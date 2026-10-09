@@ -1,0 +1,49 @@
+{
+  "request_type": "PERMISO_UNICO",
+  "applicant_name": "Ana Lucía Torres Rivera",
+  "applicant_type": "privado",
+  "applicant_role": "arrendatario",
+  "standing_document": "contrato_arrendamiento",
+  "owner_authorization": true,
+  "municipio": "Ponce",
+  "catastro": "315-042-218-09",
+  "catastro_matches_ogpe": true,
+  "calificacion": "C-L (Comercial Liviano); cafetería permitida ministerialmente",
+  "attached_documents": [
+    "foto_aerea",
+    "ubicacion_geografica",
+    "memorial_explicativo",
+    "croquis",
+    "fotos_instalacion",
+    "exclusion_categorica",
+    "antecedentes_penales",
+    "no_deuda_asume",
+    "no_deuda_crim",
+    "planillas_ingresos",
+    "planillas_ivu",
+    "certificacion_deuda_dh",
+    "numero_patronal",
+    "registro_comerciantes",
+    "proyeccion_ventas"
+  ],
+  "proposed_use": "Cafetería con servicio de mesas, sin venta de bebidas alcohólicas",
+  "use_authorization": "ministerial",
+  "employees": 6,
+  "parking_spaces": 8,
+  "required_parking_spaces": 6,
+  "operating_hours": "lunes a sábado, de 6:00 a. m. a 3:00 p. m.",
+  "licenses_requested": [
+    "sanitaria",
+    "prevencion_incendios"
+  ],
+  "validity_years": 3,
+  "declared_fee": 150,
+  "site_sketch": {
+    "floor_area_m2": 120,
+    "shows_internal_layout": true,
+    "shows_access_road": true,
+    "shows_parking": true,
+    "shows_dimensions": true
+  },
+  "in_flood_zone": false
+}

@@ -38,9 +38,11 @@ Shared core:
 
 PCOC adds: work description; estimated work value ($) and how it was calculated (OGPe guides or another method, 2.1.9.3(b)); floors/height + gross floor area; the district parameters of 2.2.1.3(d) (lot size, density, occupation area, yards, parking, loading), each beside the district's limit; how the plans are certified (professional, licence, drafter, sheet certifications, compliance certification, file format, north orientation; 2.1.9.2(k)); whether the OGPe catastral records match (2.1.9.2(j)); declared fee ($).
 
+The shared core also records whether the owner authorises a lessee's or option-holder's action (2.1.9.5(b)).
+
 **Evidence rule.** A Permit Request carries a field for every requirement that applies to its Request Type and that the record could evidence. The model judges an unevidenced requirement as unmet, so a good request that lacks the field to show compliance scores as a bad one (see *Requirement selection* below).
 
-Permiso Único adds: proposed use / business type; employees, parking, hours; licences requested (sanitaria, CPI, alcohol) + validity term (1–3 years); declared fee ($).
+Permiso Único adds: proposed use / business type and whether it is ministerial or has an approved variation (3.7.1.1(f)); employees, parking (against the district's requirement), hours; licences requested (sanitaria, CPI, alcohol) + validity term (1–3 years, 3.7.1.3(a)); the site sketch and what it shows (area, internal layout, access road, parking, dimensions; 3.7.1.2(b)(3)); whether the site is in a flood zone (3.7.1.1(k)); the documents of 2.1.9.2(h)–(i), 3.7.1.2(b) and 4.1.4.1(b) in the attached-documents checklist; declared fee ($). A renewal adds the permit being renewed, its expiry and filing dates (shown as days before or after expiry), and the owner's or operator's certification that the use conforms (3.7.1.4(k)).
 
 ### Synthetic dataset
 
@@ -59,9 +61,9 @@ intake ──► fee_check ─────────────────�
 |---|---|
 | `intake` | Validate the Permit Request fields against its Request Type. |
 | `fee_check` | Deterministic, from fee-rules YAML. Emits its own curable Note citing the Anejo A item. Does **not** affect the Approval Score. |
-| `retrieve` | Pinned Sections for each Criterion + Chroma semantic top-k, metadata-filtered by Request Type. Code splits each retrieved chunk into Clauses (top-level `a. `, `b. ` …), each identified as `section_id(letter)`, e.g. `RC-2023-E:2.1.9.2(k)`. |
-| `select_requirements` | `gpt-6-luna` with structured output classifies **every** Clause for this Permit Request as `{ref, category, reason}`: `aplica` (a requirement the Applicant or the request must meet; it stays even when the request does not meet or mention it, because then it is a deficiency), `tramite_del_sistema` (a step the system or agency performs: SUI filing, fee payments, validation, agency deadlines), or `no_aplica` (does not apply to this request). The model only picks references; code copies the Clause text word for word. Unknown references are dropped and reported; Clauses the model leaves out are reported and kept for `decide`. General Clauses the model is unsteady on have their category fixed by configuration (`fixtures/pinned_clauses.json`) and are not asked. |
-| `decide` | One OpenAI Decisions API call (`client.decisions.create`, model `gpt-6-luna`): one overall `predicate` (= Approval Score) plus one `predicate` per Criterion. `input` holds only the `aplica` Clauses, verbatim and grouped under their Section heading, then the Request fields (no system prompt; instructions are per question). |
+| `retrieve` | Chroma semantic top-k, metadata-filtered by Request Type, plus the pinned Sections of each applicable Criterion fetched by ID (a pin that matches no retrieved Clause is a configuration error). Code splits each retrieved chunk into Clauses (top-level `a. `, `b. ` …), each identified as `section_id(letter)`, e.g. `RC-2023-E:2.1.9.2(k)`. |
+| `select_requirements` | `gpt-6-luna` with structured output classifies **every** Clause for this Permit Request as `{ref, category, reason}`: `aplica` (a requirement the Applicant or the request must meet; it stays even when the request does not meet or mention it, because then it is a deficiency), `tramite_del_sistema` (a step the system or agency performs: SUI filing, fee payments, validation, agency deadlines), or `no_aplica` (does not apply to this request). The model only picks references; code copies the Clause text word for word. Unknown references are dropped and reported; Clauses the model leaves out are reported and kept for `decide`. General Clauses the model is unsteady on have their category fixed by configuration (`fixtures/fixed_clause_categories.json`) and are not asked. Clauses a Criterion pins are not asked either: they are always `aplica` (reason: the Criterion), whatever a fixed category says. |
+| `decide` | OpenAI Decisions API (`client.decisions.create`, model `gpt-6-luna`), one call per question, made concurrently: the overall `predicate` (= Approval Score) over the `aplica` Clauses, and one `predicate` per applicable Criterion over that Criterion's pinned Clauses alone. Each `input` holds its Clauses verbatim, grouped under their Section heading, then the Request fields (no system prompt; instructions are per question). The overall question names the Request Type. |
 | `write_notes` | `gpt-6-luna` with structured output: list of `{text, section_ids[], curable}`. Inputs: Request fields, the full retrieved Sections, Approval Score, Criterion probabilities, fee-check result. |
 | `validate_citations` | Reject any citation whose Section prefix was not retrieved; retry `write_notes` once, then drop offending Notes. |
 
@@ -121,7 +123,7 @@ Ingestion is not complete until retrieval has been evaluated; this validates bot
 
 ### Curated YAML
 
-- **Criteria** — 5–8 per Request Type: ID, Spanish + English text, pinned Section IDs, Decisions API predicate instruction.
+- **Criteria** — 5–8 per Request Type (`fixtures/criteria/<type>.yaml`): ID (also the Decisions API question name), Spanish + English text, pinned Clauses (or whole Sections), Decisions API predicate instruction, and the application kinds it applies to (new request, renewal, or both). PCOC: standing, environmental determination, site identification, plans, work value, district parameters; 2.2.6 (extensions) has no Criterion because a PCOC request here is a new request. Permiso Único: ministerial use, standing, components, memorial/sketch/photos and 4.1.4.1 certifications for new requests; 4.1.4.1 certifications, renewal deadline and renewal requirements for renewals.
 - **Fee rules** — COBROS 6(a)–(c) (PCOC), 28, 30, 41 (Permiso Único), plus the TERCERO.3 exemption table.
 
 ## Stack

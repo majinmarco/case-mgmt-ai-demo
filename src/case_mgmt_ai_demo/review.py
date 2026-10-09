@@ -3,24 +3,27 @@
 A LangGraph graph
 `intake → retrieve → select_requirements → decide → write_notes → validate_citations`. The Section
 retriever, the requirement selector, the Decisions API client and the Notes LLM are injected
-adapters, so tests can fake them.
+adapters, so tests can fake them. The Criteria of the request's Request Type pin the Clauses
+that are always retrieved, always scored against, and each assessed on its own.
 """
 
-from collections.abc import Iterable, Mapping
-from typing import Any, Literal, Protocol, TypedDict
+from collections.abc import Collection, Iterable, Mapping
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Literal, Protocol, TypedDict, get_args
 
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_core import ErrorDetails
 
-from case_mgmt_ai_demo.chunks import Chunk, Clause, split_clauses
+from case_mgmt_ai_demo.chunks import Chunk, Clause, RequestType, split_clauses
 from case_mgmt_ai_demo.config import Settings
-from case_mgmt_ai_demo.permit_request import PermitRequest
+from case_mgmt_ai_demo.criteria import Criterion
+from case_mgmt_ai_demo.permit_request import PermitRequest, parse_permit_request
 
 APPROVAL_QUESTION = "aprobacion"
 # The compliance wording scored best in the CMAWD-2 spike (docs/spikes/cmawd-2-decisions-api.md).
 APPROVAL_INSTRUCTIONS = (
-    "¿Cumple esta Solicitud de Permiso de Construcción con todos los requisitos de las "
+    "¿Cumple esta Solicitud de {type_name} con todos los requisitos de las "
     "Secciones del Reglamento citadas?"
 )
 
@@ -32,7 +35,9 @@ proporcionadas y en los campos de la solicitud.
 - Cada Nota cita al menos una Sección en `section_ids`, usando exactamente el identificador \
 entre corchetes (p. ej. RC-2023-E:2.1.9.5). Puede precisar el inciso: RC-2023-E:2.1.9.5(b).
 - `curable` es verdadero cuando la Nota describe una deficiencia que el Solicitante puede \
-subsanar (requerimiento de subsanación), y falso en otro caso."""
+subsanar (requerimiento de subsanación), y falso en otro caso.
+- La evaluación por Criterio indica qué requisitos se cumplen (probabilidad alta) y cuáles no \
+(probabilidad baja); apóyate en ella para elegir qué comentar."""
 
 SELECTION_INSTRUCTIONS = """\
 Eres un asistente que prepara la evaluación de una Solicitud de Permiso en Puerto Rico.
@@ -46,8 +51,9 @@ que no se acredita con los datos de la solicitud. Los pagos de derechos y arance
 "tramite_del_sistema" aunque el inciso se los imponga al solicitante: se verifican aparte.
 - "no_aplica": no aplica a esta solicitud (p. ej. asuntos discrecionales cuando la solicitud \
 es ministerial, proyectos públicos cuando el solicitante es privado, prórrogas cuando no se \
-solicita una, obligaciones que surgen después de expedido el permiso, disposiciones \
-meramente definitorias o declarativas sin requisito).
+solicita una, requisitos de renovación cuando la solicitud es nueva y de solicitudes nuevas \
+cuando es una renovación, obligaciones que surgen después de expedido el permiso, \
+disposiciones meramente definitorias o declarativas sin requisito).
 Devuelve una clasificación por inciso, con `ref` exactamente como aparece entre corchetes, y \
 una razón breve en español."""
 
@@ -86,11 +92,19 @@ class Note(DraftNote):
         return bool(self.unretrieved_section_ids)
 
 
+class CriterionAssessment(BaseModel):
+    criterion: Criterion
+    probability: float | None = Field(description="None when the Decisions API refused.")
+
+
 class Recommendation(BaseModel):
     request: PermitRequest
     approval_score: float | None = Field(description="None when the Decisions API refused.")
     verdict: Verdict
     borderline: bool
+    criteria: list[CriterionAssessment] = Field(
+        description="The Criteria of the request's Request Type, in curated order."
+    )
     notes: list[Note]
     retrieved_section_ids: list[str]
     selection: list[ClauseSelection] = Field(
@@ -114,6 +128,10 @@ class InvalidPermitRequest(ValueError):
         self.errors = errors
 
 
+class MissingPinnedClause(LookupError):
+    """A Criterion pins a Clause the retrieved Sections do not hold: a configuration error."""
+
+
 class DecisionsClient(Protocol):
     def predicates(self, input: str, questions: Mapping[str, str]) -> dict[str, float | None]:
         """Probability per named predicate question; None for a refused question."""
@@ -125,7 +143,13 @@ class NotesLLM(Protocol):
 
 
 class SectionRetriever(Protocol):
-    def retrieve(self, request: PermitRequest) -> list[Chunk]: ...
+    def retrieve(self, request: PermitRequest) -> list[Chunk]:
+        """The Sections most relevant to the request."""
+        ...
+
+    def fetch(self, section_ids: Collection[str]) -> list[Chunk]:
+        """Every chunk (all parts) of the given Sections."""
+        ...
 
 
 class RequirementSelector(Protocol):
@@ -142,12 +166,14 @@ class ReviewState(ReviewInput):
     """Graph state; each node returns a partial update of it."""
 
     request: PermitRequest
+    criteria: list[Criterion]
     sections: list[Chunk]
     clauses: list[Clause]
     selection: list[ClauseSelection]
     unclassified_clause_refs: list[str]
     unknown_clause_refs: list[str]
     approval_score: float | None
+    criterion_probabilities: dict[str, float | None]
     draft_notes: list[DraftNote]
     notes: list[Note]
 
@@ -160,15 +186,18 @@ class ReviewPipeline:
         retriever: SectionRetriever,
         selector: RequirementSelector,
         settings: Settings,
-        pinned: Iterable[ClauseSelection] = (),
+        fixed: Iterable[ClauseSelection] = (),
+        criteria: Iterable[Criterion] = (),
     ):
-        """`pinned` fixes the category of general clauses the selector is unsteady on."""
+        """`fixed` fixes the category of general clauses the selector is unsteady on;
+        `criteria` holds the Criteria of every Request Type."""
         self._decisions = decisions
         self._notes_llm = notes_llm
         self._retriever = retriever
         self._selector = selector
         self._settings = settings
-        self._pinned = {selection.ref: selection for selection in pinned}
+        self._fixed = {selection.ref: selection for selection in fixed}
+        self._criteria = list(criteria)
         graph = StateGraph(ReviewState, input_schema=ReviewInput)
         graph.add_node("intake", self._intake)
         graph.add_node("retrieve", self._retrieve)
@@ -195,6 +224,13 @@ class ReviewPipeline:
             verdict=self._verdict(score),
             borderline=score is not None
             and self._settings.borderline_low <= score <= self._settings.borderline_high,
+            criteria=[
+                CriterionAssessment(
+                    criterion=criterion,
+                    probability=state["criterion_probabilities"][criterion.id],
+                )
+                for criterion in state["criteria"]
+            ],
             notes=state["notes"],
             retrieved_section_ids=list(dict.fromkeys(c.section_id for c in state["sections"])),
             selection=state["selection"],
@@ -209,21 +245,50 @@ class ReviewPipeline:
 
     def _intake(self, state: ReviewState) -> dict[str, Any]:
         try:
-            return {"request": PermitRequest.model_validate(state["raw"])}
+            request = parse_permit_request(state["raw"])
         except ValidationError as error:
             raise InvalidPermitRequest([_error_es(e) for e in error.errors()]) from error
+        return {
+            "request": request,
+            "criteria": [c for c in self._criteria if c.applies_to(request)],
+        }
 
     def _retrieve(self, state: ReviewState) -> dict[str, Any]:
         sections = self._retriever.retrieve(state["request"])
-        return {"sections": sections, "clauses": [c for s in sections for c in split_clauses(s)]}
+        pinned = [s for c in state["criteria"] for s in c.pinned_section_ids]
+        found = {(chunk.section_id, chunk.part) for chunk in sections}
+        sections += [
+            chunk
+            for chunk in self._retriever.fetch(set(pinned))
+            if (chunk.section_id, chunk.part) not in found
+        ]
+        clauses = [c for s in sections for c in split_clauses(s)]
+        for criterion in state["criteria"]:
+            if unmatched := criterion.unmatched_pins(clauses):
+                raise MissingPinnedClause(
+                    f"Criterion {criterion.id} pins {', '.join(unmatched)}, "
+                    "which no retrieved Section holds"
+                )
+        return {"sections": sections, "clauses": clauses}
 
     def _select_requirements(self, state: ReviewState) -> dict[str, Any]:
         clauses = state["clauses"]
-        asked = [clause for clause in clauses if clause.ref not in self._pinned]
+        # Clauses a Criterion pins are requirements by definition, so the selector is not asked.
+        required = {
+            clause.ref: ClauseSelection(
+                ref=clause.ref,
+                category="aplica",
+                reason=f"Fijado por el Criterio {', '.join(ids)}: siempre se evalúa.",
+            )
+            for clause in clauses
+            if (ids := [c.id for c in state["criteria"] if c.pins(clause)])
+        }
+        asked = [c for c in clauses if c.ref not in self._fixed and c.ref not in required]
         returned: dict[str, ClauseSelection] = {}
         for selection in self._selector.select(asked, state["request"]):
             returned.setdefault(selection.ref, selection)
-        returned |= {c.ref: self._pinned[c.ref] for c in clauses if c.ref in self._pinned}
+        returned |= {c.ref: self._fixed[c.ref] for c in clauses if c.ref in self._fixed}
+        returned |= required
         known = {clause.ref for clause in clauses}
         return {
             "selection": [returned[c.ref] for c in clauses if c.ref in returned],
@@ -232,14 +297,32 @@ class ReviewPipeline:
         }
 
     def _decide(self, state: ReviewState) -> dict[str, Any]:
+        """One overall predicate over the selected Clauses, and one per Criterion over its own
+        pinned Clauses; each has its own input, so each is its own call, made concurrently."""
+        request, clauses = state["request"], state["clauses"]
         # An unclassified clause may be a requirement, so it stays rather than being set aside.
         set_aside = {s.ref for s in state["selection"] if s.set_aside}
-        requirements = [c for c in state["clauses"] if c.ref not in set_aside]
-        answers = self._decisions.predicates(
-            _requirements_context(requirements, state["request"]),
-            {APPROVAL_QUESTION: APPROVAL_INSTRUCTIONS},
-        )
-        return {"approval_score": answers[APPROVAL_QUESTION]}
+        questions = {
+            APPROVAL_QUESTION: (
+                [c for c in clauses if c.ref not in set_aside],
+                APPROVAL_INSTRUCTIONS.format(type_name=request.type_name_es),
+            )
+        } | {
+            criterion.id: ([c for c in clauses if criterion.pins(c)], criterion.instructions)
+            for criterion in state["criteria"]
+        }
+
+        def ask(name: str) -> float | None:
+            requirements, instructions = questions[name]
+            context = _requirements_context(requirements, request)
+            return self._decisions.predicates(context, {name: instructions})[name]
+
+        with ThreadPoolExecutor(max_workers=len(questions)) as pool:
+            answers = dict(zip(questions, pool.map(ask, questions)))
+        return {
+            "approval_score": answers.pop(APPROVAL_QUESTION),
+            "criterion_probabilities": answers,
+        }
 
     def _write_notes(self, state: ReviewState) -> dict[str, Any]:
         score = state["approval_score"]
@@ -249,6 +332,13 @@ class ReviewPipeline:
             f"{_context(state['sections'], state['request'])}\n\n"
             f"PUNTUACIÓN DE APROBACIÓN (0-1): {shown}"
         )
+        if state["criteria"]:
+            assessments = "\n".join(
+                f"- [{c.id}] {c.text_es} ({', '.join(c.pinned)}): "
+                + _probability_es(state["criterion_probabilities"][c.id])
+                for c in state["criteria"]
+            )
+            prompt += f"\n\nEVALUACIÓN POR CRITERIO (probabilidad de cumplimiento, 0-1)\n{assessments}"
         return {"draft_notes": self._notes_llm.write_notes(prompt)}
 
     def _validate_citations(self, state: ReviewState) -> dict[str, Any]:
@@ -277,14 +367,28 @@ INTAKE_ERRORS_ES = {
     "greater_than_equal": "debe ser mayor o igual que {ge}",
     "int_parsing": "debe ser un número entero",
     "decimal_parsing": "debe ser un número",
+    "less_than_equal": "debe ser menor o igual que {le}",
     "model_type": "la solicitud debe ser un objeto JSON",
+    "model_attributes_type": "la solicitud debe ser un objeto JSON",
+    "union_tag_not_found": "campo obligatorio",
+    "union_tag_invalid": "valor no permitido (se espera {expected_tags})",
+    "date_from_datetime_parsing": "debe ser una fecha (AAAA-MM-DD)",
 }
 
 
 def _error_es(error: ErrorDetails) -> str:
     template = INTAKE_ERRORS_ES.get(error["type"])
     message = template.format(**error.get("ctx", {})) if template else error["msg"]
-    return f"{'.'.join(map(str, error['loc'])) or '(solicitud)'}: {message}"
+    loc = list(error["loc"])
+    if loc[:1] and loc[0] in get_args(RequestType):
+        loc = loc[1:]  # the Request Type the fields were validated as, not a field
+    elif error["type"].startswith("union_tag_"):
+        loc = ["request_type"]
+    return f"{'.'.join(map(str, loc)) or '(solicitud)'}: {message}"
+
+
+def _probability_es(probability: float | None) -> str:
+    return "no evaluado (pregunta rechazada)" if probability is None else f"{probability:.2f}"
 
 
 def _was_retrieved(cited: str, retrieved: set[str]) -> bool:

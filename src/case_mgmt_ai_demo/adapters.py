@@ -1,7 +1,7 @@
 """Real implementations of the review pipeline's adapters."""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from importlib.resources import files
 
 from openai import OpenAI
@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks
 from case_mgmt_ai_demo.config import Settings
+from case_mgmt_ai_demo.criteria import load_criteria
 from case_mgmt_ai_demo.permit_request import PermitRequest
 from case_mgmt_ai_demo.review import ClauseSelection, DraftNote, ReviewPipeline, selection_prompt
 
@@ -89,10 +90,13 @@ class FixtureRetriever:
     def retrieve(self, request: PermitRequest) -> list[Chunk]:
         return [chunk for chunk in self._chunks if request.request_type in chunk.request_types]
 
+    def fetch(self, section_ids: Collection[str]) -> list[Chunk]:
+        return [chunk for chunk in self._chunks if chunk.section_id in section_ids]
 
-def load_pinned_clauses() -> list[ClauseSelection]:
+
+def load_fixed_clause_categories() -> list[ClauseSelection]:
     """General clauses whose category is fixed by configuration instead of asked each time."""
-    raw = files("case_mgmt_ai_demo.fixtures").joinpath("pinned_clauses.json").read_text()
+    raw = files("case_mgmt_ai_demo.fixtures").joinpath("fixed_clause_categories.json").read_text()
     return [ClauseSelection.model_validate(item) for item in json.loads(raw)]
 
 
@@ -103,5 +107,6 @@ def build_review_pipeline(settings: Settings, client: OpenAI) -> ReviewPipeline:
         FixtureRetriever(),
         OpenAIRequirementSelector(client, settings.selector_model),
         settings,
-        pinned=load_pinned_clauses(),
+        fixed=load_fixed_clause_categories(),
+        criteria=load_criteria(),
     )

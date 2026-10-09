@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from case_mgmt_ai_demo.permit_request import PermitRequest
-from test_review import GOOD_PCOC
+from case_mgmt_ai_demo.permit_request import parse_permit_request
+from test_review import GOOD_PCOC, GOOD_PERMISO_UNICO
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
@@ -42,13 +42,13 @@ EVIDENCED_PCOC = GOOD_PCOC | {
 
 
 def test_value_certification_method_is_shown_with_the_value():
-    fields = PermitRequest.model_validate(EVIDENCED_PCOC).fields_es()
+    fields = parse_permit_request(EVIDENCED_PCOC).fields_es()
 
     assert fields["Valor estimado de la obra"] == "$185,000, calculado según las guías de la OGPe"
 
 
 def test_district_parameters_show_each_value_against_the_district_limit():
-    fields = PermitRequest.model_validate(EVIDENCED_PCOC).fields_es()
+    fields = parse_permit_request(EVIDENCED_PCOC).fields_es()
 
     assert fields["Parámetros del distrito"] == (
         "tamaño del solar 450 m² (mínimo 300 m²); densidad 1 unidad(es) de vivienda (máximo 1); "
@@ -59,7 +59,7 @@ def test_district_parameters_show_each_value_against_the_district_limit():
 
 
 def test_plans_certification_names_the_professional_and_the_file_details():
-    fields = PermitRequest.model_validate(EVIDENCED_PCOC).fields_es()
+    fields = parse_permit_request(EVIDENCED_PCOC).fields_es()
 
     assert fields["Certificación de los planos"] == (
         "sellados y firmados por ingeniero licenciado Ing. Carlos Torres Vega (licencia 12345), "
@@ -72,7 +72,7 @@ def test_plans_certification_names_the_professional_and_the_file_details():
 
 def test_plans_drafted_by_another_professional_name_them():
     plans = PLANS | {"drafted_by": "Arq. Ana Díaz (licencia 678)"}
-    fields = PermitRequest.model_validate(
+    fields = parse_permit_request(
         EVIDENCED_PCOC | {"plans_certification": plans}
     ).fields_es()
 
@@ -94,7 +94,7 @@ def test_plans_drafted_by_another_professional_name_them():
     ],
 )
 def test_catastral_concordance_is_shown_with_the_catastro(matches, shown):
-    fields = PermitRequest.model_validate(
+    fields = parse_permit_request(
         EVIDENCED_PCOC | {"catastro_matches_ogpe": matches}
     ).fields_es()
 
@@ -107,7 +107,7 @@ def test_plans_without_the_compliance_certification_or_north_orientation_say_so(
         "compliance_certification": False,
         "north_oriented": False,
     }
-    fields = PermitRequest.model_validate(
+    fields = parse_permit_request(
         EVIDENCED_PCOC | {"plans_certification": plans}
     ).fields_es()
 
@@ -118,7 +118,7 @@ def test_plans_without_the_compliance_certification_or_north_orientation_say_so(
 
 
 def test_undeclared_evidence_fields_are_shown_as_not_declared():
-    fields = PermitRequest.model_validate(GOOD_PCOC).fields_es()
+    fields = parse_permit_request(GOOD_PCOC).fields_es()
 
     assert fields["Valor estimado de la obra"] == "$185,000, método de cálculo no declarado"
     assert fields["Parámetros del distrito"] == "no declarados"
@@ -136,22 +136,190 @@ def test_undeclared_evidence_fields_are_shown_as_not_declared():
 )
 def test_evidence_fields_are_validated(change):
     with pytest.raises(ValidationError):
-        PermitRequest.model_validate(EVIDENCED_PCOC | change)
+        parse_permit_request(EVIDENCED_PCOC | change)
 
 
-@pytest.mark.parametrize("name", ["pcoc-buena", "pcoc-mala"])
+@pytest.mark.parametrize(
+    "name", ["pcoc-buena", "pcoc-mala", "permiso-unico-buena", "permiso-unico-mala"]
+)
 def test_examples_are_valid_permit_requests(name):
     raw = json.loads((EXAMPLES / f"{name}.json").read_text(encoding="utf-8"))
 
-    PermitRequest.model_validate(raw)
+    parse_permit_request(raw)
+
+
+SKETCH = {
+    "floor_area_m2": 120,
+    "shows_internal_layout": True,
+    "shows_access_road": True,
+    "shows_parking": True,
+    "shows_dimensions": True,
+}
+RENEWAL = {
+    "permit_number": "2023-512345-PU-001234",
+    "expiry_date": "2026-03-31",
+    "filing_date": "2026-01-15",
+    "use_conforms_certification": True,
+}
+
+
+def test_request_type_picks_the_permiso_unico_fields():
+    fields = parse_permit_request(GOOD_PERMISO_UNICO).fields_es()
+
+    assert fields["Tipo de solicitud"] == "Permiso Único (solicitud nueva)"
+    assert fields["Solicitante"] == "Ana Lucía Torres Rivera (persona privada)"
+    assert fields["Uso propuesto"] == (
+        "Cafetería con servicio de mesas, sin venta de bebidas alcohólicas "
+        "(uso permitido ministerialmente en el distrito)"
+    )
+    assert fields["Empleados / estacionamiento / horario"] == (
+        "6 empleados; 8 espacios de estacionamiento; lunes a sábado, de 6:00 a. m. a 3:00 p. m."
+    )
+    assert fields["Licencias solicitadas"] == (
+        "licencia sanitaria; certificado de prevención de incendios; vigencia solicitada 3 años"
+    )
+    assert fields["Croquis de la instalación"] == "no declarado"
+    assert "memorial explicativo" in fields["Documentos adjuntos"]
+    assert fields["Derechos declarados"] == "$150"
+
+
+def test_site_sketch_lists_what_it_shows():
+    fields = parse_permit_request(GOOD_PERMISO_UNICO | {"site_sketch": SKETCH}).fields_es()
+
+    assert fields["Croquis de la instalación"] == (
+        "área del local 120 m²; incluye la distribución interna; incluye la ubicación con "
+        "respecto a la vía de acceso; incluye el estacionamiento a proveer; incluye las dimensiones"
+    )
+
+
+def test_site_sketch_says_what_it_leaves_out():
+    sketch = SKETCH | {"shows_internal_layout": False, "shows_dimensions": False}
+
+    shown = parse_permit_request(GOOD_PERMISO_UNICO | {"site_sketch": sketch}).fields_es()[
+        "Croquis de la instalación"
+    ]
+
+    assert "no incluye la distribución interna" in shown
+    assert "no incluye las dimensiones" in shown
+
+
+@pytest.mark.parametrize(
+    ("renewal", "shown"),
+    [
+        (
+            RENEWAL,
+            "renovación del Permiso Único 2023-512345-PU-001234, que expira el 2026-03-31; "
+            "presentada el 2026-01-15, 75 días antes de la expiración; se acompaña la "
+            "certificación del dueño u operador de que el uso está conforme al Permiso Único",
+        ),
+        (
+            RENEWAL
+            | {"filing_date": "2028-08-31", "use_conforms_certification": False},
+            "renovación del Permiso Único 2023-512345-PU-001234, que expira el 2026-03-31; "
+            "presentada el 2028-08-31, 884 días (2.4 años) después de la expiración; no se "
+            "acompaña la certificación del dueño u operador de que el uso está conforme al "
+            "Permiso Único",
+        ),
+    ],
+)
+def test_a_renewal_shows_when_it_was_filed_against_the_expiry(renewal, shown):
+    request = parse_permit_request(GOOD_PERMISO_UNICO | {"renewal": renewal})
+
+    assert request.application_kind == "renovacion"
+    assert request.fields_es()["Tipo de solicitud"] == "Permiso Único (renovación)"
+    assert request.fields_es()["Renovación"] == shown
+
+
+def test_a_request_without_a_renewal_is_new():
+    assert parse_permit_request(GOOD_PERMISO_UNICO).application_kind == "nueva"
+    assert parse_permit_request(GOOD_PCOC).application_kind == "nueva"
+    assert "Renovación" not in parse_permit_request(GOOD_PERMISO_UNICO).fields_es()
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"validity_years": 4},
+        {"validity_years": 0},
+        {"licenses_requested": ["armas"]},
+        {"use_authorization": "por_favor"},
+        {"attached_documents": ["planos_sellados"]},
+        {"site_sketch": SKETCH | {"floor_area_m2": 0}},
+        {"renewal": RENEWAL | {"expiry_date": "mañana"}},
+        {"work_description": "una obra"},
+    ],
+)
+def test_permiso_unico_fields_are_validated(change):
+    with pytest.raises(ValidationError):
+        parse_permit_request(GOOD_PERMISO_UNICO | change)
 
 
 def test_good_example_evidences_value_method_district_parameters_and_plans():
     raw = json.loads((EXAMPLES / "pcoc-buena.json").read_text(encoding="utf-8"))
 
-    fields = PermitRequest.model_validate(raw).fields_es()
+    fields = parse_permit_request(raw).fields_es()
 
     assert "guías de la OGPe" in fields["Valor estimado de la obra"]
     assert fields["Parámetros del distrito"] != "no declarados"
     assert "se acompaña el documento de certificación" in fields["Certificación de los planos"]
     assert "concuerda con el sistema de la OGPe" in fields["Municipio y número de catastro"]
+
+
+@pytest.mark.parametrize(
+    ("authorized", "shown"),
+    [
+        (True, "arrendatario (autorizado por el dueño para la acción propuesta)"),
+        (False, "arrendatario (sin autorización del dueño para la acción propuesta)"),
+        (None, "arrendatario"),
+    ],
+)
+def test_owner_authorization_is_shown_with_the_applicant_role(authorized, shown):
+    raw = GOOD_PERMISO_UNICO | {"owner_authorization": authorized}
+
+    assert parse_permit_request(raw).fields_es()["Rol del solicitante"] == shown
+
+
+def test_parking_is_shown_against_the_district_requirement():
+    fields = parse_permit_request(
+        GOOD_PERMISO_UNICO | {"required_parking_spaces": 6}
+    ).fields_es()
+
+    assert fields["Empleados / estacionamiento / horario"] == (
+        "6 empleados; 8 espacios de estacionamiento (requeridos por el distrito 6); "
+        "lunes a sábado, de 6:00 a. m. a 3:00 p. m."
+    )
+
+
+@pytest.mark.parametrize(
+    ("flood_zone", "shown"),
+    [
+        (False, "el predio no ubica en zona inundable"),
+        (True, "el predio ubica en zona inundable"),
+        (None, "no declarada"),
+    ],
+)
+def test_flood_zone_is_shown(flood_zone, shown):
+    fields = parse_permit_request(GOOD_PERMISO_UNICO | {"in_flood_zone": flood_zone}).fields_es()
+
+    assert fields["Zona inundable"] == shown
+
+
+def test_a_permiso_unico_can_attach_the_site_documents_of_2_1_9_2():
+    raw = GOOD_PERMISO_UNICO | {"attached_documents": ["foto_aerea", "ubicacion_geografica"]}
+
+    assert parse_permit_request(raw).fields_es()["Documentos adjuntos"] == (
+        "foto aérea del predio; ubicación geográfica del predio"
+    )
+
+
+def test_good_permiso_unico_example_evidences_standing_parking_flood_zone_and_site():
+    raw = json.loads((EXAMPLES / "permiso-unico-buena.json").read_text(encoding="utf-8"))
+
+    fields = parse_permit_request(raw).fields_es()
+
+    assert "autorizado por el dueño" in fields["Rol del solicitante"]
+    assert "requeridos por el distrito" in fields["Empleados / estacionamiento / horario"]
+    assert fields["Zona inundable"] == "el predio no ubica en zona inundable"
+    assert "foto aérea del predio" in fields["Documentos adjuntos"]
+    assert "ubicación geográfica del predio" in fields["Documentos adjuntos"]
+    assert "área del local" in fields["Croquis de la instalación"]

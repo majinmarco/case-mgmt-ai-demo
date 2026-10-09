@@ -1,0 +1,25 @@
+{
+  "request_type": "PERMISO_UNICO",
+  "applicant_name": "Roberto Javier Santiago Cruz",
+  "applicant_type": "privado",
+  "applicant_role": "otro",
+  "standing_document": null,
+  "municipio": "Mayagüez",
+  "catastro": "182-033-507-11",
+  "calificacion": "R-I (Residencial Intermedio); usos comerciales no permitidos",
+  "attached_documents": [],
+  "proposed_use": "Barra con música en vivo y venta de bebidas alcohólicas",
+  "use_authorization": "no_permitido",
+  "employees": 4,
+  "parking_spaces": 0,
+  "operating_hours": "jueves a domingo, de 8:00 p. m. a 3:00 a. m.",
+  "licenses_requested": ["bebidas_alcoholicas"],
+  "validity_years": 3,
+  "declared_fee": 0,
+  "renewal": {
+    "permit_number": "2022-498765-PU-000987",
+    "expiry_date": "2023-11-30",
+    "filing_date": "2026-09-15",
+    "use_conforms_certification": false
+  }
+}

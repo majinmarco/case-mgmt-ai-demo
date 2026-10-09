@@ -1,16 +1,18 @@
 import copy
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 
 import pytest
 
 from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks, split_clauses
 from case_mgmt_ai_demo.config import Settings
+from case_mgmt_ai_demo.criteria import Criterion
 from case_mgmt_ai_demo.permit_request import PermitRequest
 from case_mgmt_ai_demo.review import (
     ClauseCategory,
     ClauseSelection,
     DraftNote,
     InvalidPermitRequest,
+    MissingPinnedClause,
     ReviewPipeline,
 )
 
@@ -30,6 +32,37 @@ GOOD_PCOC = {
     "height_m": 7.5,
     "gross_floor_area_m2": 210,
     "declared_fee": 1850,
+}
+
+GOOD_PERMISO_UNICO = {
+    "request_type": "PERMISO_UNICO",
+    "applicant_name": "Ana Lucía Torres Rivera",
+    "applicant_type": "privado",
+    "applicant_role": "arrendatario",
+    "standing_document": "contrato_arrendamiento",
+    "municipio": "Ponce",
+    "catastro": "315-042-218-09",
+    "calificacion": "C-L (Comercial Liviano); cafetería permitida ministerialmente",
+    "attached_documents": [
+        "memorial_explicativo",
+        "croquis",
+        "fotos_instalacion",
+        "exclusion_categorica",
+    ],
+    "proposed_use": "Cafetería con servicio de mesas, sin venta de bebidas alcohólicas",
+    "use_authorization": "ministerial",
+    "employees": 6,
+    "parking_spaces": 8,
+    "operating_hours": "lunes a sábado, de 6:00 a. m. a 3:00 p. m.",
+    "licenses_requested": ["sanitaria", "prevencion_incendios"],
+    "validity_years": 3,
+    "declared_fee": 150,
+}
+RENEWAL = {
+    "permit_number": "2022-498765-PU-000987",
+    "expiry_date": "2023-11-30",
+    "filing_date": "2026-09-15",
+    "use_conforms_certification": False,
 }
 
 
@@ -81,6 +114,8 @@ class FakeSelector:
 
 
 class FakeRetriever:
+    """Semantic retrieval returns `section_ids`; any fixture Section can be fetched by ID."""
+
     def __init__(self, section_ids: set[str]):
         self.chunks = [c for c in load_fixture_chunks() if c.section_id in section_ids]
         self.requests: list[PermitRequest] = []
@@ -88,6 +123,9 @@ class FakeRetriever:
     def retrieve(self, request: PermitRequest) -> list[Chunk]:
         self.requests.append(request)
         return self.chunks
+
+    def fetch(self, section_ids: Collection[str]) -> list[Chunk]:
+        return [c for c in load_fixture_chunks() if c.section_id in section_ids]
 
 
 STANDING_NOTE = DraftNote(
@@ -102,10 +140,18 @@ VALUE_NOTE = DraftNote(
 )
 
 
-def pipeline(decisions, notes_llm, retriever, selector=None, pinned=()) -> ReviewPipeline:
+def pipeline(
+    decisions, notes_llm, retriever, selector=None, fixed=(), criteria=()
+) -> ReviewPipeline:
     settings = Settings(approval_cutoff=0.5, borderline_low=0.4, borderline_high=0.6)
     return ReviewPipeline(
-        decisions, notes_llm, retriever, selector or FakeSelector(), settings, pinned=pinned
+        decisions,
+        notes_llm,
+        retriever,
+        selector or FakeSelector(),
+        settings,
+        fixed=fixed,
+        criteria=criteria,
     )
 
 
@@ -265,6 +311,20 @@ def test_verdict_follows_cutoff_and_borderline_band(retriever, score, verdict, b
         (GOOD_PCOC | {"applicant_type": "extranjero"}, "applicant_type: valor no permitido"),
         (GOOD_PCOC | {"floors": 0}, "floors: debe ser mayor o igual que 1"),
         (GOOD_PCOC | {"colour": "azul"}, "colour: campo no reconocido"),
+        (
+            {k: v for k, v in GOOD_PCOC.items() if k != "request_type"},
+            "request_type: campo obligatorio",
+        ),
+        (
+            GOOD_PCOC | {"request_type": "LICENCIA_DE_PESCA"},
+            "request_type: valor no permitido (se espera 'PCOC', 'PERMISO_UNICO')",
+        ),
+        (GOOD_PERMISO_UNICO | {"validity_years": 5}, "validity_years: debe ser menor o igual que 3"),
+        (GOOD_PCOC | {"request_type": "PERMISO_UNICO"}, "proposed_use: campo obligatorio"),
+        (
+            GOOD_PERMISO_UNICO | {"renewal": RENEWAL | {"filing_date": "ayer"}},
+            "renewal.filing_date:",
+        ),
     ],
 )
 def test_invalid_intake_errors_are_in_spanish(retriever, raw, message):
@@ -399,27 +459,27 @@ def test_a_clause_classified_twice_keeps_its_first_classification(pcoc_retriever
     assert clause_text("RC-2023-E:2.1.9.2(a)") not in decisions.calls[0][0]
 
 
-PINNED_COMPLETENESS = ClauseSelection(
+FIXED_COMPLETENESS = ClauseSelection(
     ref="RC-2023-E:2.1.9.2(m)",
     category="tramite_del_sistema",
     reason="Fijado: la completitud se juzga por los requisitos específicos.",
 )
 
 
-def test_a_pinned_clause_is_not_shown_to_the_selector_and_keeps_its_configured_category(
+def test_a_fixed_clause_is_not_shown_to_the_selector_and_keeps_its_configured_category(
     pcoc_retriever,
 ):
     selector = FakeSelector()
     decisions = FakeDecisions({"aprobacion": 0.7})
 
     recommendation = pipeline(
-        decisions, FakeNotesLLM([]), pcoc_retriever, selector, pinned=[PINNED_COMPLETENESS]
+        decisions, FakeNotesLLM([]), pcoc_retriever, selector, fixed=[FIXED_COMPLETENESS]
     ).review(GOOD_PCOC)
 
     [(clauses, _)] = selector.calls
     assert "RC-2023-E:2.1.9.2(m)" not in {clause.ref for clause in clauses}
     selection = {s.ref: s for s in recommendation.selection}
-    assert selection["RC-2023-E:2.1.9.2(m)"] == PINNED_COMPLETENESS
+    assert selection["RC-2023-E:2.1.9.2(m)"] == FIXED_COMPLETENESS
     assert [s.ref for s in recommendation.selection][11:14] == [
         "RC-2023-E:2.1.9.2(l)",
         "RC-2023-E:2.1.9.2(m)",
@@ -429,7 +489,7 @@ def test_a_pinned_clause_is_not_shown_to_the_selector_and_keeps_its_configured_c
     assert clause_text("RC-2023-E:2.1.9.2(m)") not in decisions.calls[0][0]
 
 
-def test_a_pinned_category_wins_over_the_selector(pcoc_retriever):
+def test_a_fixed_category_wins_over_the_selector(pcoc_retriever):
     stray = ClauseSelection(ref="RC-2023-E:2.1.9.2(m)", category="aplica", reason="del modelo")
 
     recommendation = pipeline(
@@ -437,22 +497,270 @@ def test_a_pinned_category_wins_over_the_selector(pcoc_retriever):
         FakeNotesLLM([]),
         pcoc_retriever,
         FakeSelector(extra=(stray,)),
-        pinned=[PINNED_COMPLETENESS],
+        fixed=[FIXED_COMPLETENESS],
     ).review(GOOD_PCOC)
 
     assert [s for s in recommendation.selection if s.ref == "RC-2023-E:2.1.9.2(m)"] == [
-        PINNED_COMPLETENESS
+        FIXED_COMPLETENESS
     ]
     assert recommendation.unknown_clause_refs == []
 
 
-def test_a_pin_for_a_clause_that_was_not_retrieved_is_ignored(retriever):
-    # `retriever` holds 2.1.9.3 and 2.1.9.5 only, so the 2.1.9.2(m) pin has nothing to apply to.
+def test_a_fixed_category_for_a_clause_that_was_not_retrieved_is_ignored(retriever):
+    # `retriever` holds 2.1.9.3 and 2.1.9.5 only, so the 2.1.9.2(m) category has nothing to apply to.
     recommendation = pipeline(
         FakeDecisions({"aprobacion": 0.7}),
         FakeNotesLLM([]),
         retriever,
-        pinned=[PINNED_COMPLETENESS],
+        fixed=[FIXED_COMPLETENESS],
     ).review(GOOD_PCOC)
 
     assert "RC-2023-E:2.1.9.2(m)" not in {s.ref for s in recommendation.selection}
+
+
+# Criteria are built here rather than loaded, so these tests do not depend on the curated YAML.
+PCOC_STANDING = Criterion(
+    id="pcoc_legitimacion",
+    request_type="PCOC",
+    text_es="El proponente acredita legitimación activa.",
+    text_en="The Applicant shows standing.",
+    pinned=["RC-2023-E:2.1.9.5(b)"],
+    instructions="¿Acredita la solicitud la legitimación activa del proponente?",
+)
+PCOC_PARAMETERS = Criterion(
+    id="pcoc_parametros",
+    request_type="PCOC",
+    text_es="La obra cumple los parámetros del distrito.",
+    text_en="The work meets the district parameters.",
+    pinned=["RC-2023-E:2.2.1.3(d)"],
+    instructions="¿Cumple la obra cada parámetro de la Sección 2.2.1.3(d)?",
+)
+PU_USE = Criterion(
+    id="pu_uso",
+    request_type="PERMISO_UNICO",
+    text_es="El uso está permitido ministerialmente.",
+    text_en="The use is allowed as of right.",
+    pinned=["RC-2023-E:3.7.1.1(f)"],
+    application_kinds=["nueva"],
+    instructions="¿Es el uso propuesto un uso ministerial?",
+)
+PU_RENEWAL_DEADLINE = Criterion(
+    id="pu_renovacion_plazo",
+    request_type="PERMISO_UNICO",
+    text_es="La renovación se presentó a tiempo.",
+    text_en="The renewal was filed in time.",
+    pinned=["RC-2023-E:3.7.1.4(f)", "RC-2023-E:3.7.1.4(g)"],
+    application_kinds=["renovacion"],
+    instructions="¿Se presentó la renovación dentro del plazo?",
+)
+CRITERIA = [PCOC_STANDING, PCOC_PARAMETERS, PU_USE, PU_RENEWAL_DEADLINE]
+
+
+def call_for(decisions: FakeDecisions, question: str) -> tuple[str, dict[str, str]]:
+    [call] = [call for call in decisions.calls if question in call[1]]
+    return call
+
+
+def criterion_probabilities(**probabilities: float | None) -> FakeDecisions:
+    return FakeDecisions({"aprobacion": 0.7} | probabilities)
+
+
+def test_pinned_sections_are_retrieved_even_when_the_retriever_misses_them():
+    decisions = criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8)
+
+    recommendation = pipeline(
+        decisions,
+        FakeNotesLLM([]),
+        FakeRetriever({"RC-2023-E:2.1.9.3"}),
+        criteria=CRITERIA,
+    ).review(GOOD_PCOC)
+
+    assert recommendation.retrieved_section_ids == [
+        "RC-2023-E:2.1.9.3",
+        "RC-2023-E:2.1.9.5",
+        "RC-2023-E:2.2.1.3",
+    ]
+    overall, _ = call_for(decisions, "aprobacion")
+    assert clause_text("RC-2023-E:2.1.9.5(b)") in overall
+
+
+def test_a_pinned_section_the_retriever_found_is_not_repeated(pcoc_retriever):
+    recommendation = pipeline(
+        criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8),
+        FakeNotesLLM([]),
+        pcoc_retriever,
+        criteria=CRITERIA,
+    ).review(GOOD_PCOC)
+
+    assert recommendation.retrieved_section_ids == [
+        "RC-2023-E:2.1.9.2",
+        "RC-2023-E:2.1.9.3",
+        "RC-2023-E:2.1.9.5",
+        "RC-2023-E:2.2.1.3",
+    ]
+    assert [s.ref for s in recommendation.selection].count("RC-2023-E:2.1.9.5(b)") == 1
+
+
+def test_pinned_clauses_reach_decide_even_when_the_selector_would_set_them_aside(pcoc_retriever):
+    selector = FakeSelector(
+        {"RC-2023-E:2.1.9.5(b)": "no_aplica", "RC-2023-E:2.2.1.3(d)": "tramite_del_sistema"}
+    )
+    decisions = criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8)
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, selector, criteria=CRITERIA
+    ).review(GOOD_PCOC)
+
+    overall, _ = call_for(decisions, "aprobacion")
+    assert clause_text("RC-2023-E:2.1.9.5(b)") in overall
+    assert clause_text("RC-2023-E:2.2.1.3(d)") in overall
+    selection = {s.ref: s for s in recommendation.selection}
+    assert selection["RC-2023-E:2.1.9.5(b)"].category == "aplica"
+    assert "pcoc_legitimacion" in selection["RC-2023-E:2.1.9.5(b)"].reason
+    [(shown, _)] = selector.calls
+    assert "RC-2023-E:2.1.9.5(b)" not in {clause.ref for clause in shown}
+
+
+def test_a_pinned_clause_wins_over_a_fixed_category(pcoc_retriever):
+    fixed = ClauseSelection(
+        ref="RC-2023-E:2.2.1.3(d)", category="tramite_del_sistema", reason="Fijado."
+    )
+    decisions = criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8)
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, fixed=[fixed], criteria=CRITERIA
+    ).review(GOOD_PCOC)
+
+    overall, _ = call_for(decisions, "aprobacion")
+    assert clause_text("RC-2023-E:2.2.1.3(d)") in overall
+    [parameters] = [s for s in recommendation.selection if s.ref == "RC-2023-E:2.2.1.3(d)"]
+    assert parameters.category == "aplica"
+
+
+def test_each_criterion_is_asked_over_its_own_pinned_clauses_and_the_request(pcoc_retriever):
+    decisions = criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8)
+
+    pipeline(decisions, FakeNotesLLM([]), pcoc_retriever, criteria=CRITERIA).review(GOOD_PCOC)
+
+    input, questions = call_for(decisions, "pcoc_legitimacion")
+    assert questions == {"pcoc_legitimacion": PCOC_STANDING.instructions}
+    assert "[RC-2023-E:2.1.9.5] LEGITIMACIÓN ACTIVA (STANDING)" in input
+    assert clause_text("RC-2023-E:2.1.9.5(b)") in input
+    assert "1. Escritura pública." in input
+    assert clause_text("RC-2023-E:2.1.9.5(a)") not in input
+    assert clause_text("RC-2023-E:2.2.1.3(d)") not in input
+    assert "María Isabel Rivera Ortiz" in input
+    overall, questions = call_for(decisions, "aprobacion")
+    assert list(questions) == ["aprobacion"]
+
+
+def test_pcoc_criterion_probabilities_are_carried_into_the_recommendation(pcoc_retriever):
+    recommendation = pipeline(
+        criterion_probabilities(pcoc_legitimacion=0.91, pcoc_parametros=None),
+        FakeNotesLLM([]),
+        pcoc_retriever,
+        criteria=CRITERIA,
+    ).review(GOOD_PCOC)
+
+    assert [(a.criterion, a.probability) for a in recommendation.criteria] == [
+        (PCOC_STANDING, 0.91),
+        (PCOC_PARAMETERS, None),
+    ]
+
+
+def test_new_permiso_unico_is_assessed_on_its_new_request_criteria():
+    decisions = criterion_probabilities(pu_uso=0.95)
+
+    recommendation = pipeline(
+        decisions,
+        FakeNotesLLM([]),
+        FakeRetriever({"RC-2023-E:3.7.1.2"}),
+        criteria=CRITERIA,
+    ).review(GOOD_PERMISO_UNICO)
+
+    assert [(a.criterion.id, a.probability) for a in recommendation.criteria] == [("pu_uso", 0.95)]
+    assert recommendation.retrieved_section_ids == ["RC-2023-E:3.7.1.2", "RC-2023-E:3.7.1.1"]
+    assert {name for _, questions in decisions.calls for name in questions} == {
+        "aprobacion",
+        "pu_uso",
+    }
+    input, _ = call_for(decisions, "pu_uso")
+    assert clause_text("RC-2023-E:3.7.1.1(f)") in input
+    assert "Cafetería con servicio de mesas" in input
+
+
+def test_permiso_unico_renewal_is_assessed_on_its_renewal_criteria():
+    decisions = criterion_probabilities(pu_renovacion_plazo=0.02)
+
+    recommendation = pipeline(
+        decisions,
+        FakeNotesLLM([]),
+        FakeRetriever({"RC-2023-E:3.7.1.2"}),
+        criteria=CRITERIA,
+    ).review(GOOD_PERMISO_UNICO | {"renewal": RENEWAL})
+
+    assert [(a.criterion.id, a.probability) for a in recommendation.criteria] == [
+        ("pu_renovacion_plazo", 0.02)
+    ]
+    input, _ = call_for(decisions, "pu_renovacion_plazo")
+    assert clause_text("RC-2023-E:3.7.1.4(f)") in input
+    assert clause_text("RC-2023-E:3.7.1.4(g)") in input
+    assert "1020 días (2.8 años) después de la expiración" in input
+
+
+def test_the_overall_question_names_the_request_type(retriever):
+    decisions = FakeDecisions({"aprobacion": 0.7})
+
+    pipeline(decisions, FakeNotesLLM([]), retriever).review(GOOD_PERMISO_UNICO)
+
+    [(_, questions)] = decisions.calls
+    assert questions["aprobacion"] == (
+        "¿Cumple esta Solicitud de Permiso Único con todos los requisitos de las Secciones del "
+        "Reglamento citadas?"
+    )
+
+
+def test_notes_receive_the_criterion_probabilities(pcoc_retriever):
+    notes_llm = FakeNotesLLM([])
+
+    pipeline(
+        criterion_probabilities(pcoc_legitimacion=0.91, pcoc_parametros=None),
+        notes_llm,
+        pcoc_retriever,
+        criteria=CRITERIA,
+    ).review(GOOD_PCOC)
+
+    [prompt] = notes_llm.prompts
+    assert "[pcoc_legitimacion] El proponente acredita legitimación activa." in prompt
+    assert "0.91" in prompt
+    assert "[pcoc_parametros] La obra cumple los parámetros del distrito." in prompt
+    assert "no evaluado" in prompt
+
+
+def test_a_pin_that_matches_no_clause_is_a_configuration_error(retriever):
+    typo = PCOC_STANDING.model_copy(update={"pinned": ["RC-2023-E:2.1.9.5(z)"]})
+
+    with pytest.raises(MissingPinnedClause, match=r"pcoc_legitimacion.*2\.1\.9\.5\(z\)"):
+        pipeline(
+            criterion_probabilities(pcoc_legitimacion=0.9),
+            FakeNotesLLM([]),
+            retriever,
+            criteria=[typo],
+        ).review(GOOD_PCOC)
+
+
+def test_a_permiso_unico_pinned_clause_reaches_decide_even_when_the_selector_would_set_it_aside():
+    decisions = criterion_probabilities(pu_uso=0.95)
+
+    recommendation = pipeline(
+        decisions,
+        FakeNotesLLM([]),
+        FakeRetriever({"RC-2023-E:3.7.1.1"}),
+        FakeSelector({"RC-2023-E:3.7.1.1(f)": "no_aplica"}),
+        criteria=CRITERIA,
+    ).review(GOOD_PERMISO_UNICO)
+
+    overall, _ = call_for(decisions, "aprobacion")
+    assert clause_text("RC-2023-E:3.7.1.1(f)") in overall
+    [use] = [s for s in recommendation.selection if s.ref == "RC-2023-E:3.7.1.1(f)"]
+    assert use.category == "aplica" and "pu_uso" in use.reason

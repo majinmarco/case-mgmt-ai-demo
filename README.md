@@ -17,8 +17,11 @@ uv run case-mgmt-ai-demo --help   # subcommands: review, ingest, serve
 
 ```sh
 uv run case-mgmt-ai-demo review examples/pcoc-buena.json
+uv run case-mgmt-ai-demo review examples/permiso-unico-buena.json
 ```
 
-Prints the Recommendation in Spanish: Approval Score, verdict and Notes with their cited Section IDs. Sections come from a ~10-chunk RC-2023-E fixture (`src/case_mgmt_ai_demo/fixtures/`) until ingestion exists. `[…]` in the fixture marks text the PDF extraction garbles.
+Prints the Recommendation in Spanish: Approval Score, verdict, each Criterion's probability, and Notes with their cited Section IDs. `--selection` lists every Clause with its category. Both Request Types are accepted (PCOC and Permiso Único, new or renewal). Sections come from a 12-chunk RC-2023-E fixture (`src/case_mgmt_ai_demo/fixtures/`) until ingestion exists. `[…]` in the fixture marks text the PDF extraction garbles or drops.
+
+Criteria are curated in `src/case_mgmt_ai_demo/fixtures/criteria/` (one YAML file per Request Type).
 
 Model IDs, the Approval Score cutoff, the Borderline band and paths default in `src/case_mgmt_ai_demo/config.py` and can be overridden with `PRA_*` variables (listed in `.env.example`).

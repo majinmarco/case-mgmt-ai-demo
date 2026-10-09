@@ -1,0 +1,105 @@
+# Criteria for Permiso Único. Drafted by Claude; pending developer review.
+#
+# Each Criterion pins the Clauses that establish it. Those Clauses are always retrieved,
+# always scored against (never set aside by requirement selection), and the Decisions API
+# answers `instructions` over them alone, as a probability of compliance.
+#
+# `application_kinds` limits a Criterion to new requests or to renewals. A renewal covers the
+# licences and certifications only: it does not re-evaluate the authorised use (3.7.1.4(i))
+# and asks for nothing beyond Sección 3.7.1.4 (3.7.1.4(k)(5)).
+request_type: PERMISO_UNICO
+criteria:
+  - id: pu_uso
+    text_es: >-
+      El uso propuesto está permitido ministerialmente en el distrito, o cuenta con una
+      variación en el uso previamente autorizada.
+    text_en: >-
+      The proposed use is allowed in the district as of right (ministerial), or has a
+      previously approved use variation.
+    pinned: ["RC-2023-E:3.7.1.1(f)"]
+    application_kinds: [nueva]
+    instructions: >-
+      ¿Es el uso propuesto un uso permitido ministerialmente en el distrito, o cuenta con una
+      variación en el uso previamente autorizada, como exige la Sección 3.7.1.1(f)?
+
+  - id: pu_legitimacion
+    text_es: >-
+      El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado)
+      con alguno de los documentos de la Sección 2.1.9.5(b).
+    text_en: >-
+      The Applicant shows standing (owner, option-holder or authorised lessee) with one of
+      the documents listed in Sección 2.1.9.5(b).
+    pinned: ["RC-2023-E:2.1.9.5(a)", "RC-2023-E:2.1.9.5(b)"]
+    application_kinds: [nueva]
+    instructions: >-
+      ¿Acredita la solicitud que el proponente es dueño, optante o arrendatario autorizado de
+      la propiedad, con al menos uno de los documentos que enumera la Sección 2.1.9.5(b)?
+
+  - id: pu_componentes
+    text_es: >-
+      La solicitud reúne los componentes del Permiso Único: documento ambiental, certificado de
+      prevención de incendios, licencia sanitaria y demás licencias que requiera el negocio.
+    text_en: >-
+      The request covers the components of a Permiso Único: environmental document, fire
+      prevention certificate, health licence and any other licence the business needs.
+    pinned: ["RC-2023-E:3.7.1.1(b)"]
+    application_kinds: [nueva]
+    instructions: >-
+      ¿Incluye la solicitud los componentes del Permiso Único que enumera la Sección
+      3.7.1.1(b): la certificación de exclusión categórica o documento ambiental aplicable, la
+      certificación para la prevención de incendios, la licencia sanitaria y cualquier otra
+      licencia que requiera la operación del negocio?
+
+  - id: pu_memorial_croquis
+    text_es: >-
+      Se presentan el memorial explicativo, el croquis de la instalación con sus cinco
+      elementos y fotos del interior y exterior.
+    text_en: >-
+      The explanatory memorandum, a site sketch with its five elements, and interior and
+      exterior photos are filed.
+    pinned: ["RC-2023-E:3.7.1.2(b)"]
+    application_kinds: [nueva]
+    instructions: >-
+      ¿Cumple la solicitud los requisitos adicionales de la Sección 3.7.1.2(b): memorial
+      explicativo (uso, empleados, estacionamiento y horario), las licencias que requiera el
+      uso, croquis de la instalación (área, distribución interna, ubicación respecto a la vía de
+      acceso, estacionamiento y dimensiones) y fotos digitales del interior y exterior?
+
+  - id: pu_certificaciones
+    text_es: >-
+      Se acompañan las certificaciones y documentos de la Sección 4.1.4.1(b) que exigen las
+      licencias solicitadas.
+    text_en: >-
+      The certifications and documents of Sección 4.1.4.1(b) that the requested licences call
+      for are attached.
+    pinned: ["RC-2023-E:4.1.4.1(b)"]
+    instructions: >-
+      ¿Acompaña la solicitud las certificaciones y documentos que exige la Sección 4.1.4.1(b)
+      para las licencias solicitadas? Esa Sección no los exige para la Licencia Sanitaria ni
+      para el Certificado de Prevención de Incendios.
+
+  - id: pu_renovacion_plazo
+    text_es: >-
+      La renovación se presentó antes de la expiración, o sin que hayan transcurrido más de dos
+      años desde ella.
+    text_en: >-
+      The renewal was filed before expiry, or no more than two years after it.
+    pinned: ["RC-2023-E:3.7.1.4(f)", "RC-2023-E:3.7.1.4(g)"]
+    application_kinds: [renovacion]
+    instructions: >-
+      ¿Se presentó la renovación antes de la expiración del Permiso Único o, si fue después,
+      sin que hayan transcurrido más de dos (2) años desde la expiración, como exigen los
+      incisos (f) y (g) de la Sección 3.7.1.4?
+
+  - id: pu_renovacion_requisitos
+    text_es: >-
+      La renovación incluye la certificación del dueño u operador de que el uso está conforme
+      al Permiso Único.
+    text_en: >-
+      The renewal includes the owner's or operator's certification that the use conforms to
+      the Permiso Único.
+    pinned: ["RC-2023-E:3.7.1.4(k)"]
+    application_kinds: [renovacion]
+    instructions: >-
+      ¿Cumple la renovación los requisitos de la Sección 3.7.1.4(k), en particular la
+      certificación del dueño u operador de que el uso está conforme al Permiso Único?

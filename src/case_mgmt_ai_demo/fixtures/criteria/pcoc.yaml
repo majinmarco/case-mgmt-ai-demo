@@ -1,0 +1,83 @@
+# Criteria for Permiso de Construcción (PCOC). Drafted by Claude; pending developer review.
+#
+# Each Criterion pins the Clauses that establish it. Those Clauses are always retrieved,
+# always scored against (never set aside by requirement selection), and the Decisions API
+# answers `instructions` over them alone, as a probability of compliance.
+#
+# Sección 2.2.6 (prórroga) has no Criterion: a PCOC Permit Request here is a new request, and
+# an extension is asked on a permit already issued. Requirement selection decides whether its
+# Clauses apply.
+request_type: PCOC
+criteria:
+  - id: pcoc_legitimacion
+    text_es: >-
+      El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado)
+      con alguno de los documentos de la Sección 2.1.9.5(b).
+    text_en: >-
+      The Applicant shows standing (owner, option-holder or authorised lessee) with one of
+      the documents listed in Sección 2.1.9.5(b).
+    pinned: ["RC-2023-E:2.1.9.5(a)", "RC-2023-E:2.1.9.5(b)"]
+    instructions: >-
+      ¿Acredita la solicitud que el proponente es dueño, optante o arrendatario autorizado de
+      la propiedad, con al menos uno de los documentos que enumera la Sección 2.1.9.5(b)?
+
+  - id: pcoc_ambiental
+    text_es: La solicitud incluye la determinación de cumplimiento ambiental.
+    text_en: The request includes the environmental compliance determination.
+    pinned: ["RC-2023-E:2.1.9.2(g)"]
+    instructions: >-
+      ¿Incluye la solicitud la determinación de cumplimiento ambiental correspondiente, como
+      exige la Sección 2.1.9.2(g)?
+
+  - id: pcoc_predio
+    text_es: >-
+      El predio está identificado: foto aérea, ubicación geográfica y número de catastro, con
+      mapa catastral si la información catastral no concuerda con la de la OGPe.
+    text_en: >-
+      The site is identified: aerial photo, geographic location and cadastral number, with a
+      cadastral map when the cadastral records do not match OGPe's.
+    pinned: ["RC-2023-E:2.1.9.2(h)", "RC-2023-E:2.1.9.2(i)", "RC-2023-E:2.1.9.2(j)"]
+    instructions: >-
+      ¿Identifica la solicitud el predio como exigen los incisos (h), (i) y (j) de la Sección
+      2.1.9.2: foto aérea, ubicación geográfica y número de catastro, con mapa catastral si la
+      información catastral no concuerda con la del sistema de la OGPe?
+
+  - id: pcoc_planos
+    text_es: >-
+      Los planos están sellados y firmados por un profesional licenciado, con las
+      certificaciones requeridas, en archivo digital orientado al norte.
+    text_en: >-
+      The plans are sealed and signed by a licensed professional, carry the required
+      certifications, and are filed digitally, oriented north.
+    pinned: ["RC-2023-E:2.1.9.2(k)"]
+    instructions: >-
+      ¿Cumplen los planos con la Sección 2.1.9.2(k): sello y firma del profesional licenciado
+      que los certifica, certificaciones en cada hoja, archivo digital orientado al norte y el
+      documento de certificación de cumplimiento del proyectista?
+
+  - id: pcoc_valor_obra
+    text_es: >-
+      Se certifica el valor estimado de la obra, calculado con las guías de la OGPe o con otro
+      método que no dé un valor menor.
+    text_en: >-
+      The estimated work value is certified, calculated with OGPe's guides or another method
+      that gives no lower value.
+    pinned: ["RC-2023-E:2.1.9.3(a)", "RC-2023-E:2.1.9.3(b)"]
+    instructions: >-
+      ¿Incluye la solicitud la certificación del valor estimado de la obra, calculado según las
+      guías de la OGPe o por otro mecanismo que no resulte en un valor menor, como exige la
+      Sección 2.1.9.3?
+
+  - id: pcoc_parametros
+    text_es: >-
+      El uso está permitido en el distrito y la obra cumple cada parámetro de la Sección
+      2.2.1.3(d) dentro de los límites del distrito.
+    text_en: >-
+      The use is allowed in the district and the work meets every parameter of Sección
+      2.2.1.3(d) within the district's limits.
+    pinned: ["RC-2023-E:2.2.1.3(c)", "RC-2023-E:2.2.1.3(d)"]
+    instructions: >-
+      ¿Está el uso propuesto permitido en el distrito y cumple la obra, dentro de los límites
+      del distrito, cada parámetro de la Sección 2.2.1.3(d): calificación, usos, altura, tamaño
+      del solar, densidad, área de ocupación, área bruta de piso, patios, estacionamiento y área
+      de carga y descarga?

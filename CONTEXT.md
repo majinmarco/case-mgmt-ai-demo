@@ -49,7 +49,7 @@ The model's probability (0–1) that the Permit Request should be approved. A sc
 _Avoid_: Confidence, rating, grade
 
 **Criterion**:
-A single regulatory requirement for a Request Type, tied to the Section(s) that establish it, that the model assesses separately from the overall Approval Score.
+A single regulatory requirement for a Request Type, tied to the Clauses (or whole Sections) that establish it, that the model assesses separately from the overall Approval Score. A Criterion may apply only to new requests or only to renewals.
 _Avoid_: Rule, check, condition
 
 **Note**:

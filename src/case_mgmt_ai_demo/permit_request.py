@@ -6,10 +6,12 @@ A field is here when it lets a request evidence a requirement that applies to it
 the record cannot evidence is judged unmet (CMAWD-18).
 """
 
+from collections.abc import Mapping
+from datetime import date
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
 ApplicantType = Literal["privado", "gobierno", "cooperativa", "sin_fines_de_lucro"]
 ApplicantRole = Literal["dueno", "optante", "arrendatario", "representante", "otro"]
@@ -35,6 +37,32 @@ PcocDocument = Literal[
 WorkValueMethod = Literal["guias_ogpe", "otro_mecanismo"]
 # The professionals who may certify plans under RC-2023-E Sección 2.1.9.2(k).
 PlansProfessional = Literal["ingeniero", "arquitecto", "agrimensor", "arquitecto_paisajista"]
+# The site documents of RC-2023-E Sección 2.1.9.2(h)-(i), Sección 3.7.1.2(b), the environmental
+# document of 3.7.1.1(b)(2), and the certifications and documents of Sección 4.1.4.1(b).
+PermisoUnicoDocument = Literal[
+    "foto_aerea",
+    "ubicacion_geografica",
+    "memorial_explicativo",
+    "croquis",
+    "fotos_instalacion",
+    "exclusion_categorica",
+    "antecedentes_penales",
+    "no_deuda_asume",
+    "no_deuda_crim",
+    "planillas_ingresos",
+    "planillas_ivu",
+    "certificacion_deuda_dh",
+    "certificado_incorporacion",
+    "numero_patronal",
+    "registro_comerciantes",
+    "patente_municipal",
+    "proyeccion_ventas",
+]
+License = Literal["sanitaria", "prevencion_incendios", "bebidas_alcoholicas"]
+# RC-2023-E Sección 3.7.1.1(f): a Permiso Único needs a ministerial use or an approved variation.
+UseAuthorization = Literal["ministerial", "variacion_aprobada", "no_permitido"]
+# A new request, or the renewal of an issued Permiso Único (Sección 3.7.1.4).
+ApplicationKind = Literal["nueva", "renovacion"]
 
 LABELS: dict[str, str] = {
     "privado": "persona privada",
@@ -65,6 +93,29 @@ LABELS: dict[str, str] = {
     "arquitecto": "arquitecto",
     "agrimensor": "agrimensor",
     "arquitecto_paisajista": "arquitecto paisajista",
+    "memorial_explicativo": "memorial explicativo",
+    "croquis": "croquis de la instalación",
+    "fotos_instalacion": "fotos digitales del interior y exterior de la instalación",
+    "exclusion_categorica": (
+        "determinación de cumplimiento ambiental: certificación de exclusión categórica"
+    ),
+    "antecedentes_penales": "certificado de antecedentes penales",
+    "no_deuda_asume": "certificado de no deuda en pensiones alimentarias (ASUME)",
+    "no_deuda_crim": "certificación de no deuda del CRIM (propiedad mueble)",
+    "planillas_ingresos": "certificación de radicación de planillas de ingresos (5 años)",
+    "planillas_ivu": "certificación de radicación de planillas del IVU",
+    "certificacion_deuda_dh": "certificación de deuda del Departamento de Hacienda",
+    "certificado_incorporacion": "certificado de incorporación (Departamento de Estado)",
+    "numero_patronal": "evidencia del número de identificación patronal o seguro social",
+    "registro_comerciantes": "certificación vigente del Registro de Comerciantes",
+    "patente_municipal": "copia de la patente municipal o evidencia de pago",
+    "proyeccion_ventas": "proyección de ventas anual",
+    "sanitaria": "licencia sanitaria",
+    "prevencion_incendios": "certificado de prevención de incendios",
+    "bebidas_alcoholicas": "licencia de bebidas alcohólicas",
+    "ministerial": "uso permitido ministerialmente en el distrito",
+    "variacion_aprobada": "variación en el uso previamente autorizada",
+    "no_permitido": "uso no permitido en el distrito y sin variación autorizada",
 }
 
 
@@ -177,6 +228,10 @@ class PermitRequestCore(BaseModel):
     applicant_type: ApplicantType
     applicant_role: ApplicantRole
     standing_document: StandingDocument | None = None
+    owner_authorization: bool | None = Field(
+        default=None,
+        description="For a lessee or option-holder: the owner authorises the action (2.1.9.5(b)).",
+    )
     municipio: str = Field(min_length=1)
     catastro: str = Field(pattern=r"^\d{3}-\d{3}-\d{3}-\d{2}$")
     catastro_matches_ogpe: bool | None = Field(
@@ -186,13 +241,17 @@ class PermitRequestCore(BaseModel):
 
     def core_fields_es(self) -> dict[str, str]:
         standing = LABELS[self.standing_document] if self.standing_document else "ninguno"
+        role = LABELS[self.applicant_role]
+        if self.owner_authorization is not None:
+            authorized = "autorizado por el" if self.owner_authorization else "sin autorización del"
+            role += f" ({authorized} dueño para la acción propuesta)"
         catastro = f"{self.municipio}, {self.catastro}"
         if self.catastro_matches_ogpe is not None:
             matches = "concuerda" if self.catastro_matches_ogpe else "no concuerda"
             catastro += f" (la información catastral {matches} con el sistema de la OGPe)"
         return {
             "Solicitante": f"{self.applicant_name} ({LABELS[self.applicant_type]})",
-            "Rol del solicitante": LABELS[self.applicant_role],
+            "Rol del solicitante": role,
             "Documento de legitimación activa": standing,
             "Municipio y número de catastro": catastro,
             "Calificación del distrito": self.calificacion,
@@ -201,6 +260,9 @@ class PermitRequestCore(BaseModel):
 
 class PcocPermitRequest(PermitRequestCore):
     """Permiso de Construcción."""
+
+    type_name_es: ClassVar[str] = "Permiso de Construcción"
+    application_kind: ClassVar[ApplicationKind] = "nueva"
 
     request_type: Literal["PCOC"]
     attached_documents: list[PcocDocument]
@@ -244,5 +306,121 @@ class PcocPermitRequest(PermitRequestCore):
         }
 
 
-# Becomes a discriminated union on `request_type` when Permiso Único is added.
-PermitRequest = PcocPermitRequest
+class SiteSketch(BaseModel):
+    """The croquis of RC-2023-E Sección 3.7.1.2(b)(3) and what it shows."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    floor_area_m2: Decimal = Field(gt=0)
+    shows_internal_layout: bool
+    shows_access_road: bool
+    shows_parking: bool
+    shows_dimensions: bool
+
+    def summary_es(self) -> str:
+        shown = {
+            "la distribución interna": self.shows_internal_layout,
+            "la ubicación con respecto a la vía de acceso": self.shows_access_road,
+            "el estacionamiento a proveer": self.shows_parking,
+            "las dimensiones": self.shows_dimensions,
+        }
+        return "; ".join(
+            [f"área del local {_number(self.floor_area_m2)} m²"]
+            + [f"{'incluye' if yes else 'no incluye'} {item}" for item, yes in shown.items()]
+        )
+
+
+class Renewal(BaseModel):
+    """The Permiso Único being renewed, per RC-2023-E Sección 3.7.1.4."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    permit_number: str = Field(min_length=1)
+    expiry_date: date
+    filing_date: date
+    use_conforms_certification: bool = Field(
+        description="The owner's or operator's certification that the use conforms (3.7.1.4(k))."
+    )
+
+    def summary_es(self) -> str:
+        days = (self.filing_date - self.expiry_date).days
+        if days <= 0:
+            timing = f"{-days} días antes de la expiración"
+        else:
+            timing = f"{days} días ({days / 365:.1f} años) después de la expiración"
+        certification = "se acompaña" if self.use_conforms_certification else "no se acompaña"
+        return (
+            f"renovación del Permiso Único {self.permit_number}, que expira el "
+            f"{self.expiry_date.isoformat()}; presentada el {self.filing_date.isoformat()}, "
+            f"{timing}; {certification} la certificación del dueño u operador de que el uso "
+            "está conforme al Permiso Único"
+        )
+
+
+class PermisoUnicoPermitRequest(PermitRequestCore):
+    """Permiso Único: a new request, or the renewal of one already issued."""
+
+    type_name_es: ClassVar[str] = "Permiso Único"
+
+    request_type: Literal["PERMISO_UNICO"]
+    attached_documents: list[PermisoUnicoDocument]
+    proposed_use: str = Field(min_length=1)
+    use_authorization: UseAuthorization
+    employees: int = Field(ge=0)
+    parking_spaces: int = Field(ge=0)
+    required_parking_spaces: int | None = Field(default=None, ge=0)
+    operating_hours: str = Field(min_length=1)
+    licenses_requested: list[License]
+    validity_years: int = Field(ge=1, le=3, description="RC-2023-E Sección 3.7.1.3(a).")
+    declared_fee: Decimal = Field(ge=0)
+    site_sketch: SiteSketch | None = None
+    in_flood_zone: bool | None = Field(default=None, description="RC-2023-E Sección 3.7.1.1(k).")
+    renewal: Renewal | None = None
+
+    @property
+    def application_kind(self) -> ApplicationKind:
+        return "nueva" if self.renewal is None else "renovacion"
+
+    def fields_es(self) -> dict[str, str]:
+        """The request as labelled Spanish fields, as shown to models and Reviewers."""
+        kind = {"nueva": "solicitud nueva", "renovacion": "renovación"}[self.application_kind]
+        licenses = [LABELS[license] for license in self.licenses_requested] or ["ninguna"]
+        documents = "; ".join(LABELS[d] for d in self.attached_documents) or "ninguno"
+        parking = f"{self.parking_spaces} espacios de estacionamiento"
+        if self.required_parking_spaces is not None:
+            parking += f" (requeridos por el distrito {self.required_parking_spaces})"
+        if self.in_flood_zone is None:
+            flood_zone = "no declarada"
+        else:
+            flood_zone = f"el predio {'' if self.in_flood_zone else 'no '}ubica en zona inundable"
+        fields = {
+            "Tipo de solicitud": f"Permiso Único ({kind})",
+            **self.core_fields_es(),
+            "Uso propuesto": f"{self.proposed_use} ({LABELS[self.use_authorization]})",
+            "Empleados / estacionamiento / horario": (
+                f"{self.employees} empleados; {parking}; {self.operating_hours}"
+            ),
+            "Licencias solicitadas": "; ".join(
+                licenses + [f"vigencia solicitada {self.validity_years} años"]
+            ),
+            "Croquis de la instalación": (
+                self.site_sketch.summary_es() if self.site_sketch else "no declarado"
+            ),
+            "Zona inundable": flood_zone,
+            "Documentos adjuntos": documents,
+            "Derechos declarados": f"${self.declared_fee:,}",
+        }
+        if self.renewal:
+            fields["Renovación"] = self.renewal.summary_es()
+        return fields
+
+
+PermitRequest = Annotated[
+    PcocPermitRequest | PermisoUnicoPermitRequest, Field(discriminator="request_type")
+]
+_PERMIT_REQUEST: TypeAdapter[PermitRequest] = TypeAdapter(PermitRequest)
+
+
+def parse_permit_request(raw: Mapping[str, Any]) -> PcocPermitRequest | PermisoUnicoPermitRequest:
+    """Validate raw fields as the Permit Request their `request_type` names."""
+    return _PERMIT_REQUEST.validate_python(raw)

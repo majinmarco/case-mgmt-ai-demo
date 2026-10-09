@@ -21,6 +21,8 @@ VERDICTS_ES = {
     "manual_review": "Sin puntuación — revisión manual",
 }
 
+NOT_ASSESSED = "no evaluado"
+
 CATEGORIES_ES = {
     "aplica": "aplica",
     "tramite_del_sistema": "trámite del sistema",
@@ -100,12 +102,19 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
     set_aside = recommendation.set_aside_count
     considered = len(recommendation.selection) + len(recommendation.unclassified_clause_refs)
     lines = [
-        f"Recomendación — Solicitud {request.request_type} de {request.applicant_name}",
+        f"Recomendación — Solicitud de {request.type_name_es} de {request.applicant_name}",
         f"Puntuación de aprobación: {'sin puntuación' if score is None else f'{score:.2f}'}",
         f"Veredicto: {verdict}",
         f"Incisos evaluados: {considered - set_aside} de {considered} "
         f"({set_aside} descartados; --selection para ver la lista)",
     ]
+    if recommendation.criteria:
+        lines.append("Criterios:")
+        for assessment in recommendation.criteria:
+            probability = assessment.probability
+            shown = NOT_ASSESSED if probability is None else f"{probability:.2f}"
+            criterion = assessment.criterion
+            lines.append(f"  {shown:<{len(NOT_ASSESSED)}}  {criterion.text_es} [{criterion.id}]")
     for ref in recommendation.unclassified_clause_refs:
         lines.append(f"  ⚠ Inciso sin clasificar (se evalúa igualmente): {ref}")
     for ref in recommendation.unknown_clause_refs:

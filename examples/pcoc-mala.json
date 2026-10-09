@@ -1,0 +1,17 @@
+{
+  "request_type": "PCOC",
+  "applicant_name": "José Luis Méndez Colón",
+  "applicant_type": "privado",
+  "applicant_role": "otro",
+  "standing_document": null,
+  "municipio": "Bayamón",
+  "catastro": "098-011-456-07",
+  "calificacion": "R-I (Residencial Intermedio); uso residencial unifamiliar permitido; altura máxima 2 plantas",
+  "attached_documents": [],
+  "work_description": "Construcción de taller de mecánica automotriz de 4 plantas, sin espacios de estacionamiento ni área de carga y descarga; se presenta un croquis a mano sin sello ni firma",
+  "estimated_work_value": null,
+  "floors": 4,
+  "height_m": 15,
+  "gross_floor_area_m2": 1200,
+  "declared_fee": 0
+}

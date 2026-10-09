@@ -1,0 +1,23 @@
+{
+  "request_type": "PCOC",
+  "applicant_name": "María Isabel Rivera Ortiz",
+  "applicant_type": "privado",
+  "applicant_role": "dueno",
+  "standing_document": "escritura_publica",
+  "municipio": "Caguas",
+  "catastro": "254-087-123-45",
+  "calificacion": "R-I (Residencial Intermedio); uso residencial unifamiliar permitido; altura máxima 2 plantas",
+  "attached_documents": [
+    "planos_sellados",
+    "certificacion_valor_obra",
+    "determinacion_cumplimiento_ambiental",
+    "ubicacion_geografica",
+    "foto_aerea"
+  ],
+  "work_description": "Construcción de vivienda unifamiliar de 2 plantas; patios y estacionamientos según la hoja de calificación",
+  "estimated_work_value": 185000,
+  "floors": 2,
+  "height_m": 7.5,
+  "gross_floor_area_m2": 210,
+  "declared_fee": 1850
+}

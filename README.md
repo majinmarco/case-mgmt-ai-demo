@@ -13,4 +13,12 @@ uv run pytest          # real-model tests skipped; RUN_REAL_MODEL_TESTS=1 to inc
 uv run case-mgmt-ai-demo --help   # subcommands: review, ingest, serve
 ```
 
+## Review a Permit Request
+
+```sh
+uv run case-mgmt-ai-demo review examples/pcoc-buena.json
+```
+
+Prints the Recommendation in Spanish: Approval Score, verdict and Notes with their cited Section IDs. Sections come from a ~10-chunk RC-2023-E fixture (`src/case_mgmt_ai_demo/fixtures/`) until ingestion exists. `[…]` in the fixture marks text the PDF extraction garbles.
+
 Model IDs, the Approval Score cutoff, the Borderline band and paths default in `src/case_mgmt_ai_demo/config.py` and can be overridden with `PRA_*` variables (listed in `.env.example`).

@@ -8,7 +8,7 @@ Every number below comes from one run of `--repeat 3 --wording-probe --refusal-p
 
 The Decisions API can produce the Approval Score and Criterion probabilities for Spanish Permit Requests. A clearly good and a clearly bad PCOC request separate widely (0.86 vs 0.00), every call returns the same result, and Criterion answers are confident and correct. The structured-output fallback is not needed and was not built.
 
-One condition carries into the build: **the overall Approval Score is sensitive to small changes in the context**, while the Criterion scores are not. Restoring one clause of one Section excerpt moved the good request from 0.53 to 0.86 (see [Context sensitivity](#context-sensitivity)). Treat the overall score as uncalibrated, and set the cutoff and Borderline band from the 8 curated Permit Requests with the real retrieval output, not with assumed values.
+One condition carries into the build: **the overall Approval Score is sensitive to small changes in the context**, while the Criterion scores are not. Restoring one phrase of one Section excerpt moved the good request from 0.53 to 0.86 (see [Context sensitivity](#context-sensitivity)). Treat the overall score as uncalibrated, and set the cutoff and Borderline band from the 8 curated Permit Requests with the real retrieval output, not with assumed values.
 
 ## Setup
 
@@ -38,7 +38,7 @@ Yes: 0.86 vs 0.00 in Spanish and 0.90 vs 0.00 in English. The `real_model` test 
 
 ### Context sensitivity
 
-My first draft of the script had a mis-transcribed 2.1.9.5(a): it dropped the clause "…por el Jefe de la Agencia o su representante autorizado en caso de un proyecto público." and added a full stop after "JP". That was the only difference. These numbers come from the earlier draft run, and that version of the excerpt was not committed.
+My first draft of the script had a mis-transcribed 2.1.9.5(a): it dropped the phrase "…por el Jefe de la Agencia o su representante autorizado en caso de un proyecto público." and added a full stop after "JP". That was the only difference. These numbers come from the earlier draft run, and that version of the excerpt was not committed.
 
 | | Draft excerpt | Corrected excerpt |
 |---|---|---|

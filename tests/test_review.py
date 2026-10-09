@@ -165,7 +165,7 @@ def test_note_citing_a_section_that_was_not_retrieved_is_flagged(retriever):
 
 
 def test_citing_a_sibling_section_with_a_shared_prefix_is_flagged(retriever):
-    # 2.1.9.3 was retrieved; 2.1.9.30 is a different Section, not an inciso of it.
+    # 2.1.9.3 was retrieved; 2.1.9.30 is a different Section, not a clause of it.
     sibling = DraftNote(text="...", section_ids=["RC-2023-E:2.1.9.30"], curable=False)
 
     recommendation = pipeline(

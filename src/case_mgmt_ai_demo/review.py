@@ -204,7 +204,7 @@ def _error_es(error: ErrorDetails) -> str:
 
 
 def _was_retrieved(cited: str, retrieved: set[str]) -> bool:
-    """A citation may go down to inciso: 'RC-2023-E:2.1.9.2(m)' matches 'RC-2023-E:2.1.9.2'."""
+    """A citation may go down to a clause: 'RC-2023-E:2.1.9.2(m)' matches 'RC-2023-E:2.1.9.2'."""
     return cited in retrieved or cited.split("(", 1)[0] in retrieved
 
 

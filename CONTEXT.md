@@ -31,8 +31,12 @@ The body of regulatory documents the assistant reviews against; today, the Regla
 _Avoid_: Documentation, docs, reglamentación, regulations
 
 **Section**:
-A citable unit of the Reglamento, identified by its official number (e.g. "Sección 3.7.1.2(b)" or "Anejo A, 6(a)").
-_Avoid_: Chunk (that is a storage concept), article, clause
+A citable unit of the Reglamento, identified by its official number (e.g. "Sección 3.7.1.2" or "Anejo A, 6").
+_Avoid_: Chunk (that is a storage concept), article
+
+**Clause**:
+A lettered paragraph within a Section, the smallest citable unit that states a single requirement (e.g. clause (k) of Sección 2.1.9.2, cited as `RC-2023-E:2.1.9.2(k)`). The Reglamento calls it an *inciso*; Spanish content keeps that word.
+_Avoid_: inciso (in English text), subsection, paragraph
 
 ### The outcome
 

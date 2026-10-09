@@ -25,7 +25,7 @@ USD_PER_M_INPUT_TOKENS = 0.10
 USD_PER_M_OUTPUT_TOKENS = 0.0
 
 # Excerpts from RC-2023-E (pymupdf text, pp. 78-81 and 92-93), joined across line breaks and
-# trimmed to the incisos a PCOC review needs; 2.1.9.2(g) keeps only its first sentence and
+# trimmed to the clauses a PCOC review needs; 2.1.9.2(g) keeps only its first sentence and
 # 2.1.9.5(a) omits a sentence the PDF text extraction garbles. Otherwise word for word.
 SECTIONS = {
     "RC-2023-E:2.1.9.2": """SECCIÓN 2.1.9.2 REQUISITOS DE PRESENTACIÓN

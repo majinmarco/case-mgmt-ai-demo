@@ -25,7 +25,7 @@ class Chunk(BaseModel):
     parents: list[str] = Field(description="e.g. ['Tomo III', 'Capítulo 3.7', 'Regla 3.7.1']")
     page_start: int = Field(ge=1, description="Source PDF page (1-based).")
     page_end: int = Field(ge=1)
-    text: str = Field(min_length=1, description="Full Section text, incisos preserved.")
+    text: str = Field(min_length=1, description="Full Section text, clauses preserved.")
     part: str | None = Field(
         default=None, pattern=r"^\d+-of-\d+$", description="'1-of-N' for a split Section."
     )

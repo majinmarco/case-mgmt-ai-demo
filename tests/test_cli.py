@@ -180,6 +180,17 @@ def test_review_prints_every_api_error_with_its_step_and_subject(request_file, c
     ) in out
 
 
+def test_review_names_api_errors_as_the_reason_for_manual_review(request_file, capsys):
+    failure = ModelFailure(step="write_notes", message="gpt-6-luna: Request timed out.")
+    pipeline = FakePipeline(recommendation(verdict="manual_review", errors=[failure]))
+
+    main(["review", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert "Puntuación de aprobación: 0.86" in out
+    assert "Veredicto: Revisión manual (falló una llamada a la API; ver abajo)\n" in out
+
+
 def test_review_without_api_errors_prints_no_errors_block(request_file, capsys):
     main(["review", str(request_file)], pipeline=FakePipeline(recommendation()))
 

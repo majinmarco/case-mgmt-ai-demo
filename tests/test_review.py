@@ -1038,6 +1038,7 @@ def test_a_section_validator_error_keeps_the_section_and_is_recorded(retriever):
     # Kept rather than dropped: its requirements are still scored.
     assert clause_text("RC-2023-E:2.1.9.3(a)") in all_inputs(decisions)
     assert recommendation.approval_score == 0.8
+    assert recommendation.verdict == "manual_review"
     [error] = recommendation.errors
     assert (error.step, error.subject) == ("validate_sections", "RC-2023-E:2.1.9.3")
     assert "tiempo de espera" in error.message
@@ -1053,11 +1054,12 @@ def test_a_selector_error_leaves_every_clause_unclassified_and_kept(pcoc_retriev
     assert recommendation.selection == []
     assert len(recommendation.unclassified_clause_refs) == 23 + 3 + 6
     assert clause_text("RC-2023-E:2.1.9.2(a)") in all_inputs(decisions)
+    assert recommendation.verdict == "manual_review"
     [error] = recommendation.errors
     assert (error.step, error.subject) == ("select_requirements", None)
 
 
-def test_a_notes_error_keeps_the_score_and_is_recorded(retriever):
+def test_a_notes_error_keeps_the_score_but_means_manual_review(retriever):
     notes_llm = FakeNotesLLM(ModelError("Notes model: límite de uso"))
 
     recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
@@ -1065,10 +1067,21 @@ def test_a_notes_error_keeps_the_score_and_is_recorded(retriever):
     )
 
     assert recommendation.notes == []
-    assert (recommendation.approval_score, recommendation.verdict) == (0.86, "approve")
+    assert (recommendation.approval_score, recommendation.verdict) == (0.86, "manual_review")
     [error] = recommendation.errors
     assert (error.step, error.subject, error.message) == (
         "write_notes",
         None,
         "Notes model: límite de uso",
     )
+
+
+def test_a_model_error_is_never_borderline_even_with_a_score_in_the_band(retriever):
+    validator = FakeSectionValidator(failing=frozenset({"RC-2023-E:2.1.9.3"}))
+
+    recommendation = pipeline(
+        FakeDecisions(default=0.55), FakeNotesLLM([]), retriever, validator=validator
+    ).review(GOOD_PCOC)
+
+    assert (recommendation.approval_score, recommendation.verdict) == (0.55, "manual_review")
+    assert not recommendation.borderline

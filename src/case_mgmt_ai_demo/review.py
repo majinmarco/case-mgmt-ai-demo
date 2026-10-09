@@ -317,11 +317,14 @@ class ReviewPipeline:
         """Review a Permit Request given as raw fields; raises InvalidPermitRequest."""
         state = ReviewState(**self._graph.invoke({"raw": raw}))
         score = state["approval_score"]
+        errors = state.get("errors", [])
+        verdict = self._verdict(score, errors)
         return Recommendation(
             request=state["request"],
             approval_score=score,
-            verdict=self._verdict(score),
-            borderline=score is not None
+            verdict=verdict,
+            borderline=verdict != "manual_review"
+            and score is not None
             and self._settings.borderline_low <= score <= self._settings.borderline_high,
             requirements=state["requirements"],
             notes=state["notes"],
@@ -330,11 +333,12 @@ class ReviewPipeline:
             selection=state["selection"],
             unclassified_clause_refs=state["unclassified_clause_refs"],
             unknown_clause_refs=state["unknown_clause_refs"],
-            errors=state.get("errors", []),
+            errors=errors,
         )
 
-    def _verdict(self, score: float | None) -> Verdict:
-        if score is None:
+    def _verdict(self, score: float | None, errors: list[ModelFailure]) -> Verdict:
+        # A failed model call leaves the score resting on a guess, so a Reviewer decides.
+        if score is None or errors:
             return "manual_review"
         return "approve" if score >= self._settings.approval_cutoff else "not_approve"
 

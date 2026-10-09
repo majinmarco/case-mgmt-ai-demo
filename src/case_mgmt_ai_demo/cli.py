@@ -97,6 +97,8 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
     request = recommendation.request
     score = recommendation.approval_score
     verdict = VERDICTS_ES[recommendation.verdict]
+    if recommendation.verdict == "manual_review" and recommendation.errors:
+        verdict = "Revisión manual (falló una llamada a la API; ver abajo)"
     if recommendation.borderline:
         verdict += " (caso límite: revisar con detenimiento)"
     set_aside = recommendation.set_aside_count

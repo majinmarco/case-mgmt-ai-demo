@@ -23,6 +23,7 @@ def test_defaults_use_design_models_and_thresholds():
     assert settings.decisions_api_model == "gpt-6-luna"
     assert settings.notes_model == "gpt-6-luna"
     assert settings.selector_model == "gpt-6-luna"
+    assert settings.section_validator_model == "gpt-6-luna"
     assert settings.embedding_model == "text-embedding-3-large"
     assert settings.approval_cutoff == 0.5
     assert (settings.borderline_low, settings.borderline_high) == (0.4, 0.6)
@@ -43,6 +44,7 @@ def test_paths_follow_overridden_data_dir(monkeypatch):
 def test_environment_overrides_defaults(monkeypatch):
     monkeypatch.setenv("PRA_DECISIONS_API_MODEL", "gpt-other")
     monkeypatch.setenv("PRA_SELECTOR_MODEL", "gpt-selector")
+    monkeypatch.setenv("PRA_SECTION_VALIDATOR_MODEL", "gpt-validator")
     monkeypatch.setenv("PRA_APPROVAL_CUTOFF", "0.7")
     monkeypatch.setenv("PRA_BORDERLINE_LOW", "0.65")
     monkeypatch.setenv("PRA_BORDERLINE_HIGH", "0.75")
@@ -52,6 +54,7 @@ def test_environment_overrides_defaults(monkeypatch):
 
     assert settings.decisions_api_model == "gpt-other"
     assert settings.selector_model == "gpt-selector"
+    assert settings.section_validator_model == "gpt-validator"
     assert settings.approval_cutoff == 0.7
     assert (settings.borderline_low, settings.borderline_high) == (0.65, 0.75)
     assert settings.data_dir == Path("/tmp/pra")

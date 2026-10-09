@@ -101,20 +101,25 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
         verdict += " (caso límite: revisar con detenimiento)"
     set_aside = recommendation.set_aside_count
     considered = len(recommendation.selection) + len(recommendation.unclassified_clause_refs)
+    shown_score = "sin puntuación" if score is None else f"{score:.2f}"
+    if weakest := recommendation.weakest_requirement:
+        shown_score += f" (requisito más débil: {weakest.id})"
+    not_applicable = recommendation.sections_not_applicable
     lines = [
         f"Recomendación — Solicitud de {request.type_name_es} de {request.applicant_name}",
-        f"Puntuación de aprobación: {'sin puntuación' if score is None else f'{score:.2f}'}",
+        f"Puntuación de aprobación: {shown_score}",
         f"Veredicto: {verdict}",
+        f"Secciones recuperadas: {len(recommendation.section_relevance)} "
+        f"({len(not_applicable)} no aplica; --selection para ver por qué)",
         f"Incisos evaluados: {considered - set_aside} de {considered} "
         f"({set_aside} descartados; --selection para ver la lista)",
     ]
-    if recommendation.criteria:
-        lines.append("Criterios:")
-        for assessment in recommendation.criteria:
-            probability = assessment.probability
+    if recommendation.requirements:
+        lines.append("Requisitos:")
+        for requirement in recommendation.requirements:
+            probability = requirement.probability
             shown = NOT_ASSESSED if probability is None else f"{probability:.2f}"
-            criterion = assessment.criterion
-            lines.append(f"  {shown:<{len(NOT_ASSESSED)}}  {criterion.text_es} [{criterion.id}]")
+            lines.append(f"  {shown:<{len(NOT_ASSESSED)}}  {requirement.text_es} [{requirement.id}]")
     for ref in recommendation.unclassified_clause_refs:
         lines.append(f"  ⚠ Inciso sin clasificar (se evalúa igualmente): {ref}")
     for ref in recommendation.unknown_clause_refs:
@@ -125,9 +130,12 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
         lines.append(f"  {number}. {note.text} [{', '.join(note.section_ids)}]{curable}")
         for section_id in note.unretrieved_section_ids:
             lines.append(
-                f"     ⚠ Cita no verificada: {section_id} no está entre las Secciones recuperadas"
+                f"     ⚠ Cita no verificada: {section_id} no está entre las Secciones que aplican"
             )
     if show_selection:
+        if not_applicable:
+            lines += ["", "Secciones que no aplican:"]
+            lines += [f"  {r.section_id}: {r.reason}" for r in not_applicable]
         width = max(map(len, CATEGORIES_ES.values()))
         lines += ["", "Selección de incisos:"]
         for selection in recommendation.selection:

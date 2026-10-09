@@ -11,9 +11,11 @@ from case_mgmt_ai_demo.review import (
     ClauseCategory,
     ClauseSelection,
     DraftNote,
+    FixedCategory,
     InvalidPermitRequest,
     MissingPinnedClause,
     ReviewPipeline,
+    SectionRelevance,
 )
 
 GOOD_PCOC = {
@@ -67,13 +69,48 @@ RENEWAL = {
 
 
 class FakeDecisions:
-    def __init__(self, probabilities: Mapping[str, float | None]):
-        self.probabilities = probabilities
+    """Answers each named question from `probabilities`, else with `default`."""
+
+    def __init__(
+        self,
+        probabilities: Mapping[str, float | None] | None = None,
+        default: float | None = 0.9,
+    ):
+        self.probabilities = probabilities or {}
+        self.default = default
         self.calls: list[tuple[str, dict[str, str]]] = []
 
     def predicates(self, input: str, questions: Mapping[str, str]) -> dict[str, float | None]:
         self.calls.append((input, dict(questions)))
-        return {name: self.probabilities[name] for name in questions}
+        return {name: self.probabilities.get(name, self.default) for name in questions}
+
+
+def all_inputs(decisions: FakeDecisions) -> str:
+    """Every input the Decisions API was given, joined: what the Requirements were assessed on."""
+    return "\n\n".join(input for input, _ in decisions.calls)
+
+
+def call_for(decisions: FakeDecisions, question: str) -> tuple[str, dict[str, str]]:
+    [call] = [call for call in decisions.calls if question in call[1]]
+    return call
+
+
+class FakeSectionValidator:
+    """Every Section applies unless listed in `not_applicable` (Section ID -> reason)."""
+
+    def __init__(self, not_applicable: Mapping[str, str] | None = None):
+        self.not_applicable = not_applicable or {}
+        self.calls: list[tuple[list[Chunk], PermitRequest]] = []
+
+    def validate(self, chunks: list[Chunk], request: PermitRequest) -> SectionRelevance:
+        self.calls.append((chunks, request))
+        section_id = chunks[0].section_id
+        reason = self.not_applicable.get(section_id)
+        return SectionRelevance(
+            section_id=section_id,
+            applies=reason is None,
+            reason=reason or f"Aplica: {section_id}",
+        )
 
 
 class FakeNotesLLM:
@@ -141,7 +178,7 @@ VALUE_NOTE = DraftNote(
 
 
 def pipeline(
-    decisions, notes_llm, retriever, selector=None, fixed=(), criteria=()
+    decisions, notes_llm, retriever, selector=None, fixed=(), criteria=(), validator=None
 ) -> ReviewPipeline:
     settings = Settings(approval_cutoff=0.5, borderline_low=0.4, borderline_high=0.6)
     return ReviewPipeline(
@@ -149,6 +186,7 @@ def pipeline(
         notes_llm,
         retriever,
         selector or FakeSelector(),
+        validator or FakeSectionValidator(),
         settings,
         fixed=fixed,
         criteria=criteria,
@@ -172,7 +210,7 @@ def retriever():
 
 
 def test_good_request_gets_approve_recommendation_with_cited_notes(retriever):
-    decisions = FakeDecisions({"aprobacion": 0.86})
+    decisions = FakeDecisions(default=0.86)
     notes_llm = FakeNotesLLM([STANDING_NOTE, VALUE_NOTE])
 
     recommendation = pipeline(decisions, notes_llm, retriever).review(GOOD_PCOC)
@@ -186,15 +224,23 @@ def test_good_request_gets_approve_recommendation_with_cited_notes(retriever):
     assert recommendation.retrieved_section_ids == ["RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5"]
 
 
-def test_decisions_api_is_asked_only_the_overall_predicate_over_sections_and_request(retriever):
-    decisions = FakeDecisions({"aprobacion": 0.86})
+def test_each_section_is_asked_over_its_own_applicable_clauses_and_the_request(retriever):
+    decisions = FakeDecisions(default=0.86)
 
     pipeline(decisions, FakeNotesLLM([VALUE_NOTE]), retriever).review(GOOD_PCOC)
 
-    [(input, questions)] = decisions.calls
-    assert list(questions) == ["aprobacion"]
+    assert [list(questions) for _, questions in decisions.calls] == [
+        ["seccion_2_1_9_3"],
+        ["seccion_2_1_9_5"],
+    ]
+    input, questions = call_for(decisions, "seccion_2_1_9_5")
+    assert questions["seccion_2_1_9_5"] == (
+        "¿Cumple esta Solicitud de Permiso de Construcción con los requisitos citados de la "
+        "Sección 2.1.9.5 del Reglamento?"
+    )
     assert "[RC-2023-E:2.1.9.5]" in input
     assert "Tendrá que incluirse evidencia fehaciente" in input
+    assert clause_text("RC-2023-E:2.1.9.3(a)") not in input
     assert "María Isabel Rivera Ortiz" in input
     assert "254-087-123-45" in input
 
@@ -202,7 +248,7 @@ def test_decisions_api_is_asked_only_the_overall_predicate_over_sections_and_req
 def test_notes_prompt_carries_sections_request_and_score(retriever):
     notes_llm = FakeNotesLLM([VALUE_NOTE])
 
-    pipeline(FakeDecisions({"aprobacion": 0.86}), notes_llm, retriever).review(GOOD_PCOC)
+    pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(GOOD_PCOC)
 
     [prompt] = notes_llm.prompts
     assert "[RC-2023-E:2.1.9.3]" in prompt
@@ -221,7 +267,7 @@ def test_notes_prompt_carries_sections_request_and_score(retriever):
 )
 def test_invalid_intake_is_rejected_before_any_model_is_called(retriever, field, value):
     raw = copy.deepcopy(GOOD_PCOC) | {field: value}
-    decisions = FakeDecisions({"aprobacion": 0.86})
+    decisions = FakeDecisions(default=0.86)
     notes_llm = FakeNotesLLM([VALUE_NOTE])
 
     with pytest.raises(InvalidPermitRequest) as error:
@@ -235,7 +281,7 @@ def test_missing_required_field_is_invalid_intake(retriever):
     raw = {k: v for k, v in GOOD_PCOC.items() if k != "work_description"}
 
     with pytest.raises(InvalidPermitRequest, match="work_description"):
-        pipeline(FakeDecisions({}), FakeNotesLLM(), retriever).review(raw)
+        pipeline(FakeDecisions(), FakeNotesLLM(), retriever).review(raw)
 
 
 def test_note_citing_a_section_that_was_not_retrieved_is_flagged(retriever):
@@ -246,7 +292,7 @@ def test_note_citing_a_section_that_was_not_retrieved_is_flagged(retriever):
     )
     notes_llm = FakeNotesLLM([STANDING_NOTE, stray])
 
-    recommendation = pipeline(FakeDecisions({"aprobacion": 0.86}), notes_llm, retriever).review(
+    recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
         GOOD_PCOC
     )
 
@@ -261,16 +307,16 @@ def test_citing_a_sibling_section_with_a_shared_prefix_is_flagged(retriever):
     sibling = DraftNote(text="...", section_ids=["RC-2023-E:2.1.9.30"], curable=False)
 
     recommendation = pipeline(
-        FakeDecisions({"aprobacion": 0.86}), FakeNotesLLM([sibling]), retriever
+        FakeDecisions(default=0.86), FakeNotesLLM([sibling]), retriever
     ).review(GOOD_PCOC)
 
     assert recommendation.notes[0].unretrieved_section_ids == ["RC-2023-E:2.1.9.30"]
 
 
-def test_refused_approval_predicate_means_manual_review_but_notes_are_still_written(retriever):
+def test_every_requirement_refused_means_manual_review_but_notes_are_still_written(retriever):
     notes_llm = FakeNotesLLM([VALUE_NOTE])
 
-    recommendation = pipeline(FakeDecisions({"aprobacion": None}), notes_llm, retriever).review(
+    recommendation = pipeline(FakeDecisions(default=None), notes_llm, retriever).review(
         GOOD_PCOC
     )
 
@@ -279,6 +325,36 @@ def test_refused_approval_predicate_means_manual_review_but_notes_are_still_writ
     assert not recommendation.borderline
     assert len(recommendation.notes) == 1
     assert "sin puntuación" in notes_llm.prompts[0]
+
+
+def test_one_refused_requirement_means_no_score_and_the_others_are_kept(retriever):
+    decisions = FakeDecisions({"seccion_2_1_9_3": None}, default=0.9)
+
+    recommendation = pipeline(decisions, FakeNotesLLM([]), retriever).review(GOOD_PCOC)
+
+    assert recommendation.approval_score is None
+    assert recommendation.verdict == "manual_review"
+    assert [(c.id, c.probability) for c in recommendation.requirements] == [
+        ("seccion_2_1_9_3", None),
+        ("seccion_2_1_9_5", 0.9),
+    ]
+
+
+def test_approval_score_is_the_lowest_requirement_probability(pcoc_retriever):
+    decisions = FakeDecisions(
+        {"pcoc_parametros": 0.62, "seccion_2_1_9_3": 0.55, "pcoc_legitimacion": 0.97},
+        default=0.9,
+    )
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, criteria=CRITERIA
+    ).review(GOOD_PCOC)
+
+    assert recommendation.approval_score == 0.55
+    assert recommendation.weakest_requirement is not None
+    assert recommendation.weakest_requirement.id == "seccion_2_1_9_3"
+    assert recommendation.verdict == "approve"
+    assert recommendation.borderline
 
 
 @pytest.mark.parametrize(
@@ -294,7 +370,7 @@ def test_refused_approval_predicate_means_manual_review_but_notes_are_still_writ
 )
 def test_verdict_follows_cutoff_and_borderline_band(retriever, score, verdict, borderline):
     recommendation = pipeline(
-        FakeDecisions({"aprobacion": score}), FakeNotesLLM([VALUE_NOTE]), retriever
+        FakeDecisions(default=score), FakeNotesLLM([VALUE_NOTE]), retriever
     ).review(GOOD_PCOC)
 
     assert (recommendation.verdict, recommendation.borderline) == (verdict, borderline)
@@ -329,7 +405,7 @@ def test_verdict_follows_cutoff_and_borderline_band(retriever, score, verdict, b
 )
 def test_invalid_intake_errors_are_in_spanish(retriever, raw, message):
     with pytest.raises(InvalidPermitRequest) as error:
-        pipeline(FakeDecisions({}), FakeNotesLLM(), retriever).review(raw)
+        pipeline(FakeDecisions(), FakeNotesLLM(), retriever).review(raw)
 
     assert any(m.startswith(message) for m in error.value.errors), error.value.errors
 
@@ -350,7 +426,7 @@ def pcoc_retriever():
 def test_selector_is_shown_every_retrieved_clause_and_the_request(pcoc_retriever):
     selector = FakeSelector()
 
-    pipeline(FakeDecisions({"aprobacion": 0.7}), FakeNotesLLM([]), pcoc_retriever, selector).review(
+    pipeline(FakeDecisions(default=0.7), FakeNotesLLM([]), pcoc_retriever, selector).review(
         GOOD_PCOC
     )
 
@@ -362,40 +438,41 @@ def test_selector_is_shown_every_retrieved_clause_and_the_request(pcoc_retriever
 
 
 def test_only_aplica_clauses_reach_decide_word_for_word_under_their_section(pcoc_retriever):
-    decisions = FakeDecisions({"aprobacion": 0.7})
+    decisions = FakeDecisions(default=0.7)
 
     pipeline(decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(PROCEDURAL)).review(
         GOOD_PCOC
     )
 
-    [(input, _)] = decisions.calls
+    input = all_inputs(decisions)
     for ref in PROCEDURAL:
         assert clause_text(ref) not in input
     for ref in ["RC-2023-E:2.1.9.2(k)", "RC-2023-E:2.1.9.2(m)", "RC-2023-E:2.1.9.5(b)"]:
         assert clause_text(ref) in input
     assert "1. Escritura pública.\n2. Contrato de arrendamiento." in input
-    # Both parts of 2.1.9.2 sit under one heading, ahead of the request fields.
-    assert input.count("[RC-2023-E:2.1.9.2] REQUISITOS DE PRESENTACIÓN") == 1
-    assert input.index(clause_text("RC-2023-E:2.1.9.2(w)")) < input.index("[RC-2023-E:2.1.9.3]")
-    assert input.index("[RC-2023-E:2.1.9.5]") < input.index("SOLICITUD DE PERMISO")
+    # Both parts of 2.1.9.2 sit under one heading in one Requirement, ahead of the request fields.
+    filing, _ = call_for(decisions, "seccion_2_1_9_2")
+    assert filing.count("[RC-2023-E:2.1.9.2] REQUISITOS DE PRESENTACIÓN") == 1
+    assert clause_text("RC-2023-E:2.1.9.2(k)") in filing
+    assert filing.index(clause_text("RC-2023-E:2.1.9.2(w)")) < filing.index("SOLICITUD DE PERMISO")
 
 
 def test_an_applicable_requirement_the_request_omits_stays_in_the_decide_input(pcoc_retriever):
     # No value certification attached and no value declared: 2.1.9.3(a) is a deficiency.
     raw = GOOD_PCOC | {"attached_documents": ["planos_sellados"], "estimated_work_value": None}
-    decisions = FakeDecisions({"aprobacion": 0.2})
+    decisions = FakeDecisions(default=0.2)
 
     pipeline(decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(PROCEDURAL)).review(raw)
 
-    [(input, _)] = decisions.calls
+    input = all_inputs(decisions)
     assert clause_text("RC-2023-E:2.1.9.3(a)") in input
 
 
-def test_write_notes_still_receives_the_full_retrieved_sections(pcoc_retriever):
+def test_write_notes_receives_the_full_applicable_sections(pcoc_retriever):
     notes_llm = FakeNotesLLM([])
 
     pipeline(
-        FakeDecisions({"aprobacion": 0.7}), notes_llm, pcoc_retriever, FakeSelector(PROCEDURAL)
+        FakeDecisions(default=0.7), notes_llm, pcoc_retriever, FakeSelector(PROCEDURAL)
     ).review(GOOD_PCOC)
 
     [prompt] = notes_llm.prompts
@@ -405,7 +482,7 @@ def test_write_notes_still_receives_the_full_retrieved_sections(pcoc_retriever):
 
 def test_recommendation_carries_the_selection_with_reasons_in_reglamento_order(pcoc_retriever):
     recommendation = pipeline(
-        FakeDecisions({"aprobacion": 0.7}),
+        FakeDecisions(default=0.7),
         FakeNotesLLM([]),
         pcoc_retriever,
         FakeSelector(PROCEDURAL),
@@ -425,7 +502,7 @@ def test_unknown_clause_refs_are_dropped_and_reported(pcoc_retriever):
     selector = FakeSelector(PROCEDURAL, extra=(invented,))
 
     recommendation = pipeline(
-        FakeDecisions({"aprobacion": 0.7}), FakeNotesLLM([]), pcoc_retriever, selector
+        FakeDecisions(default=0.7), FakeNotesLLM([]), pcoc_retriever, selector
     ).review(GOOD_PCOC)
 
     assert "RC-2023-E:2.1.9.2(z)" not in {s.ref for s in recommendation.selection}
@@ -433,7 +510,7 @@ def test_unknown_clause_refs_are_dropped_and_reported(pcoc_retriever):
 
 
 def test_a_clause_the_selector_left_out_is_reported_and_kept_for_decide(pcoc_retriever):
-    decisions = FakeDecisions({"aprobacion": 0.7})
+    decisions = FakeDecisions(default=0.7)
     selector = FakeSelector(PROCEDURAL, omit=frozenset({"RC-2023-E:2.1.9.3(b)"}))
 
     recommendation = pipeline(decisions, FakeNotesLLM([]), pcoc_retriever, selector).review(
@@ -441,13 +518,13 @@ def test_a_clause_the_selector_left_out_is_reported_and_kept_for_decide(pcoc_ret
     )
 
     assert recommendation.unclassified_clause_refs == ["RC-2023-E:2.1.9.3(b)"]
-    [(input, _)] = decisions.calls
+    input = all_inputs(decisions)
     assert clause_text("RC-2023-E:2.1.9.3(b)") in input
 
 
 def test_a_clause_classified_twice_keeps_its_first_classification(pcoc_retriever):
     again = ClauseSelection(ref="RC-2023-E:2.1.9.2(a)", category="aplica", reason="otra vez")
-    decisions = FakeDecisions({"aprobacion": 0.7})
+    decisions = FakeDecisions(default=0.7)
 
     recommendation = pipeline(
         decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(PROCEDURAL, extra=(again,))
@@ -456,10 +533,10 @@ def test_a_clause_classified_twice_keeps_its_first_classification(pcoc_retriever
     assert [s.category for s in recommendation.selection if s.ref == "RC-2023-E:2.1.9.2(a)"] == [
         "tramite_del_sistema"
     ]
-    assert clause_text("RC-2023-E:2.1.9.2(a)") not in decisions.calls[0][0]
+    assert clause_text("RC-2023-E:2.1.9.2(a)") not in all_inputs(decisions)
 
 
-FIXED_COMPLETENESS = ClauseSelection(
+FIXED_COMPLETENESS = FixedCategory(
     ref="RC-2023-E:2.1.9.2(m)",
     category="tramite_del_sistema",
     reason="Fijado: la completitud se juzga por los requisitos específicos.",
@@ -470,7 +547,7 @@ def test_a_fixed_clause_is_not_shown_to_the_selector_and_keeps_its_configured_ca
     pcoc_retriever,
 ):
     selector = FakeSelector()
-    decisions = FakeDecisions({"aprobacion": 0.7})
+    decisions = FakeDecisions(default=0.7)
 
     recommendation = pipeline(
         decisions, FakeNotesLLM([]), pcoc_retriever, selector, fixed=[FIXED_COMPLETENESS]
@@ -486,14 +563,14 @@ def test_a_fixed_clause_is_not_shown_to_the_selector_and_keeps_its_configured_ca
         "RC-2023-E:2.1.9.2(n)",
     ]
     assert recommendation.unclassified_clause_refs == []
-    assert clause_text("RC-2023-E:2.1.9.2(m)") not in decisions.calls[0][0]
+    assert clause_text("RC-2023-E:2.1.9.2(m)") not in all_inputs(decisions)
 
 
 def test_a_fixed_category_wins_over_the_selector(pcoc_retriever):
     stray = ClauseSelection(ref="RC-2023-E:2.1.9.2(m)", category="aplica", reason="del modelo")
 
     recommendation = pipeline(
-        FakeDecisions({"aprobacion": 0.7}),
+        FakeDecisions(default=0.7),
         FakeNotesLLM([]),
         pcoc_retriever,
         FakeSelector(extra=(stray,)),
@@ -509,7 +586,7 @@ def test_a_fixed_category_wins_over_the_selector(pcoc_retriever):
 def test_a_fixed_category_for_a_clause_that_was_not_retrieved_is_ignored(retriever):
     # `retriever` holds 2.1.9.3 and 2.1.9.5 only, so the 2.1.9.2(m) category has nothing to apply to.
     recommendation = pipeline(
-        FakeDecisions({"aprobacion": 0.7}),
+        FakeDecisions(default=0.7),
         FakeNotesLLM([]),
         retriever,
         fixed=[FIXED_COMPLETENESS],
@@ -556,13 +633,8 @@ PU_RENEWAL_DEADLINE = Criterion(
 CRITERIA = [PCOC_STANDING, PCOC_PARAMETERS, PU_USE, PU_RENEWAL_DEADLINE]
 
 
-def call_for(decisions: FakeDecisions, question: str) -> tuple[str, dict[str, str]]:
-    [call] = [call for call in decisions.calls if question in call[1]]
-    return call
-
-
 def criterion_probabilities(**probabilities: float | None) -> FakeDecisions:
-    return FakeDecisions({"aprobacion": 0.7} | probabilities)
+    return FakeDecisions(probabilities, default=0.7)
 
 
 def test_pinned_sections_are_retrieved_even_when_the_retriever_misses_them():
@@ -580,8 +652,8 @@ def test_pinned_sections_are_retrieved_even_when_the_retriever_misses_them():
         "RC-2023-E:2.1.9.5",
         "RC-2023-E:2.2.1.3",
     ]
-    overall, _ = call_for(decisions, "aprobacion")
-    assert clause_text("RC-2023-E:2.1.9.5(b)") in overall
+    scored = all_inputs(decisions)
+    assert clause_text("RC-2023-E:2.1.9.5(b)") in scored
 
 
 def test_a_pinned_section_the_retriever_found_is_not_repeated(pcoc_retriever):
@@ -611,9 +683,9 @@ def test_pinned_clauses_reach_decide_even_when_the_selector_would_set_them_aside
         decisions, FakeNotesLLM([]), pcoc_retriever, selector, criteria=CRITERIA
     ).review(GOOD_PCOC)
 
-    overall, _ = call_for(decisions, "aprobacion")
-    assert clause_text("RC-2023-E:2.1.9.5(b)") in overall
-    assert clause_text("RC-2023-E:2.2.1.3(d)") in overall
+    scored = all_inputs(decisions)
+    assert clause_text("RC-2023-E:2.1.9.5(b)") in scored
+    assert clause_text("RC-2023-E:2.2.1.3(d)") in scored
     selection = {s.ref: s for s in recommendation.selection}
     assert selection["RC-2023-E:2.1.9.5(b)"].category == "aplica"
     assert "pcoc_legitimacion" in selection["RC-2023-E:2.1.9.5(b)"].reason
@@ -622,7 +694,7 @@ def test_pinned_clauses_reach_decide_even_when_the_selector_would_set_them_aside
 
 
 def test_a_pinned_clause_wins_over_a_fixed_category(pcoc_retriever):
-    fixed = ClauseSelection(
+    fixed = FixedCategory(
         ref="RC-2023-E:2.2.1.3(d)", category="tramite_del_sistema", reason="Fijado."
     )
     decisions = criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8)
@@ -631,8 +703,8 @@ def test_a_pinned_clause_wins_over_a_fixed_category(pcoc_retriever):
         decisions, FakeNotesLLM([]), pcoc_retriever, fixed=[fixed], criteria=CRITERIA
     ).review(GOOD_PCOC)
 
-    overall, _ = call_for(decisions, "aprobacion")
-    assert clause_text("RC-2023-E:2.2.1.3(d)") in overall
+    scored = all_inputs(decisions)
+    assert clause_text("RC-2023-E:2.2.1.3(d)") in scored
     [parameters] = [s for s in recommendation.selection if s.ref == "RC-2023-E:2.2.1.3(d)"]
     assert parameters.category == "aplica"
 
@@ -650,8 +722,10 @@ def test_each_criterion_is_asked_over_its_own_pinned_clauses_and_the_request(pco
     assert clause_text("RC-2023-E:2.1.9.5(a)") not in input
     assert clause_text("RC-2023-E:2.2.1.3(d)") not in input
     assert "María Isabel Rivera Ortiz" in input
-    overall, questions = call_for(decisions, "aprobacion")
-    assert list(questions) == ["aprobacion"]
+    # The rest of 2.1.9.5 is its Section's own Requirement; the pinned clause is the Criterion's.
+    standing_section, _ = call_for(decisions, "seccion_2_1_9_5")
+    assert clause_text("RC-2023-E:2.1.9.5(a)") in standing_section
+    assert clause_text("RC-2023-E:2.1.9.5(b)") not in standing_section
 
 
 def test_pcoc_criterion_probabilities_are_carried_into_the_recommendation(pcoc_retriever):
@@ -662,7 +736,7 @@ def test_pcoc_criterion_probabilities_are_carried_into_the_recommendation(pcoc_r
         criteria=CRITERIA,
     ).review(GOOD_PCOC)
 
-    assert [(a.criterion, a.probability) for a in recommendation.criteria] == [
+    assert [(a.criterion, a.probability) for a in recommendation.criterion_requirements] == [
         (PCOC_STANDING, 0.91),
         (PCOC_PARAMETERS, None),
     ]
@@ -678,11 +752,14 @@ def test_new_permiso_unico_is_assessed_on_its_new_request_criteria():
         criteria=CRITERIA,
     ).review(GOOD_PERMISO_UNICO)
 
-    assert [(a.criterion.id, a.probability) for a in recommendation.criteria] == [("pu_uso", 0.95)]
+    assert [(a.id, a.probability) for a in recommendation.criterion_requirements] == [
+        ("pu_uso", 0.95)
+    ]
     assert recommendation.retrieved_section_ids == ["RC-2023-E:3.7.1.2", "RC-2023-E:3.7.1.1"]
     assert {name for _, questions in decisions.calls for name in questions} == {
-        "aprobacion",
         "pu_uso",
+        "seccion_3_7_1_1",
+        "seccion_3_7_1_2",
     }
     input, _ = call_for(decisions, "pu_uso")
     assert clause_text("RC-2023-E:3.7.1.1(f)") in input
@@ -699,7 +776,7 @@ def test_permiso_unico_renewal_is_assessed_on_its_renewal_criteria():
         criteria=CRITERIA,
     ).review(GOOD_PERMISO_UNICO | {"renewal": RENEWAL})
 
-    assert [(a.criterion.id, a.probability) for a in recommendation.criteria] == [
+    assert [(a.id, a.probability) for a in recommendation.criterion_requirements] == [
         ("pu_renovacion_plazo", 0.02)
     ]
     input, _ = call_for(decisions, "pu_renovacion_plazo")
@@ -708,19 +785,19 @@ def test_permiso_unico_renewal_is_assessed_on_its_renewal_criteria():
     assert "1020 días (2.8 años) después de la expiración" in input
 
 
-def test_the_overall_question_names_the_request_type(retriever):
-    decisions = FakeDecisions({"aprobacion": 0.7})
+def test_section_questions_name_the_request_type(retriever):
+    decisions = FakeDecisions(default=0.7)
 
     pipeline(decisions, FakeNotesLLM([]), retriever).review(GOOD_PERMISO_UNICO)
 
-    [(_, questions)] = decisions.calls
-    assert questions["aprobacion"] == (
-        "¿Cumple esta Solicitud de Permiso Único con todos los requisitos de las Secciones del "
-        "Reglamento citadas?"
+    _, questions = call_for(decisions, "seccion_2_1_9_5")
+    assert questions["seccion_2_1_9_5"] == (
+        "¿Cumple esta Solicitud de Permiso Único con los requisitos citados de la Sección "
+        "2.1.9.5 del Reglamento?"
     )
 
 
-def test_notes_receive_the_criterion_probabilities(pcoc_retriever):
+def test_notes_receive_every_requirement_with_its_probability(pcoc_retriever):
     notes_llm = FakeNotesLLM([])
 
     pipeline(
@@ -731,10 +808,15 @@ def test_notes_receive_the_criterion_probabilities(pcoc_retriever):
     ).review(GOOD_PCOC)
 
     [prompt] = notes_llm.prompts
-    assert "[pcoc_legitimacion] El proponente acredita legitimación activa." in prompt
-    assert "0.91" in prompt
-    assert "[pcoc_parametros] La obra cumple los parámetros del distrito." in prompt
-    assert "no evaluado" in prompt
+    assert (
+        "- [pcoc_legitimacion] El proponente acredita legitimación activa. "
+        "(RC-2023-E:2.1.9.5(b)): 0.91"
+    ) in prompt
+    assert (
+        "- [pcoc_parametros] La obra cumple los parámetros del distrito. "
+        "(RC-2023-E:2.2.1.3(d)): no evaluado (pregunta rechazada)"
+    ) in prompt
+    assert "- [seccion_2_1_9_3] Requisitos aplicables de la Sección 2.1.9.3" in prompt
 
 
 def test_a_pin_that_matches_no_clause_is_a_configuration_error(retriever):
@@ -760,7 +842,136 @@ def test_a_permiso_unico_pinned_clause_reaches_decide_even_when_the_selector_wou
         criteria=CRITERIA,
     ).review(GOOD_PERMISO_UNICO)
 
-    overall, _ = call_for(decisions, "aprobacion")
-    assert clause_text("RC-2023-E:3.7.1.1(f)") in overall
+    scored = all_inputs(decisions)
+    assert clause_text("RC-2023-E:3.7.1.1(f)") in scored
     [use] = [s for s in recommendation.selection if s.ref == "RC-2023-E:3.7.1.1(f)"]
     assert use.category == "aplica" and "pu_uso" in use.reason
+
+
+def test_each_retrieved_section_is_validated_once_with_all_its_parts_and_the_request(
+    pcoc_retriever,
+):
+    validator = FakeSectionValidator()
+
+    pipeline(
+        criterion_probabilities(),
+        FakeNotesLLM([]),
+        pcoc_retriever,
+        criteria=[PCOC_STANDING],
+        validator=validator,
+    ).review(GOOD_PCOC)
+
+    asked = [[(c.section_id, c.part) for c in chunks] for chunks, _ in validator.calls]
+    # 2.1.9.5 is pinned by a Criterion, so it applies without asking.
+    assert sorted(asked) == [
+        [("RC-2023-E:2.1.9.2", "1-of-2"), ("RC-2023-E:2.1.9.2", "2-of-2")],
+        [("RC-2023-E:2.1.9.3", None)],
+    ]
+    assert {request.applicant_name for _, request in validator.calls} == {
+        "María Isabel Rivera Ortiz"
+    }
+
+
+def test_a_section_that_does_not_apply_is_neither_selected_from_scored_nor_shown_to_notes():
+    retriever = FakeRetriever({"RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5", "RC-2023-E:2.2.6"})
+    validator = FakeSectionValidator({"RC-2023-E:2.2.6": "No se solicita una prórroga."})
+    selector = FakeSelector()
+    decisions = FakeDecisions(default=0.9)
+    notes_llm = FakeNotesLLM([])
+
+    recommendation = pipeline(
+        decisions, notes_llm, retriever, selector, validator=validator
+    ).review(GOOD_PCOC)
+
+    [(shown, _)] = selector.calls
+    assert not any(clause.section_id == "RC-2023-E:2.2.6" for clause in shown)
+    assert clause_text("RC-2023-E:2.2.6(c)") not in all_inputs(decisions)
+    assert "seccion_2_2_6" not in {name for _, questions in decisions.calls for name in questions}
+    assert clause_text("RC-2023-E:2.2.6(c)") not in notes_llm.prompts[0]
+    assert "RC-2023-E:2.2.6" in recommendation.retrieved_section_ids
+    relevance = {r.section_id: r for r in recommendation.section_relevance}
+    assert relevance["RC-2023-E:2.2.6"].applies is False
+    assert relevance["RC-2023-E:2.2.6"].reason == "No se solicita una prórroga."
+    assert relevance["RC-2023-E:2.1.9.3"].applies is True
+
+
+def test_a_section_pinned_by_a_criterion_always_applies(pcoc_retriever):
+    validator = FakeSectionValidator({"RC-2023-E:2.1.9.5": "No aplica."})
+
+    recommendation = pipeline(
+        criterion_probabilities(),
+        FakeNotesLLM([]),
+        pcoc_retriever,
+        criteria=[PCOC_STANDING],
+        validator=validator,
+    ).review(GOOD_PCOC)
+
+    relevance = {r.section_id: r for r in recommendation.section_relevance}
+    assert relevance["RC-2023-E:2.1.9.5"].applies is True
+    assert "pcoc_legitimacion" in relevance["RC-2023-E:2.1.9.5"].reason
+
+
+def test_a_note_citing_a_section_that_does_not_apply_is_flagged():
+    retriever = FakeRetriever({"RC-2023-E:2.1.9.3", "RC-2023-E:2.2.6"})
+    validator = FakeSectionValidator({"RC-2023-E:2.2.6": "No se solicita una prórroga."})
+    extension = DraftNote(text="...", section_ids=["RC-2023-E:2.2.6(c)"], curable=False)
+
+    recommendation = pipeline(
+        FakeDecisions(), FakeNotesLLM([extension]), retriever, validator=validator
+    ).review(GOOD_PCOC)
+
+    assert recommendation.notes[0].unretrieved_section_ids == ["RC-2023-E:2.2.6(c)"]
+
+
+def test_a_section_whose_clauses_are_all_set_aside_is_no_requirement(pcoc_retriever):
+    every_value_clause: dict[str, ClauseCategory] = {
+        f"RC-2023-E:2.1.9.3({letter})": "no_aplica" for letter in "abc"
+    }
+    decisions = FakeDecisions()
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(every_value_clause)
+    ).review(GOOD_PCOC)
+
+    assert [c.id for c in recommendation.requirements] == ["seccion_2_1_9_2", "seccion_2_1_9_5"]
+
+
+def test_a_request_with_no_applicable_requirement_gets_no_score(retriever):
+    validator = FakeSectionValidator(
+        {"RC-2023-E:2.1.9.3": "No aplica.", "RC-2023-E:2.1.9.5": "No aplica."}
+    )
+
+    recommendation = pipeline(
+        FakeDecisions(), FakeNotesLLM([]), retriever, validator=validator
+    ).review(GOOD_PCOC)
+
+    assert recommendation.requirements == []
+    assert recommendation.approval_score is None
+    assert recommendation.verdict == "manual_review"
+
+
+def test_a_fixed_category_for_one_request_type_does_not_apply_to_the_other(pcoc_retriever):
+    plans_for_permiso_unico = FixedCategory(
+        ref="RC-2023-E:2.1.9.2(k)",
+        category="no_aplica",
+        reason="Fijado: un Permiso Único no radica planos de construcción.",
+        request_types=["PERMISO_UNICO"],
+    )
+    reviews = {}
+    for raw in (GOOD_PCOC, GOOD_PERMISO_UNICO):
+        selector = FakeSelector()
+        recommendation = pipeline(
+            FakeDecisions(),
+            FakeNotesLLM([]),
+            pcoc_retriever,
+            selector,
+            fixed=[plans_for_permiso_unico],
+        ).review(raw)
+        [(shown, _)] = selector.calls
+        selection = {s.ref: s for s in recommendation.selection}
+        reviews[raw["request_type"]] = (
+            "RC-2023-E:2.1.9.2(k)" in {clause.ref for clause in shown},
+            selection["RC-2023-E:2.1.9.2(k)"].category,
+        )
+
+    assert reviews == {"PCOC": (True, "aplica"), "PERMISO_UNICO": (False, "no_aplica")}

@@ -1,18 +1,22 @@
 """The review pipeline: one Permit Request in, one Recommendation out.
 
-A LangGraph graph
-`intake → retrieve → select_requirements → decide → write_notes → validate_citations`. The Section
-retriever, the requirement selector, the Decisions API client and the Notes LLM are injected
-adapters, so tests can fake them. The Criteria of the request's Request Type pin the Clauses
-that are always retrieved, always scored against, and each assessed on its own.
+A LangGraph graph `intake → retrieve → validate_sections → select_requirements → decide →
+write_notes → validate_citations`. The Section retriever, the Section validator, the requirement
+selector, the Decisions API client and the Notes LLM are injected adapters, so tests can fake them.
+
+The Approval Score is not one question over everything retrieved: each Requirement is assessed on
+its own, and the score is the lowest probability. A Requirement is a Criterion (its pinned
+Clauses) or a Section that applies (its other applicable Clauses). Sections that do not apply to
+the request are set aside before any Clause is selected or scored.
 """
 
+import re
 from collections.abc import Collection, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Literal, Protocol, TypedDict, get_args
 
 from langgraph.graph import END, START, StateGraph
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, computed_field
 from pydantic_core import ErrorDetails
 
 from case_mgmt_ai_demo.chunks import Chunk, Clause, RequestType, split_clauses
@@ -20,24 +24,35 @@ from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.criteria import Criterion
 from case_mgmt_ai_demo.permit_request import PermitRequest, parse_permit_request
 
-APPROVAL_QUESTION = "aprobacion"
 # The compliance wording scored best in the CMAWD-2 spike (docs/spikes/cmawd-2-decisions-api.md).
-APPROVAL_INSTRUCTIONS = (
-    "¿Cumple esta Solicitud de {type_name} con todos los requisitos de las "
-    "Secciones del Reglamento citadas?"
+SECTION_REQUIREMENT_INSTRUCTIONS = (
+    "¿Cumple esta Solicitud de {type_name} con los requisitos citados de la Sección {number} "
+    "del Reglamento?"
 )
 
 NOTES_INSTRUCTIONS = """\
 Eres un asistente que apoya a un Revisor de solicitudes de permisos en Puerto Rico.
-Escribe de 2 a 5 Notas en español que apoyen la Recomendación para la Solicitud de Permiso.
+Escribe Notas en español que apoyen la Recomendación para la Solicitud de Permiso.
+- La evaluación por requisito da, para cada requisito, la probabilidad de que la solicitud lo \
+cumpla. Escribe una Nota por cada requisito con probabilidad menor que 0.5 o no evaluado, que \
+explique qué falta o qué incumple la solicitud; después, de 1 a 3 Notas que confirmen los \
+requisitos principales que sí se cumplen.
 - Cada Nota tiene una o dos oraciones y se basa únicamente en las Secciones del Reglamento \
 proporcionadas y en los campos de la solicitud.
 - Cada Nota cita al menos una Sección en `section_ids`, usando exactamente el identificador \
 entre corchetes (p. ej. RC-2023-E:2.1.9.5). Puede precisar el inciso: RC-2023-E:2.1.9.5(b).
 - `curable` es verdadero cuando la Nota describe una deficiencia que el Solicitante puede \
-subsanar (requerimiento de subsanación), y falso en otro caso.
-- La evaluación por Criterio indica qué requisitos se cumplen (probabilidad alta) y cuáles no \
-(probabilidad baja); apóyate en ella para elegir qué comentar."""
+subsanar (requerimiento de subsanación), y falso en otro caso."""
+
+RELEVANCE_INSTRUCTIONS = """\
+Eres un asistente que prepara la evaluación de una Solicitud de Permiso en Puerto Rico.
+Una búsqueda recuperó la Sección del Reglamento que aparece abajo. Decide si esta Sección \
+aplica a esta solicitud: si establece al menos un requisito que el Solicitante o su solicitud \
+deban cumplir, dado el tipo de solicitud (y si es nueva o una renovación). Una Sección aplica \
+AUNQUE la solicitud no cumpla o no mencione sus requisitos. No aplica si trata de otro tipo de \
+trámite (p. ej. prórrogas cuando no se solicita una, renovaciones cuando la solicitud es nueva, \
+solicitudes nuevas cuando es una renovación) o solo regula a la agencia. Da una razón breve en \
+español."""
 
 SELECTION_INSTRUCTIONS = """\
 Eres un asistente que prepara la evaluación de una Solicitud de Permiso en Puerto Rico.
@@ -74,6 +89,17 @@ class ClauseSelection(BaseModel):
         return self.category != "aplica"
 
 
+class FixedCategory(ClauseSelection):
+    """A clause category fixed by configuration instead of asked of the selector."""
+
+    request_types: list[RequestType] | None = Field(
+        default=None, description="The Request Types it applies to; None for every one."
+    )
+
+    def applies_to(self, request_type: RequestType) -> bool:
+        return self.request_types is None or request_type in self.request_types
+
+
 class DraftNote(BaseModel):
     """A Note as the Notes LLM writes it, before its citations are checked."""
 
@@ -92,21 +118,42 @@ class Note(DraftNote):
         return bool(self.unretrieved_section_ids)
 
 
-class CriterionAssessment(BaseModel):
-    criterion: Criterion
+class SectionRelevance(BaseModel):
+    """Whether one retrieved Section applies to this Permit Request, and why."""
+
+    section_id: str
+    applies: bool
+    reason: str
+
+
+class RequirementAssessment(BaseModel):
+    """One requirement asked of the Decisions API: a Criterion, or what applies of a Section."""
+
+    id: str = Field(description="Criterion ID, or 'seccion_' plus the Section number.")
+    text_es: str
+    clause_refs: list[str]
     probability: float | None = Field(description="None when the Decisions API refused.")
+    criterion: Criterion | None = Field(
+        default=None, description="None for a Section's Requirement."
+    )
 
 
 class Recommendation(BaseModel):
     request: PermitRequest
-    approval_score: float | None = Field(description="None when the Decisions API refused.")
+    approval_score: float | None = Field(
+        description="The lowest Requirement probability; None when one was refused or "
+        "nothing applied."
+    )
     verdict: Verdict
     borderline: bool
-    criteria: list[CriterionAssessment] = Field(
-        description="The Criteria of the request's Request Type, in curated order."
+    requirements: list[RequirementAssessment] = Field(
+        description="Criteria in curated order, then Sections' Requirements in retrieval order."
     )
     notes: list[Note]
     retrieved_section_ids: list[str]
+    section_relevance: list[SectionRelevance] = Field(
+        description="Every retrieved Section, whether it applies, and why."
+    )
     selection: list[ClauseSelection] = Field(
         description="Every retrieved clause the selector classified, in Reglamento order."
     )
@@ -120,6 +167,23 @@ class Recommendation(BaseModel):
     @property
     def set_aside_count(self) -> int:
         return sum(1 for s in self.selection if s.set_aside)
+
+    @property
+    def criterion_requirements(self) -> list[RequirementAssessment]:
+        return [r for r in self.requirements if r.criterion]
+
+    @computed_field
+    @property
+    def weakest_requirement(self) -> RequirementAssessment | None:
+        """The Requirement that set the Approval Score (the first, on a tie)."""
+        assessed = [r for r in self.requirements if r.probability is not None]
+        if self.approval_score is None or not assessed:
+            return None
+        return min(assessed, key=lambda r: r.probability or 0.0)
+
+    @property
+    def sections_not_applicable(self) -> list[SectionRelevance]:
+        return [r for r in self.section_relevance if not r.applies]
 
 
 class InvalidPermitRequest(ValueError):
@@ -152,6 +216,12 @@ class SectionRetriever(Protocol):
         ...
 
 
+class SectionValidator(Protocol):
+    def validate(self, chunks: list[Chunk], request: PermitRequest) -> SectionRelevance:
+        """Whether the Section these chunks (all its parts) hold applies to the request."""
+        ...
+
+
 class RequirementSelector(Protocol):
     def select(self, clauses: list[Clause], request: PermitRequest) -> list[ClauseSelection]:
         """One classification per clause; may omit clauses or return unknown references."""
@@ -168,12 +238,14 @@ class ReviewState(ReviewInput):
     request: PermitRequest
     criteria: list[Criterion]
     sections: list[Chunk]
+    section_relevance: list[SectionRelevance]
+    applicable_sections: list[Chunk]
     clauses: list[Clause]
     selection: list[ClauseSelection]
     unclassified_clause_refs: list[str]
     unknown_clause_refs: list[str]
+    requirements: list[RequirementAssessment]
     approval_score: float | None
-    criterion_probabilities: dict[str, float | None]
     draft_notes: list[DraftNote]
     notes: list[Note]
 
@@ -185,8 +257,9 @@ class ReviewPipeline:
         notes_llm: NotesLLM,
         retriever: SectionRetriever,
         selector: RequirementSelector,
+        validator: SectionValidator,
         settings: Settings,
-        fixed: Iterable[ClauseSelection] = (),
+        fixed: Iterable[FixedCategory] = (),
         criteria: Iterable[Criterion] = (),
     ):
         """`fixed` fixes the category of general clauses the selector is unsteady on;
@@ -195,19 +268,22 @@ class ReviewPipeline:
         self._notes_llm = notes_llm
         self._retriever = retriever
         self._selector = selector
+        self._validator = validator
         self._settings = settings
-        self._fixed = {selection.ref: selection for selection in fixed}
+        self._fixed = list(fixed)
         self._criteria = list(criteria)
         graph = StateGraph(ReviewState, input_schema=ReviewInput)
         graph.add_node("intake", self._intake)
         graph.add_node("retrieve", self._retrieve)
+        graph.add_node("validate_sections", self._validate_sections)
         graph.add_node("select_requirements", self._select_requirements)
         graph.add_node("decide", self._decide)
         graph.add_node("write_notes", self._write_notes)
         graph.add_node("validate_citations", self._validate_citations)
         graph.add_edge(START, "intake")
         graph.add_edge("intake", "retrieve")
-        graph.add_edge("retrieve", "select_requirements")
+        graph.add_edge("retrieve", "validate_sections")
+        graph.add_edge("validate_sections", "select_requirements")
         graph.add_edge("select_requirements", "decide")
         graph.add_edge("decide", "write_notes")
         graph.add_edge("write_notes", "validate_citations")
@@ -224,15 +300,10 @@ class ReviewPipeline:
             verdict=self._verdict(score),
             borderline=score is not None
             and self._settings.borderline_low <= score <= self._settings.borderline_high,
-            criteria=[
-                CriterionAssessment(
-                    criterion=criterion,
-                    probability=state["criterion_probabilities"][criterion.id],
-                )
-                for criterion in state["criteria"]
-            ],
+            requirements=state["requirements"],
             notes=state["notes"],
             retrieved_section_ids=list(dict.fromkeys(c.section_id for c in state["sections"])),
+            section_relevance=state["section_relevance"],
             selection=state["selection"],
             unclassified_clause_refs=state["unclassified_clause_refs"],
             unknown_clause_refs=state["unknown_clause_refs"],
@@ -269,10 +340,41 @@ class ReviewPipeline:
                     f"Criterion {criterion.id} pins {', '.join(unmatched)}, "
                     "which no retrieved Section holds"
                 )
-        return {"sections": sections, "clauses": clauses}
+        return {"sections": sections}
+
+    def _validate_sections(self, state: ReviewState) -> dict[str, Any]:
+        """Ask once per Section, concurrently, whether it applies; a pinned Section always does."""
+        by_section: dict[str, list[Chunk]] = {}
+        for chunk in state["sections"]:
+            by_section.setdefault(chunk.section_id, []).append(chunk)
+        pinned_by = {
+            section_id: [c.id for c in state["criteria"] if section_id in c.pinned_section_ids]
+            for section_id in by_section
+        }
+
+        def validate(section_id: str) -> SectionRelevance:
+            if criteria := pinned_by[section_id]:
+                return SectionRelevance(
+                    section_id=section_id,
+                    applies=True,
+                    reason=f"Fijada por el Criterio {', '.join(criteria)}: siempre aplica.",
+                )
+            return self._validator.validate(by_section[section_id], state["request"])
+
+        with ThreadPoolExecutor(max_workers=max(len(by_section), 1)) as pool:
+            relevance = list(pool.map(validate, by_section))
+        applies = {r.section_id for r in relevance if r.applies}
+        sections = [chunk for chunk in state["sections"] if chunk.section_id in applies]
+        return {
+            "section_relevance": relevance,
+            "applicable_sections": sections,
+            "clauses": [c for s in sections for c in split_clauses(s)],
+        }
 
     def _select_requirements(self, state: ReviewState) -> dict[str, Any]:
         clauses = state["clauses"]
+        request_type = state["request"].request_type
+        fixed = {f.ref: f for f in self._fixed if f.applies_to(request_type)}
         # Clauses a Criterion pins are requirements by definition, so the selector is not asked.
         required = {
             clause.ref: ClauseSelection(
@@ -283,11 +385,11 @@ class ReviewPipeline:
             for clause in clauses
             if (ids := [c.id for c in state["criteria"] if c.pins(clause)])
         }
-        asked = [c for c in clauses if c.ref not in self._fixed and c.ref not in required]
+        asked = [c for c in clauses if c.ref not in fixed and c.ref not in required]
         returned: dict[str, ClauseSelection] = {}
         for selection in self._selector.select(asked, state["request"]):
             returned.setdefault(selection.ref, selection)
-        returned |= {c.ref: self._fixed[c.ref] for c in clauses if c.ref in self._fixed}
+        returned |= {c.ref: fixed[c.ref] for c in clauses if c.ref in fixed}
         returned |= required
         known = {clause.ref for clause in clauses}
         return {
@@ -297,52 +399,72 @@ class ReviewPipeline:
         }
 
     def _decide(self, state: ReviewState) -> dict[str, Any]:
-        """One overall predicate over the selected Clauses, and one per Criterion over its own
-        pinned Clauses; each has its own input, so each is its own call, made concurrently."""
+        """One predicate per Requirement, each over its own Clauses; each has its own
+        input, so each is its own call, made concurrently."""
         request, clauses = state["request"], state["clauses"]
         # An unclassified clause may be a requirement, so it stays rather than being set aside.
         set_aside = {s.ref for s in state["selection"] if s.set_aside}
-        questions = {
-            APPROVAL_QUESTION: (
-                [c for c in clauses if c.ref not in set_aside],
-                APPROVAL_INSTRUCTIONS.format(type_name=request.type_name_es),
+        questions: list[_Question] = [
+            _Question(
+                id=criterion.id,
+                text_es=criterion.text_es,
+                instructions=criterion.instructions,
+                clauses=[c for c in clauses if criterion.pins(c)],
+                criterion=criterion,
             )
-        } | {
-            criterion.id: ([c for c in clauses if criterion.pins(c)], criterion.instructions)
             for criterion in state["criteria"]
-        }
+        ]
+        by_section: dict[str, list[Clause]] = {}
+        for clause in clauses:
+            if clause.ref not in set_aside and not any(c.pins(clause) for c in state["criteria"]):
+                by_section.setdefault(clause.section_id, []).append(clause)
+        for section_id, section_clauses in by_section.items():
+            number = section_id.split(":", 1)[1]
+            questions.append(
+                _Question(
+                    id="seccion_" + re.sub(r"[^a-z0-9]+", "_", number.lower()),
+                    text_es=f"Requisitos aplicables de la Sección {number} "
+                    f"({section_clauses[0].heading})",
+                    instructions=SECTION_REQUIREMENT_INSTRUCTIONS.format(
+                        type_name=request.type_name_es, number=number
+                    ),
+                    clauses=section_clauses,
+                )
+            )
 
-        def ask(name: str) -> float | None:
-            requirements, instructions = questions[name]
-            context = _requirements_context(requirements, request)
-            return self._decisions.predicates(context, {name: instructions})[name]
+        def ask(question: _Question) -> RequirementAssessment:
+            context = _requirements_context(question.clauses, request)
+            answers = self._decisions.predicates(context, {question.id: question.instructions})
+            return RequirementAssessment(
+                id=question.id,
+                text_es=question.text_es,
+                clause_refs=[c.ref for c in question.clauses],
+                probability=answers[question.id],
+                criterion=question.criterion,
+            )
 
-        with ThreadPoolExecutor(max_workers=len(questions)) as pool:
-            answers = dict(zip(questions, pool.map(ask, questions)))
-        return {
-            "approval_score": answers.pop(APPROVAL_QUESTION),
-            "criterion_probabilities": answers,
-        }
+        with ThreadPoolExecutor(max_workers=max(len(questions), 1)) as pool:
+            requirements = list(pool.map(ask, questions))
+        return {"requirements": requirements, "approval_score": _approval_score(requirements)}
 
     def _write_notes(self, state: ReviewState) -> dict[str, Any]:
         score = state["approval_score"]
-        shown = "sin puntuación (pregunta rechazada)" if score is None else f"{score:.2f}"
+        shown = "sin puntuación" if score is None else f"{score:.2f}"
+        requirements = "\n".join(
+            f"- [{r.id}] {r.text_es} ({', '.join(r.clause_refs)}): " + _probability_es(r.probability)
+            for r in state["requirements"]
+        )
         prompt = (
             f"{NOTES_INSTRUCTIONS}\n\n"
-            f"{_context(state['sections'], state['request'])}\n\n"
-            f"PUNTUACIÓN DE APROBACIÓN (0-1): {shown}"
+            f"{_context(state['applicable_sections'], state['request'])}\n\n"
+            f"EVALUACIÓN POR REQUISITO (probabilidad de cumplimiento, 0-1)\n{requirements}\n\n"
+            f"PUNTUACIÓN DE APROBACIÓN (0-1, la del requisito más débil): {shown}"
         )
-        if state["criteria"]:
-            assessments = "\n".join(
-                f"- [{c.id}] {c.text_es} ({', '.join(c.pinned)}): "
-                + _probability_es(state["criterion_probabilities"][c.id])
-                for c in state["criteria"]
-            )
-            prompt += f"\n\nEVALUACIÓN POR CRITERIO (probabilidad de cumplimiento, 0-1)\n{assessments}"
         return {"draft_notes": self._notes_llm.write_notes(prompt)}
 
     def _validate_citations(self, state: ReviewState) -> dict[str, Any]:
-        retrieved = {chunk.section_id for chunk in state["sections"]}
+        # Only Sections that apply were shown to the Notes LLM, so only they may be cited.
+        retrieved = {chunk.section_id for chunk in state["applicable_sections"]}
         return {
             "notes": [
                 Note(
@@ -354,6 +476,24 @@ class ReviewPipeline:
                 for draft in state["draft_notes"]
             ]
         }
+
+
+class _Question(BaseModel):
+    """A Requirement before it is asked."""
+
+    id: str
+    text_es: str
+    instructions: str
+    clauses: list[Clause]
+    criterion: Criterion | None = None
+
+
+def _approval_score(requirements: list[RequirementAssessment]) -> float | None:
+    """Approval needs every requirement met, so the score is the weakest requirement's."""
+    probabilities = [r.probability for r in requirements]
+    if not probabilities or None in probabilities:
+        return None
+    return min(p for p in probabilities if p is not None)
 
 
 # Spanish messages for the Pydantic errors a Permit Request file is likely to hit.
@@ -394,6 +534,15 @@ def _probability_es(probability: float | None) -> str:
 def _was_retrieved(cited: str, retrieved: set[str]) -> bool:
     """A citation may go down to a clause: 'RC-2023-E:2.1.9.2(m)' matches 'RC-2023-E:2.1.9.2'."""
     return cited in retrieved or cited.split("(", 1)[0] in retrieved
+
+
+def relevance_prompt(chunks: list[Chunk], request: PermitRequest) -> str:
+    """The Spanish prompt asking a model whether one Section applies to this request."""
+    text = "\n".join(chunk.text for chunk in chunks)
+    return (
+        f"{RELEVANCE_INSTRUCTIONS}\n\nSECCIÓN DEL REGLAMENTO\n[{chunks[0].section_id}] "
+        f"{chunks[0].heading}\n{text}\n\nSOLICITUD DE PERMISO\n{_fields(request)}"
+    )
 
 
 def selection_prompt(clauses: list[Clause], request: PermitRequest) -> str:

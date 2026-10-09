@@ -45,12 +45,16 @@ The assistant's output for a Permit Request: an Approve / Not approve verdict, a
 _Avoid_: Decision, result, AI approval
 
 **Approval Score**:
-The model's probability (0–1) that the Permit Request should be approved. A score near the cutoff is **Borderline** and flagged for closer review.
+The probability (0–1) that the Permit Request should be approved: the probability of its weakest requirement, since approval needs every requirement met. A score near the cutoff is **Borderline** and flagged for closer review.
 _Avoid_: Confidence, rating, grade
 
 **Criterion**:
-A single regulatory requirement for a Request Type, tied to the Clauses (or whole Sections) that establish it, that the model assesses separately from the overall Approval Score. A Criterion may apply only to new requests or only to renewals.
+A single regulatory requirement for a Request Type, curated in advance and tied to the Clauses (or whole Sections) that establish it. Each Criterion is one Requirement. A Criterion may apply only to new requests or only to renewals.
 _Avoid_: Rule, check, condition
+
+**Requirement**:
+Something a Permit Request must meet, assessed on its own with a probability: either a Criterion, or the remaining applicable Clauses of a Section that applies to the request. The weakest Requirement sets the Approval Score.
+_Avoid_: check, requirement check, condition
 
 **Note**:
 A one-to-two-sentence statement supporting the Recommendation, citing at least one Section. A Note may be **curable**: it describes a deficiency the Applicant can fix rather than a reason to deny.

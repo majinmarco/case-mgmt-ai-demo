@@ -41,25 +41,24 @@ def example(name: str) -> dict:
 
 @pytest.mark.real_model
 @pytest.mark.parametrize("run", range(REPEATS))
-def test_good_pcoc_request_scores_at_or_above_the_cutoff_with_requirement_selection(
-    real_pipeline, run
-):
+@pytest.mark.parametrize("name", ["pcoc-buena", "permiso-unico-buena"])
+def test_good_request_scores_at_or_above_the_cutoff(real_pipeline, name, run):
     settings, pipeline = real_pipeline
 
-    recommendation = pipeline.review(example("pcoc-buena"))
+    recommendation = pipeline.review(example(name))
 
     score = recommendation.approval_score
-    assert score is not None and score >= settings.approval_cutoff, (
-        score,
-        [s.ref for s in recommendation.selection if s.category == "aplica"],
-    )
+    assert score is not None and score >= settings.approval_cutoff, [
+        (r.id, r.probability, r.clause_refs) for r in recommendation.requirements
+    ]
 
 
 @pytest.mark.real_model
 @pytest.mark.parametrize("run", range(REPEATS))
-def test_bad_pcoc_request_stays_below_0_1_with_requirement_selection(real_pipeline, run):
+@pytest.mark.parametrize("name", ["pcoc-mala", "permiso-unico-mala"])
+def test_bad_request_stays_below_0_1(real_pipeline, name, run):
     _, pipeline = real_pipeline
 
-    recommendation = pipeline.review(example("pcoc-mala"))
+    recommendation = pipeline.review(example(name))
 
     assert recommendation.approval_score is not None and recommendation.approval_score < 0.1

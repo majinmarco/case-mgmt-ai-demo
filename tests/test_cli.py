@@ -8,10 +8,11 @@ from case_mgmt_ai_demo import main
 from case_mgmt_ai_demo.permit_request import parse_permit_request
 from case_mgmt_ai_demo.review import (
     ClauseSelection,
-    CriterionAssessment,
     InvalidPermitRequest,
     Note,
     Recommendation,
+    RequirementAssessment,
+    SectionRelevance,
 )
 from test_review import GOOD_PCOC, GOOD_PERMISO_UNICO, PCOC_PARAMETERS, PCOC_STANDING, PU_USE
 
@@ -28,15 +29,31 @@ class FakePipeline:
         return self.outcome
 
 
+def criterion_requirement(criterion, probability) -> RequirementAssessment:
+    return RequirementAssessment(
+        id=criterion.id,
+        text_es=criterion.text_es,
+        clause_refs=criterion.pinned,
+        probability=probability,
+        criterion=criterion,
+    )
+
+
 def recommendation(**overrides) -> Recommendation:
     fields = dict(
         request=parse_permit_request(GOOD_PCOC),
         approval_score=0.86,
         verdict="approve",
         borderline=False,
-        criteria=[
-            CriterionAssessment(criterion=PCOC_STANDING, probability=0.91),
-            CriterionAssessment(criterion=PCOC_PARAMETERS, probability=None),
+        requirements=[
+            criterion_requirement(PCOC_STANDING, 0.91),
+            criterion_requirement(PCOC_PARAMETERS, 0.97),
+            RequirementAssessment(
+                id="seccion_2_1_9_2",
+                text_es="Requisitos aplicables de la Sección 2.1.9.2 (REQUISITOS DE PRESENTACIÓN)",
+                clause_refs=["RC-2023-E:2.1.9.2(k)"],
+                probability=0.86,
+            ),
         ],
         notes=[
             Note(
@@ -51,7 +68,16 @@ def recommendation(**overrides) -> Recommendation:
                 unretrieved_section_ids=["RC-2023-E:3.1.3.2"],
             ),
         ],
-        retrieved_section_ids=["RC-2023-E:2.1.9.2", "RC-2023-E:2.1.9.5"],
+        retrieved_section_ids=["RC-2023-E:2.1.9.2", "RC-2023-E:2.1.9.5", "RC-2023-E:2.2.6"],
+        section_relevance=[
+            SectionRelevance(section_id="RC-2023-E:2.1.9.2", applies=True, reason="Aplica."),
+            SectionRelevance(section_id="RC-2023-E:2.1.9.5", applies=True, reason="Aplica."),
+            SectionRelevance(
+                section_id="RC-2023-E:2.2.6",
+                applies=False,
+                reason="No se solicita una prórroga del permiso.",
+            ),
+        ],
         selection=[
             ClauseSelection(
                 ref="RC-2023-E:2.1.9.2(a)",
@@ -99,22 +125,42 @@ def test_review_prints_score_verdict_and_cited_notes_in_spanish(request_file, ca
     assert "Cita no verificada: RC-2023-E:3.1.3.2" in out
 
 
-def test_review_prints_each_criterion_probability_or_not_assessed(request_file, capsys):
+def test_review_prints_every_requirement_and_names_the_weakest(request_file, capsys):
     main(["review", str(request_file)], pipeline=FakePipeline(recommendation()))
 
     out = capsys.readouterr().out
+    assert "Puntuación de aprobación: 0.86 (requisito más débil: seccion_2_1_9_2)" in out
     assert (
-        "Criterios:\n"
+        "Requisitos:\n"
         "  0.91         El proponente acredita legitimación activa. [pcoc_legitimacion]\n"
-        "  no evaluado  La obra cumple los parámetros del distrito. [pcoc_parametros]\n"
+        "  0.97         La obra cumple los parámetros del distrito. [pcoc_parametros]\n"
+        "  0.86         Requisitos aplicables de la Sección 2.1.9.2 (REQUISITOS DE PRESENTACIÓN) "
+        "[seccion_2_1_9_2]\n"
     ) in out
+
+
+def test_review_marks_a_refused_requirement_as_not_assessed(request_file, capsys):
+    pipeline = FakePipeline(
+        recommendation(
+            approval_score=None,
+            verdict="manual_review",
+            requirements=[criterion_requirement(PCOC_STANDING, 0.91), criterion_requirement(PCOC_PARAMETERS, None)],
+        )
+    )
+
+    main(["review", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert "Puntuación de aprobación: sin puntuación\n" in out
+    assert "  no evaluado  La obra cumple los parámetros del distrito. [pcoc_parametros]" in out
 
 
 def test_review_names_the_request_type_of_a_permiso_unico(request_file, capsys):
     pipeline = FakePipeline(
         recommendation(
             request=parse_permit_request(GOOD_PERMISO_UNICO),
-            criteria=[CriterionAssessment(criterion=PU_USE, probability=0.95)],
+            approval_score=0.95,
+            requirements=[criterion_requirement(PU_USE, 0.95)],
         )
     )
 
@@ -122,13 +168,37 @@ def test_review_names_the_request_type_of_a_permiso_unico(request_file, capsys):
 
     out = capsys.readouterr().out
     assert "Recomendación — Solicitud de Permiso Único de Ana Lucía Torres Rivera" in out
-    assert "Criterios:\n  0.95         El uso está permitido ministerialmente. [pu_uso]\n" in out
+    assert "Requisitos:\n  0.95         El uso está permitido ministerialmente. [pu_uso]\n" in out
 
 
-def test_review_without_criteria_prints_no_criteria_block(request_file, capsys):
-    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(criteria=[])))
+def test_review_without_requirements_prints_no_requirements_block(request_file, capsys):
+    pipeline = FakePipeline(
+        recommendation(approval_score=None, verdict="manual_review", requirements=[])
+    )
 
-    assert "Criterios:" not in capsys.readouterr().out
+    main(["review", str(request_file)], pipeline=pipeline)
+
+    assert "Requisitos:" not in capsys.readouterr().out
+
+
+def test_review_counts_the_sections_that_do_not_apply_but_lists_them_only_on_request(
+    request_file, capsys
+):
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation()))
+
+    out = capsys.readouterr().out
+    assert "Secciones recuperadas: 3 (1 no aplica; --selection para ver por qué)" in out
+    assert "No se solicita una prórroga" not in out
+
+
+def test_review_with_selection_lists_the_sections_that_do_not_apply(request_file, capsys):
+    main(["review", "--selection", str(request_file)], pipeline=FakePipeline(recommendation()))
+
+    out = capsys.readouterr().out
+    assert (
+        "Secciones que no aplican:\n"
+        "  RC-2023-E:2.2.6: No se solicita una prórroga del permiso.\n"
+    ) in out
 
 
 def test_review_prints_how_many_clauses_were_set_aside_but_not_the_list(request_file, capsys):

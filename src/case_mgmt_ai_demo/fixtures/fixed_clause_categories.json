@@ -25,6 +25,14 @@
     "reason": "Fijado por configuración: pago del derecho de la Orden Administrativa de Cobro; se verifica aparte."
   },
   {
+    "ref": "RC-2023-E:2.1.9.2(k)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: un Permiso Único no radica planos de construcción; el croquis de la instalación se evalúa por la Sección 3.7.1.2(b).",
+    "request_types": [
+      "PERMISO_UNICO"
+    ]
+  },
+  {
     "ref": "RC-2023-E:2.1.9.2(w)",
     "category": "tramite_del_sistema",
     "reason": "Fijado por configuración: la carga al SUI y su notificación de recibo son parte de la radicación."

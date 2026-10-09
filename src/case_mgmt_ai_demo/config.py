@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     decisions_api_model: str = "gpt-6-luna"
     notes_model: str = "gpt-6-luna"
     selector_model: str = "gpt-6-luna"
+    section_validator_model: str = "gpt-6-luna"
     embedding_model: str = "text-embedding-3-large"
 
     approval_cutoff: float = 0.5

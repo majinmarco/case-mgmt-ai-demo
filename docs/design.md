@@ -51,10 +51,10 @@ Permiso Único adds: proposed use / business type and whether it is ministerial 
 ## Pipeline (LangGraph)
 
 ```
-intake ──► fee_check ───────────────────────────────────────────────┐
-   └────► retrieve ──► select_requirements ──► decide ──► write_notes ├─► validate_citations ──► END (Recommendation)
-                                                             ▲                │
-                                                             └── retry once ──┘
+intake ──► fee_check ─────────────────────────────────────────────────────────────────────┐
+   └────► retrieve ──► validate_sections ──► select_requirements ──► decide ──► write_notes ├─► validate_citations ──► END (Recommendation)
+                                                                                   ▲                │
+                                                                                   └── retry once ──┘
 ```
 
 | Node | Behaviour |
@@ -62,15 +62,16 @@ intake ──► fee_check ─────────────────�
 | `intake` | Validate the Permit Request fields against its Request Type. |
 | `fee_check` | Deterministic, from fee-rules YAML. Emits its own curable Note citing the Anejo A item. Does **not** affect the Approval Score. |
 | `retrieve` | Chroma semantic top-k, metadata-filtered by Request Type, plus the pinned Sections of each applicable Criterion fetched by ID (a pin that matches no retrieved Clause is a configuration error). Code splits each retrieved chunk into Clauses (top-level `a. `, `b. ` …), each identified as `section_id(letter)`, e.g. `RC-2023-E:2.1.9.2(k)`. |
-| `select_requirements` | `gpt-6-luna` with structured output classifies **every** Clause for this Permit Request as `{ref, category, reason}`: `aplica` (a requirement the Applicant or the request must meet; it stays even when the request does not meet or mention it, because then it is a deficiency), `tramite_del_sistema` (a step the system or agency performs: SUI filing, fee payments, validation, agency deadlines), or `no_aplica` (does not apply to this request). The model only picks references; code copies the Clause text word for word. Unknown references are dropped and reported; Clauses the model leaves out are reported and kept for `decide`. General Clauses the model is unsteady on have their category fixed by configuration (`fixtures/fixed_clause_categories.json`) and are not asked. Clauses a Criterion pins are not asked either: they are always `aplica` (reason: the Criterion), whatever a fixed category says. |
-| `decide` | OpenAI Decisions API (`client.decisions.create`, model `gpt-6-luna`), one call per question, made concurrently: the overall `predicate` (= Approval Score) over the `aplica` Clauses, and one `predicate` per applicable Criterion over that Criterion's pinned Clauses alone. Each `input` holds its Clauses verbatim, grouped under their Section heading, then the Request fields (no system prompt; instructions are per question). The overall question names the Request Type. |
-| `write_notes` | `gpt-6-luna` with structured output: list of `{text, section_ids[], curable}`. Inputs: Request fields, the full retrieved Sections, Approval Score, Criterion probabilities, fee-check result. |
-| `validate_citations` | Reject any citation whose Section prefix was not retrieved; retry `write_notes` once, then drop offending Notes. |
+| `validate_sections` | `gpt-6-luna` with structured output `{applies, reason}`, one call per retrieved Section (all its parts), concurrently: does this Section set a requirement this Permit Request must meet, given its Request Type and whether it is new or a renewal? Sections pinned by an applicable Criterion always apply and are not asked. A Section that does not apply stays in the Recommendation and trace with its reason, but its Clauses never reach `select_requirements` or `decide`, Notes are not given it, and a Note citing it is flagged. (CMAWD-19) |
+| `select_requirements` | `gpt-6-luna` with structured output classifies **every** Clause for this Permit Request as `{ref, category, reason}`: `aplica` (a requirement the Applicant or the request must meet; it stays even when the request does not meet or mention it, because then it is a deficiency), `tramite_del_sistema` (a step the system or agency performs: SUI filing, fee payments, validation, agency deadlines), or `no_aplica` (does not apply to this request). The model only picks references; code copies the Clause text word for word. Unknown references are dropped and reported; Clauses the model leaves out are reported and kept for `decide`. General Clauses the model is unsteady on have their category fixed by configuration (`fixtures/fixed_clause_categories.json`, optionally for some Request Types only, e.g. 2.1.9.2(k) sealed construction plans is `no_aplica` for Permiso Único) and are not asked. Clauses a Criterion pins are not asked either: they are always `aplica` (reason: the Criterion), whatever a fixed category says. |
+| `decide` | OpenAI Decisions API (`client.decisions.create`, model `gpt-6-luna`), one `predicate` per **Requirement**, one call each, made concurrently. A Requirement is an applicable Criterion (over its pinned Clauses) or an applicable Section (over its remaining `aplica` Clauses that no Criterion pins; question named `seccion_<number>`, worded "¿Cumple esta Solicitud de {Request Type} con los requisitos citados de la Sección …?"). Each `input` holds its Clauses verbatim, grouped under their Section heading, then the Request fields (no system prompt; instructions are per question). **Approval Score = the lowest Requirement probability**: approval needs every requirement met, and the weakest one explains the score. (CMAWD-19) |
+| `write_notes` | `gpt-6-luna` with structured output: list of `{text, section_ids[], curable}`. Inputs: Request fields, the Sections that apply, every Requirement with its probability, the Approval Score, fee-check result. One Note per Requirement below 0.5 or not assessed, then a few confirming what is met. |
+| `validate_citations` | Reject any citation whose Section prefix is not among the Sections that apply; retry `write_notes` once, then drop offending Notes. |
 
-- **Adapters:** the Section retriever, the requirement selector, the Decisions API client and the Notes LLM are injected into the graph, so tests run it with fakes.
+- **Adapters:** the Section retriever, the Section validator, the requirement selector, the Decisions API client and the Notes LLM are injected into the graph, so tests run it with fakes.
 - **Selection in the trace:** the full classification (all three categories, with reasons) is kept in graph state and in the Recommendation; `review` prints how many Clauses were set aside and lists them with `--selection`.
 - **Verdict:** configurable cutoff on the Approval Score plus a configurable **Borderline** band (e.g. 0.4–0.6) flagged in the UI.
-- **Failure handling:** a refused overall predicate yields "No score — manual review" (Notes still generated); a refused Criterion predicate is shown as "not assessed". API errors surface in the trace.
+- **Failure handling:** any refused Requirement yields "No score — manual review" (Notes still generated), and that Requirement is shown as "not assessed"; so does a request with no applicable requirement. API errors surface in the trace.
 - **Determination is outside the graph** — plain app state in SQLite. (Revisit LangGraph `interrupt()` only if post-Determination steps are added.)
 - Graph state per node feeds the in-app pipeline trace.
 
@@ -78,12 +79,17 @@ intake ──► fee_check ─────────────────�
 
 In the first terminal slice (CMAWD-4), `decide` received whole retrieved Sections and the good PCOC example scored 0.24 (Not approve). Sección 2.1.9.2 alone has Clauses a–w, many of them procedural (SUI filing, the 10%/90% payments, validation deadlines) that a Permit Request record cannot evidence, and asked whether the request meets "todos los requisitos de las Secciones citadas" the model counts anything unevidenced as unmet. No single Section caused it, and rewording the question topped out at 0.46. Two changes were both needed: selecting the Clauses that apply (`select_requirements`), and Permit Request fields that can evidence them (the evidence rule above). Without fixed categories, the selector still varied run to run on the general Clauses (SUI filing, fee payments, completeness 2.1.9.2(m), 2.2.1.3(a)–(b)), and one bad run was enough to pull the good request below the cutoff; those Clauses are now fixed by configuration. With all three, the good example scores at or above the cutoff and the bad one below 0.1 (opt-in real-model test, three repeats each).
 
+### Per-requirement scoring (CMAWD-5 finding, CMAWD-19)
+
+With Criteria in place (CMAWD-5), the good Permiso Único example still scored 0.16–0.61 over three runs on the single overall predicate, while every Criterion scored 0.89–1.00. Leaving out one kept Clause at a time moved the score by at most 0.16: the overall question stays pessimistic over many requirements, as in CMAWD-4. Focused per-requirement predicates had been stable and correct throughout, so the overall predicate was replaced by per-Requirement predicates with the lowest probability as the Approval Score, and a `validate_sections` step was added so Sections retrieved but unrelated to the request never reach scoring. Taking the minimum makes one wrongly kept Clause decisive: the good Permiso Único scored 0.16 whenever the selector kept 2.1.9.2(k) (sealed construction plans), so that Clause is fixed `no_aplica` for Permiso Único. After that: good PCOC 0.68, good Permiso Único 0.62 (three of three runs), both bad examples 0.00.
+
 ## Models
 
 | Use | Model |
 |---|---|
 | Approval Score + Criterion probabilities | `gpt-6-luna` via Decisions API (public beta; requires `openai>=3.26.0`) |
 | Requirement selection | `gpt-6-luna` (structured output); model ID configurable |
+| Section validation | `gpt-6-luna` (structured output); model ID configurable |
 | Notes | `gpt-6-luna` (structured output); model ID configurable |
 | Embeddings | `text-embedding-3-large` |
 

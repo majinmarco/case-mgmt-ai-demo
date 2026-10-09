@@ -19,6 +19,13 @@ def test_the_general_completeness_clause_is_set_aside_by_configuration():
     assert fixed["RC-2023-E:2.1.9.2(m)"].category == "tramite_del_sistema"
 
 
+def test_sealed_construction_plans_do_not_apply_to_a_permiso_unico_by_configuration():
+    [plans] = [s for s in load_fixed_clause_categories() if s.ref == "RC-2023-E:2.1.9.2(k)"]
+
+    assert plans.category == "no_aplica"
+    assert plans.request_types == ["PERMISO_UNICO"]
+
+
 def test_fixture_retriever_fetches_every_part_of_a_section_by_id():
     chunks = FixtureRetriever().fetch({"RC-2023-E:2.1.9.2", "RC-2023-E:3.7.1.1"})
 

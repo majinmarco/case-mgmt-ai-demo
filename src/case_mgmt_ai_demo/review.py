@@ -8,12 +8,16 @@ The Approval Score is not one question over everything retrieved: each Requireme
 its own, and the score is the lowest probability. A Requirement is a Criterion (its pinned
 Clauses) or a Section that applies (its other applicable Clauses). Sections that do not apply to
 the request are set aside before any Clause is selected or scored.
+
+A model adapter that fails raises ModelError; the pipeline records it in the Recommendation's
+`errors` and carries on with the safest reading (see each node) rather than aborting the review.
 """
 
+import operator
 import re
 from collections.abc import Collection, Iterable, Mapping
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Literal, Protocol, TypedDict, get_args
+from typing import Annotated, Any, Literal, Protocol, TypedDict, get_args
 
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError, computed_field
@@ -74,6 +78,7 @@ una razón breve en español."""
 
 Verdict = Literal["approve", "not_approve", "manual_review"]
 ClauseCategory = Literal["aplica", "tramite_del_sistema", "no_aplica"]
+ModelStep = Literal["validate_sections", "select_requirements", "decide", "write_notes"]
 
 
 class ClauseSelection(BaseModel):
@@ -138,6 +143,16 @@ class RequirementAssessment(BaseModel):
     )
 
 
+class ModelFailure(BaseModel):
+    """A model call that failed; the review carried on without its answer."""
+
+    step: ModelStep
+    subject: str | None = Field(
+        default=None, description="The Section or Requirement asked about; None for the step."
+    )
+    message: str
+
+
 class Recommendation(BaseModel):
     request: PermitRequest
     approval_score: float | None = Field(
@@ -162,6 +177,9 @@ class Recommendation(BaseModel):
     )
     unknown_clause_refs: list[str] = Field(
         description="References the selector returned that match no retrieved clause; dropped."
+    )
+    errors: list[ModelFailure] = Field(
+        default_factory=list, description="Model calls that failed, in pipeline order."
     )
 
     @property
@@ -194,6 +212,10 @@ class InvalidPermitRequest(ValueError):
 
 class MissingPinnedClause(LookupError):
     """A Criterion pins a Clause the retrieved Sections do not hold: a configuration error."""
+
+
+class ModelError(RuntimeError):
+    """A model adapter's call failed (API error or unusable response)."""
 
 
 class DecisionsClient(Protocol):
@@ -248,6 +270,7 @@ class ReviewState(ReviewInput):
     approval_score: float | None
     draft_notes: list[DraftNote]
     notes: list[Note]
+    errors: Annotated[list[ModelFailure], operator.add]
 
 
 class ReviewPipeline:
@@ -307,6 +330,7 @@ class ReviewPipeline:
             selection=state["selection"],
             unclassified_clause_refs=state["unclassified_clause_refs"],
             unknown_clause_refs=state["unknown_clause_refs"],
+            errors=state.get("errors", []),
         )
 
     def _verdict(self, score: float | None) -> Verdict:
@@ -352,23 +376,30 @@ class ReviewPipeline:
             for section_id in by_section
         }
 
-        def validate(section_id: str) -> SectionRelevance:
+        def validate(section_id: str) -> tuple[SectionRelevance, ModelFailure | None]:
             if criteria := pinned_by[section_id]:
-                return SectionRelevance(
-                    section_id=section_id,
-                    applies=True,
-                    reason=f"Fijada por el Criterio {', '.join(criteria)}: siempre aplica.",
+                reason = f"Fijada por el Criterio {', '.join(criteria)}: siempre aplica."
+                return SectionRelevance(section_id=section_id, applies=True, reason=reason), None
+            try:
+                return self._validator.validate(by_section[section_id], state["request"]), None
+            except ModelError as error:
+                # Kept, so its requirements are still scored rather than silently dropped.
+                reason = "No se pudo validar (error del modelo): se mantiene."
+                return (
+                    SectionRelevance(section_id=section_id, applies=True, reason=reason),
+                    ModelFailure(step="validate_sections", subject=section_id, message=str(error)),
                 )
-            return self._validator.validate(by_section[section_id], state["request"])
 
         with ThreadPoolExecutor(max_workers=max(len(by_section), 1)) as pool:
-            relevance = list(pool.map(validate, by_section))
+            validated = list(pool.map(validate, by_section))
+        relevance = [r for r, _ in validated]
         applies = {r.section_id for r in relevance if r.applies}
         sections = [chunk for chunk in state["sections"] if chunk.section_id in applies]
         return {
             "section_relevance": relevance,
             "applicable_sections": sections,
             "clauses": [c for s in sections for c in split_clauses(s)],
+            "errors": [error for _, error in validated if error],
         }
 
     def _select_requirements(self, state: ReviewState) -> dict[str, Any]:
@@ -387,7 +418,14 @@ class ReviewPipeline:
         }
         asked = [c for c in clauses if c.ref not in fixed and c.ref not in required]
         returned: dict[str, ClauseSelection] = {}
-        for selection in self._selector.select(asked, state["request"]):
+        errors: list[ModelFailure] = []
+        try:
+            selections = self._selector.select(asked, state["request"])
+        except ModelError as error:
+            # Every asked clause is then unclassified, and so kept for decide.
+            selections = []
+            errors.append(ModelFailure(step="select_requirements", message=str(error)))
+        for selection in selections:
             returned.setdefault(selection.ref, selection)
         returned |= {c.ref: fixed[c.ref] for c in clauses if c.ref in fixed}
         returned |= required
@@ -396,6 +434,7 @@ class ReviewPipeline:
             "selection": [returned[c.ref] for c in clauses if c.ref in returned],
             "unclassified_clause_refs": [c.ref for c in clauses if c.ref not in returned],
             "unknown_clause_refs": [ref for ref in returned if ref not in known],
+            "errors": errors,
         }
 
     def _decide(self, state: ReviewState) -> dict[str, Any]:
@@ -432,20 +471,32 @@ class ReviewPipeline:
                 )
             )
 
-        def ask(question: _Question) -> RequirementAssessment:
+        def ask(question: _Question) -> tuple[RequirementAssessment, ModelFailure | None]:
             context = _requirements_context(question.clauses, request)
-            answers = self._decisions.predicates(context, {question.id: question.instructions})
-            return RequirementAssessment(
+            error = None
+            try:
+                answers = self._decisions.predicates(context, {question.id: question.instructions})
+            except ModelError as failure:
+                # Not assessed, as for a refusal: no score rather than a fabricated one.
+                answers = {question.id: None}
+                error = ModelFailure(step="decide", subject=question.id, message=str(failure))
+            requirement = RequirementAssessment(
                 id=question.id,
                 text_es=question.text_es,
                 clause_refs=[c.ref for c in question.clauses],
                 probability=answers[question.id],
                 criterion=question.criterion,
             )
+            return requirement, error
 
         with ThreadPoolExecutor(max_workers=max(len(questions), 1)) as pool:
-            requirements = list(pool.map(ask, questions))
-        return {"requirements": requirements, "approval_score": _approval_score(requirements)}
+            answered = list(pool.map(ask, questions))
+        requirements = [requirement for requirement, _ in answered]
+        return {
+            "requirements": requirements,
+            "approval_score": _approval_score(requirements),
+            "errors": [error for _, error in answered if error],
+        }
 
     def _write_notes(self, state: ReviewState) -> dict[str, Any]:
         score = state["approval_score"]
@@ -460,7 +511,14 @@ class ReviewPipeline:
             f"EVALUACIÓN POR REQUISITO (probabilidad de cumplimiento, 0-1)\n{requirements}\n\n"
             f"PUNTUACIÓN DE APROBACIÓN (0-1, la del requisito más débil): {shown}"
         )
-        return {"draft_notes": self._notes_llm.write_notes(prompt)}
+        try:
+            return {"draft_notes": self._notes_llm.write_notes(prompt)}
+        except ModelError as error:
+            # The score and verdict stand on their own; the Reviewer sees no Notes and the error.
+            return {
+                "draft_notes": [],
+                "errors": [ModelFailure(step="write_notes", message=str(error))],
+            }
 
     def _validate_citations(self, state: ReviewState) -> dict[str, Any]:
         # Only Sections that apply were shown to the Notes LLM, so only they may be cited.

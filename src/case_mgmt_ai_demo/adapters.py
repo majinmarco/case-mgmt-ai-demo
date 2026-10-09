@@ -1,11 +1,12 @@
 """Real implementations of the review pipeline's adapters."""
 
 import json
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Iterator, Mapping
+from contextlib import contextmanager
 from importlib.resources import files
 
-from openai import OpenAI
-from pydantic import BaseModel
+from openai import OpenAI, OpenAIError
+from pydantic import BaseModel, ValidationError
 
 from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks
 from case_mgmt_ai_demo.config import Settings
@@ -15,11 +16,31 @@ from case_mgmt_ai_demo.review import (
     ClauseSelection,
     DraftNote,
     FixedCategory,
+    ModelError,
     ReviewPipeline,
     SectionRelevance,
     relevance_prompt,
     selection_prompt,
 )
+
+
+@contextmanager
+def _model_errors(model: str) -> Iterator[None]:
+    """Raise any OpenAI error or malformed output as a ModelError, so the pipeline records it
+    and carries on."""
+    try:
+        yield
+    except (OpenAIError, ValidationError) as error:
+        raise ModelError(f"{model}: {error}") from error
+
+
+def _parse[T: BaseModel](client: OpenAI, model: str, prompt: str, output: type[T], what: str) -> T:
+    """One structured-output call; raises ModelError when it fails or nothing is parsed."""
+    with _model_errors(model):
+        response = client.responses.parse(model=model, input=prompt, text_format=output)
+    if response.output_parsed is None:
+        raise ModelError(f"{model} returned no parsed {what}")
+    return response.output_parsed
 
 
 class OpenAIDecisions:
@@ -30,14 +51,15 @@ class OpenAIDecisions:
         self._model = model
 
     def predicates(self, input: str, questions: Mapping[str, str]) -> dict[str, float | None]:
-        decision = self._client.decisions.create(
-            model=self._model,
-            input=input,
-            questions=[
-                {"type": "predicate", "name": name, "instructions": instructions}
-                for name, instructions in questions.items()
-            ],
-        )
+        with _model_errors(self._model):
+            decision = self._client.decisions.create(
+                model=self._model,
+                input=input,
+                questions=[
+                    {"type": "predicate", "name": name, "instructions": instructions}
+                    for name, instructions in questions.items()
+                ],
+            )
         # Refusals carry no probability; questions are named, so match answers by name.
         answered = {
             answer.name: answer.probability
@@ -59,12 +81,7 @@ class OpenAINotesLLM:
         self._model = model
 
     def write_notes(self, prompt: str) -> list[DraftNote]:
-        response = self._client.responses.parse(
-            model=self._model, input=prompt, text_format=_NotesOutput
-        )
-        if response.output_parsed is None:
-            raise RuntimeError(f"Notes model {self._model} returned no parsed Notes")
-        return response.output_parsed.notes
+        return _parse(self._client, self._model, prompt, _NotesOutput, "Notes").notes
 
 
 class _SelectionOutput(BaseModel):
@@ -79,14 +96,9 @@ class OpenAIRequirementSelector:
         self._model = model
 
     def select(self, clauses: list[Clause], request: PermitRequest) -> list[ClauseSelection]:
-        response = self._client.responses.parse(
-            model=self._model,
-            input=selection_prompt(clauses, request),
-            text_format=_SelectionOutput,
-        )
-        if response.output_parsed is None:
-            raise RuntimeError(f"Selector model {self._model} returned no parsed selection")
-        return response.output_parsed.classifications
+        prompt = selection_prompt(clauses, request)
+        output = _parse(self._client, self._model, prompt, _SelectionOutput, "selection")
+        return output.classifications
 
 
 class _RelevanceOutput(BaseModel):
@@ -102,14 +114,8 @@ class OpenAISectionValidator:
         self._model = model
 
     def validate(self, chunks: list[Chunk], request: PermitRequest) -> SectionRelevance:
-        response = self._client.responses.parse(
-            model=self._model,
-            input=relevance_prompt(chunks, request),
-            text_format=_RelevanceOutput,
-        )
-        if response.output_parsed is None:
-            raise RuntimeError(f"Section validator {self._model} returned no parsed verdict")
-        verdict = response.output_parsed
+        prompt = relevance_prompt(chunks, request)
+        verdict = _parse(self._client, self._model, prompt, _RelevanceOutput, "verdict")
         return SectionRelevance(
             section_id=chunks[0].section_id, applies=verdict.applies, reason=verdict.reason
         )

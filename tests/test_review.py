@@ -14,6 +14,7 @@ from case_mgmt_ai_demo.review import (
     FixedCategory,
     InvalidPermitRequest,
     MissingPinnedClause,
+    ModelError,
     ReviewPipeline,
     SectionRelevance,
 )
@@ -69,19 +70,24 @@ RENEWAL = {
 
 
 class FakeDecisions:
-    """Answers each named question from `probabilities`, else with `default`."""
+    """Answers each named question from `probabilities`, else with `default`; a call asking a
+    question in `failing` raises ModelError."""
 
     def __init__(
         self,
         probabilities: Mapping[str, float | None] | None = None,
         default: float | None = 0.9,
+        failing: frozenset[str] = frozenset(),
     ):
         self.probabilities = probabilities or {}
         self.default = default
+        self.failing = failing
         self.calls: list[tuple[str, dict[str, str]]] = []
 
     def predicates(self, input: str, questions: Mapping[str, str]) -> dict[str, float | None]:
         self.calls.append((input, dict(questions)))
+        if failed := self.failing & questions.keys():
+            raise ModelError(f"Decisions API: 500 al preguntar {', '.join(sorted(failed))}")
         return {name: self.probabilities.get(name, self.default) for name in questions}
 
 
@@ -96,15 +102,23 @@ def call_for(decisions: FakeDecisions, question: str) -> tuple[str, dict[str, st
 
 
 class FakeSectionValidator:
-    """Every Section applies unless listed in `not_applicable` (Section ID -> reason)."""
+    """Every Section applies unless listed in `not_applicable` (Section ID -> reason); a
+    Section in `failing` raises ModelError."""
 
-    def __init__(self, not_applicable: Mapping[str, str] | None = None):
+    def __init__(
+        self,
+        not_applicable: Mapping[str, str] | None = None,
+        failing: frozenset[str] = frozenset(),
+    ):
         self.not_applicable = not_applicable or {}
+        self.failing = failing
         self.calls: list[tuple[list[Chunk], PermitRequest]] = []
 
     def validate(self, chunks: list[Chunk], request: PermitRequest) -> SectionRelevance:
         self.calls.append((chunks, request))
         section_id = chunks[0].section_id
+        if section_id in self.failing:
+            raise ModelError("Section validator: tiempo de espera agotado")
         reason = self.not_applicable.get(section_id)
         return SectionRelevance(
             section_id=section_id,
@@ -114,13 +128,18 @@ class FakeSectionValidator:
 
 
 class FakeNotesLLM:
-    def __init__(self, *batches: list[DraftNote]):
+    """Returns each batch in turn; a batch that is a ModelError is raised instead."""
+
+    def __init__(self, *batches: list[DraftNote] | ModelError):
         self.batches = list(batches)
         self.prompts: list[str] = []
 
     def write_notes(self, prompt: str) -> list[DraftNote]:
         self.prompts.append(prompt)
-        return self.batches.pop(0)
+        batch = self.batches.pop(0)
+        if isinstance(batch, ModelError):
+            raise batch
+        return batch
 
 
 class FakeSelector:
@@ -131,14 +150,18 @@ class FakeSelector:
         categories: Mapping[str, ClauseCategory] | None = None,
         omit: frozenset[str] = frozenset(),
         extra: tuple[ClauseSelection, ...] = (),
+        fail: bool = False,
     ):
         self.categories = categories or {}
         self.omit = omit
         self.extra = extra
+        self.fail = fail
         self.calls: list[tuple[list[Clause], PermitRequest]] = []
 
     def select(self, clauses: list[Clause], request: PermitRequest) -> list[ClauseSelection]:
         self.calls.append((clauses, request))
+        if self.fail:
+            raise ModelError("Selector: respuesta sin clasificación")
         return [
             ClauseSelection(
                 ref=clause.ref,
@@ -975,3 +998,77 @@ def test_a_fixed_category_for_one_request_type_does_not_apply_to_the_other(pcoc_
         )
 
     assert reviews == {"PCOC": (True, "aplica"), "PERMISO_UNICO": (False, "no_aplica")}
+
+
+def test_a_review_without_api_errors_records_none(retriever):
+    recommendation = pipeline(FakeDecisions(), FakeNotesLLM([]), retriever).review(GOOD_PCOC)
+
+    assert recommendation.errors == []
+
+
+def test_a_decisions_api_error_leaves_its_requirement_not_assessed_and_is_recorded(retriever):
+    decisions = FakeDecisions(default=0.9, failing=frozenset({"seccion_2_1_9_3"}))
+    notes_llm = FakeNotesLLM([VALUE_NOTE])
+
+    recommendation = pipeline(decisions, notes_llm, retriever).review(GOOD_PCOC)
+
+    assert [(r.id, r.probability) for r in recommendation.requirements] == [
+        ("seccion_2_1_9_3", None),
+        ("seccion_2_1_9_5", 0.9),
+    ]
+    assert recommendation.approval_score is None
+    assert recommendation.verdict == "manual_review"
+    assert len(recommendation.notes) == 1
+    [error] = recommendation.errors
+    assert (error.step, error.subject) == ("decide", "seccion_2_1_9_3")
+    assert "500" in error.message
+
+
+def test_a_section_validator_error_keeps_the_section_and_is_recorded(retriever):
+    validator = FakeSectionValidator(failing=frozenset({"RC-2023-E:2.1.9.3"}))
+    decisions = FakeDecisions(default=0.8)
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), retriever, validator=validator
+    ).review(GOOD_PCOC)
+
+    relevance = {r.section_id: r for r in recommendation.section_relevance}
+    assert relevance["RC-2023-E:2.1.9.3"].applies is True
+    assert "No se pudo validar" in relevance["RC-2023-E:2.1.9.3"].reason
+    # Kept rather than dropped: its requirements are still scored.
+    assert clause_text("RC-2023-E:2.1.9.3(a)") in all_inputs(decisions)
+    assert recommendation.approval_score == 0.8
+    [error] = recommendation.errors
+    assert (error.step, error.subject) == ("validate_sections", "RC-2023-E:2.1.9.3")
+    assert "tiempo de espera" in error.message
+
+
+def test_a_selector_error_leaves_every_clause_unclassified_and_kept(pcoc_retriever):
+    decisions = FakeDecisions(default=0.8)
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(fail=True)
+    ).review(GOOD_PCOC)
+
+    assert recommendation.selection == []
+    assert len(recommendation.unclassified_clause_refs) == 23 + 3 + 6
+    assert clause_text("RC-2023-E:2.1.9.2(a)") in all_inputs(decisions)
+    [error] = recommendation.errors
+    assert (error.step, error.subject) == ("select_requirements", None)
+
+
+def test_a_notes_error_keeps_the_score_and_is_recorded(retriever):
+    notes_llm = FakeNotesLLM(ModelError("Notes model: límite de uso"))
+
+    recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
+        GOOD_PCOC
+    )
+
+    assert recommendation.notes == []
+    assert (recommendation.approval_score, recommendation.verdict) == (0.86, "approve")
+    [error] = recommendation.errors
+    assert (error.step, error.subject, error.message) == (
+        "write_notes",
+        None,
+        "Notes model: límite de uso",
+    )

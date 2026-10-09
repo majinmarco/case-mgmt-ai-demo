@@ -71,7 +71,7 @@ intake ──► fee_check ─────────────────�
 - **Adapters:** the Section retriever, the Section validator, the requirement selector, the Decisions API client and the Notes LLM are injected into the graph, so tests run it with fakes.
 - **Selection in the trace:** the full classification (all three categories, with reasons) is kept in graph state and in the Recommendation; `review` prints how many Clauses were set aside and lists them with `--selection`.
 - **Verdict:** configurable cutoff on the Approval Score plus a configurable **Borderline** band (e.g. 0.4–0.6) flagged in the UI.
-- **Failure handling:** any refused Requirement yields "No score — manual review" (Notes still generated), and that Requirement is shown as "not assessed"; so does a request with no applicable requirement. API errors surface in the trace.
+- **Failure handling:** any refused Requirement yields "No score — manual review" (Notes still generated), and that Requirement is shown as "not assessed"; so does a request with no applicable requirement. A model call that fails (adapters raise `ModelError` for OpenAI errors and missing or malformed structured output) is recorded as `{step, subject, message}` in the Recommendation's `errors` and printed by `review`; the review carries on with the safest reading: a failed Decisions call leaves its Requirement not assessed (so manual review), a failed Section validation keeps the Section, a failed selection leaves every Clause unclassified (so kept for `decide`), and failed Notes leave none while the score stands. (CMAWD-9)
 - **Determination is outside the graph** — plain app state in SQLite. (Revisit LangGraph `interrupt()` only if post-Determination steps are added.)
 - Graph state per node feeds the in-app pipeline trace.
 

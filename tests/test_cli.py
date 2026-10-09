@@ -10,6 +10,7 @@ from case_mgmt_ai_demo.review import (
     ClauseSelection,
     InvalidPermitRequest,
     Note,
+    ModelFailure,
     Recommendation,
     RequirementAssessment,
     SectionRelevance,
@@ -153,6 +154,36 @@ def test_review_marks_a_refused_requirement_as_not_assessed(request_file, capsys
     out = capsys.readouterr().out
     assert "Puntuación de aprobación: sin puntuación\n" in out
     assert "  no evaluado  La obra cumple los parámetros del distrito. [pcoc_parametros]" in out
+
+
+def test_review_prints_every_api_error_with_its_step_and_subject(request_file, capsys):
+    pipeline = FakePipeline(
+        recommendation(
+            errors=[
+                ModelFailure(
+                    step="validate_sections",
+                    subject="RC-2023-E:2.1.9.3",
+                    message="gpt-6-luna: Connection error.",
+                ),
+                ModelFailure(step="write_notes", message="gpt-6-luna: Request timed out."),
+            ]
+        )
+    )
+
+    main(["review", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert (
+        "Errores de la API (la revisión continuó sin esas respuestas):\n"
+        "  ⚠ validate_sections [RC-2023-E:2.1.9.3]: gpt-6-luna: Connection error.\n"
+        "  ⚠ write_notes: gpt-6-luna: Request timed out.\n"
+    ) in out
+
+
+def test_review_without_api_errors_prints_no_errors_block(request_file, capsys):
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation()))
+
+    assert "Errores de la API" not in capsys.readouterr().out
 
 
 def test_review_names_the_request_type_of_a_permiso_unico(request_file, capsys):

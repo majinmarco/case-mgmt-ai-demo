@@ -124,6 +124,11 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
         lines.append(f"  ⚠ Inciso sin clasificar (se evalúa igualmente): {ref}")
     for ref in recommendation.unknown_clause_refs:
         lines.append(f"  ⚠ Inciso desconocido descartado: {ref}")
+    if recommendation.errors:
+        lines += ["", "Errores de la API (la revisión continuó sin esas respuestas):"]
+        for error in recommendation.errors:
+            subject = f" [{error.subject}]" if error.subject else ""
+            lines.append(f"  ⚠ {error.step}{subject}: {error.message}")
     lines += ["", "Notas:"]
     for number, note in enumerate(recommendation.notes, start=1):
         curable = " (subsanable)" if note.curable else ""

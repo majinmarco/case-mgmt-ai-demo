@@ -1,14 +1,16 @@
 """Real implementations of the review pipeline's adapters."""
 
+import json
 from collections.abc import Mapping
+from importlib.resources import files
 
 from openai import OpenAI
 from pydantic import BaseModel
 
-from case_mgmt_ai_demo.chunks import Chunk, load_fixture_chunks
+from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.permit_request import PermitRequest
-from case_mgmt_ai_demo.review import DraftNote, ReviewPipeline
+from case_mgmt_ai_demo.review import ClauseSelection, DraftNote, ReviewPipeline, selection_prompt
 
 
 class OpenAIDecisions:
@@ -56,6 +58,28 @@ class OpenAINotesLLM:
         return response.output_parsed.notes
 
 
+class _SelectionOutput(BaseModel):
+    classifications: list[ClauseSelection]
+
+
+class OpenAIRequirementSelector:
+    """Classifies every clause with structured output `{ref, category, reason}`."""
+
+    def __init__(self, client: OpenAI, model: str):
+        self._client = client
+        self._model = model
+
+    def select(self, clauses: list[Clause], request: PermitRequest) -> list[ClauseSelection]:
+        response = self._client.responses.parse(
+            model=self._model,
+            input=selection_prompt(clauses, request),
+            text_format=_SelectionOutput,
+        )
+        if response.output_parsed is None:
+            raise RuntimeError(f"Selector model {self._model} returned no parsed selection")
+        return response.output_parsed.classifications
+
+
 class FixtureRetriever:
     """Stands in for Chroma retrieval: every fixture Section tagged with the Request Type."""
 
@@ -66,10 +90,18 @@ class FixtureRetriever:
         return [chunk for chunk in self._chunks if request.request_type in chunk.request_types]
 
 
+def load_pinned_clauses() -> list[ClauseSelection]:
+    """General clauses whose category is fixed by configuration instead of asked each time."""
+    raw = files("case_mgmt_ai_demo.fixtures").joinpath("pinned_clauses.json").read_text()
+    return [ClauseSelection.model_validate(item) for item in json.loads(raw)]
+
+
 def build_review_pipeline(settings: Settings, client: OpenAI) -> ReviewPipeline:
     return ReviewPipeline(
         OpenAIDecisions(client, settings.decisions_api_model),
         OpenAINotesLLM(client, settings.notes_model),
         FixtureRetriever(),
+        OpenAIRequirementSelector(client, settings.selector_model),
         settings,
+        pinned=load_pinned_clauses(),
     )

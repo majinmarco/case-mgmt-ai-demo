@@ -5,6 +5,7 @@ ingestion exists, `load_fixture_chunks()` serves ~10 hand-typed RC-2023-E Sectio
 """
 
 import json
+import re
 from importlib.resources import files
 from typing import Literal, Self
 
@@ -38,6 +39,34 @@ class Chunk(BaseModel):
         if not self.section_id.startswith(SECTION_ID_PREFIX[self.doc]):
             raise ValueError(f"section_id {self.section_id!r} does not belong to {self.doc}")
         return self
+
+
+class Clause(BaseModel):
+    """One lettered clause of a Section, with its text exactly as the chunk holds it."""
+
+    ref: str = Field(description="Section ID plus letter, e.g. 'RC-2023-E:2.1.9.2(k)'.")
+    section_id: str
+    heading: str
+    text: str = Field(description="Verbatim, from the letter through any numbered items.")
+
+
+# A top-level clause starts a line with its letter and a period ("k. "); numbered items
+# ("1. ") and parenthesised sub-items ("a) ") stay inside the clause above them.
+_CLAUSE_START = re.compile(r"^(?=[a-zñ]\. )", re.MULTILINE)
+
+
+def split_clauses(chunk: Chunk) -> list[Clause]:
+    """Text before the first clause, or a Section without clauses, is cited by its Section ID."""
+    return [
+        Clause(
+            ref=f"{chunk.section_id}({text[0]})" if _CLAUSE_START.match(text) else chunk.section_id,
+            section_id=chunk.section_id,
+            heading=chunk.heading,
+            text=text.removesuffix("\n"),
+        )
+        for text in _CLAUSE_START.split(chunk.text)
+        if text
+    ]
 
 
 def load_fixture_chunks() -> list[Chunk]:

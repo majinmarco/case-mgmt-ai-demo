@@ -3,10 +3,16 @@ from collections.abc import Mapping
 
 import pytest
 
-from case_mgmt_ai_demo.chunks import Chunk, load_fixture_chunks
+from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks, split_clauses
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.permit_request import PermitRequest
-from case_mgmt_ai_demo.review import DraftNote, InvalidPermitRequest, ReviewPipeline
+from case_mgmt_ai_demo.review import (
+    ClauseCategory,
+    ClauseSelection,
+    DraftNote,
+    InvalidPermitRequest,
+    ReviewPipeline,
+)
 
 GOOD_PCOC = {
     "request_type": "PCOC",
@@ -47,6 +53,33 @@ class FakeNotesLLM:
         return self.batches.pop(0)
 
 
+class FakeSelector:
+    """Classifies every clause it is shown: `aplica` unless listed in `categories`."""
+
+    def __init__(
+        self,
+        categories: Mapping[str, ClauseCategory] | None = None,
+        omit: frozenset[str] = frozenset(),
+        extra: tuple[ClauseSelection, ...] = (),
+    ):
+        self.categories = categories or {}
+        self.omit = omit
+        self.extra = extra
+        self.calls: list[tuple[list[Clause], PermitRequest]] = []
+
+    def select(self, clauses: list[Clause], request: PermitRequest) -> list[ClauseSelection]:
+        self.calls.append((clauses, request))
+        return [
+            ClauseSelection(
+                ref=clause.ref,
+                category=self.categories.get(clause.ref, "aplica"),
+                reason=f"razón para {clause.ref}",
+            )
+            for clause in clauses
+            if clause.ref not in self.omit
+        ] + list(self.extra)
+
+
 class FakeRetriever:
     def __init__(self, section_ids: set[str]):
         self.chunks = [c for c in load_fixture_chunks() if c.section_id in section_ids]
@@ -69,9 +102,22 @@ VALUE_NOTE = DraftNote(
 )
 
 
-def pipeline(decisions, notes_llm, retriever) -> ReviewPipeline:
+def pipeline(decisions, notes_llm, retriever, selector=None, pinned=()) -> ReviewPipeline:
     settings = Settings(approval_cutoff=0.5, borderline_low=0.4, borderline_high=0.6)
-    return ReviewPipeline(decisions, notes_llm, retriever, settings)
+    return ReviewPipeline(
+        decisions, notes_llm, retriever, selector or FakeSelector(), settings, pinned=pinned
+    )
+
+
+def clause_text(ref: str) -> str:
+    """The fixture text of one clause, as an independent check on what reaches the models."""
+    section_id, letter = ref.removesuffix(")").split("(")
+    for chunk in load_fixture_chunks():
+        if chunk.section_id == section_id:
+            for line in chunk.text.splitlines():
+                if line.startswith(f"{letter}. "):
+                    return line
+    raise KeyError(ref)
 
 
 @pytest.fixture
@@ -226,3 +272,187 @@ def test_invalid_intake_errors_are_in_spanish(retriever, raw, message):
         pipeline(FakeDecisions({}), FakeNotesLLM(), retriever).review(raw)
 
     assert any(m.startswith(message) for m in error.value.errors), error.value.errors
+
+
+PROCEDURAL: dict[str, ClauseCategory] = {
+    "RC-2023-E:2.1.9.2(a)": "tramite_del_sistema",
+    "RC-2023-E:2.1.9.2(n)": "tramite_del_sistema",
+    "RC-2023-E:2.1.9.2(l)": "no_aplica",
+    "RC-2023-E:2.1.9.5(d)": "no_aplica",
+}
+
+
+@pytest.fixture
+def pcoc_retriever():
+    return FakeRetriever({"RC-2023-E:2.1.9.2", "RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5"})
+
+
+def test_selector_is_shown_every_retrieved_clause_and_the_request(pcoc_retriever):
+    selector = FakeSelector()
+
+    pipeline(FakeDecisions({"aprobacion": 0.7}), FakeNotesLLM([]), pcoc_retriever, selector).review(
+        GOOD_PCOC
+    )
+
+    [(clauses, request)] = selector.calls
+    assert len(clauses) == 23 + 3 + 6
+    assert clauses[0].ref == "RC-2023-E:2.1.9.2(a)"
+    assert clauses[-1].ref == "RC-2023-E:2.1.9.5(f)"
+    assert request.applicant_name == "María Isabel Rivera Ortiz"
+
+
+def test_only_aplica_clauses_reach_decide_word_for_word_under_their_section(pcoc_retriever):
+    decisions = FakeDecisions({"aprobacion": 0.7})
+
+    pipeline(decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(PROCEDURAL)).review(
+        GOOD_PCOC
+    )
+
+    [(input, _)] = decisions.calls
+    for ref in PROCEDURAL:
+        assert clause_text(ref) not in input
+    for ref in ["RC-2023-E:2.1.9.2(k)", "RC-2023-E:2.1.9.2(m)", "RC-2023-E:2.1.9.5(b)"]:
+        assert clause_text(ref) in input
+    assert "1. Escritura pública.\n2. Contrato de arrendamiento." in input
+    # Both parts of 2.1.9.2 sit under one heading, ahead of the request fields.
+    assert input.count("[RC-2023-E:2.1.9.2] REQUISITOS DE PRESENTACIÓN") == 1
+    assert input.index(clause_text("RC-2023-E:2.1.9.2(w)")) < input.index("[RC-2023-E:2.1.9.3]")
+    assert input.index("[RC-2023-E:2.1.9.5]") < input.index("SOLICITUD DE PERMISO")
+
+
+def test_an_applicable_requirement_the_request_omits_stays_in_the_decide_input(pcoc_retriever):
+    # No value certification attached and no value declared: 2.1.9.3(a) is a deficiency.
+    raw = GOOD_PCOC | {"attached_documents": ["planos_sellados"], "estimated_work_value": None}
+    decisions = FakeDecisions({"aprobacion": 0.2})
+
+    pipeline(decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(PROCEDURAL)).review(raw)
+
+    [(input, _)] = decisions.calls
+    assert clause_text("RC-2023-E:2.1.9.3(a)") in input
+
+
+def test_write_notes_still_receives_the_full_retrieved_sections(pcoc_retriever):
+    notes_llm = FakeNotesLLM([])
+
+    pipeline(
+        FakeDecisions({"aprobacion": 0.7}), notes_llm, pcoc_retriever, FakeSelector(PROCEDURAL)
+    ).review(GOOD_PCOC)
+
+    [prompt] = notes_llm.prompts
+    for ref in PROCEDURAL:
+        assert clause_text(ref) in prompt
+
+
+def test_recommendation_carries_the_selection_with_reasons_in_reglamento_order(pcoc_retriever):
+    recommendation = pipeline(
+        FakeDecisions({"aprobacion": 0.7}),
+        FakeNotesLLM([]),
+        pcoc_retriever,
+        FakeSelector(PROCEDURAL),
+    ).review(GOOD_PCOC)
+
+    selection = {s.ref: s for s in recommendation.selection}
+    assert len(recommendation.selection) == 32
+    assert recommendation.selection[0].ref == "RC-2023-E:2.1.9.2(a)"
+    assert selection["RC-2023-E:2.1.9.2(n)"].category == "tramite_del_sistema"
+    assert selection["RC-2023-E:2.1.9.2(l)"].reason == "razón para RC-2023-E:2.1.9.2(l)"
+    assert selection["RC-2023-E:2.1.9.2(k)"].category == "aplica"
+    assert recommendation.set_aside_count == 4
+
+
+def test_unknown_clause_refs_are_dropped_and_reported(pcoc_retriever):
+    invented = ClauseSelection(ref="RC-2023-E:2.1.9.2(z)", category="aplica", reason="inventado")
+    selector = FakeSelector(PROCEDURAL, extra=(invented,))
+
+    recommendation = pipeline(
+        FakeDecisions({"aprobacion": 0.7}), FakeNotesLLM([]), pcoc_retriever, selector
+    ).review(GOOD_PCOC)
+
+    assert "RC-2023-E:2.1.9.2(z)" not in {s.ref for s in recommendation.selection}
+    assert recommendation.unknown_clause_refs == ["RC-2023-E:2.1.9.2(z)"]
+
+
+def test_a_clause_the_selector_left_out_is_reported_and_kept_for_decide(pcoc_retriever):
+    decisions = FakeDecisions({"aprobacion": 0.7})
+    selector = FakeSelector(PROCEDURAL, omit=frozenset({"RC-2023-E:2.1.9.3(b)"}))
+
+    recommendation = pipeline(decisions, FakeNotesLLM([]), pcoc_retriever, selector).review(
+        GOOD_PCOC
+    )
+
+    assert recommendation.unclassified_clause_refs == ["RC-2023-E:2.1.9.3(b)"]
+    [(input, _)] = decisions.calls
+    assert clause_text("RC-2023-E:2.1.9.3(b)") in input
+
+
+def test_a_clause_classified_twice_keeps_its_first_classification(pcoc_retriever):
+    again = ClauseSelection(ref="RC-2023-E:2.1.9.2(a)", category="aplica", reason="otra vez")
+    decisions = FakeDecisions({"aprobacion": 0.7})
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(PROCEDURAL, extra=(again,))
+    ).review(GOOD_PCOC)
+
+    assert [s.category for s in recommendation.selection if s.ref == "RC-2023-E:2.1.9.2(a)"] == [
+        "tramite_del_sistema"
+    ]
+    assert clause_text("RC-2023-E:2.1.9.2(a)") not in decisions.calls[0][0]
+
+
+PINNED_COMPLETENESS = ClauseSelection(
+    ref="RC-2023-E:2.1.9.2(m)",
+    category="tramite_del_sistema",
+    reason="Fijado: la completitud se juzga por los requisitos específicos.",
+)
+
+
+def test_a_pinned_clause_is_not_shown_to_the_selector_and_keeps_its_configured_category(
+    pcoc_retriever,
+):
+    selector = FakeSelector()
+    decisions = FakeDecisions({"aprobacion": 0.7})
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, selector, pinned=[PINNED_COMPLETENESS]
+    ).review(GOOD_PCOC)
+
+    [(clauses, _)] = selector.calls
+    assert "RC-2023-E:2.1.9.2(m)" not in {clause.ref for clause in clauses}
+    selection = {s.ref: s for s in recommendation.selection}
+    assert selection["RC-2023-E:2.1.9.2(m)"] == PINNED_COMPLETENESS
+    assert [s.ref for s in recommendation.selection][11:14] == [
+        "RC-2023-E:2.1.9.2(l)",
+        "RC-2023-E:2.1.9.2(m)",
+        "RC-2023-E:2.1.9.2(n)",
+    ]
+    assert recommendation.unclassified_clause_refs == []
+    assert clause_text("RC-2023-E:2.1.9.2(m)") not in decisions.calls[0][0]
+
+
+def test_a_pinned_category_wins_over_the_selector(pcoc_retriever):
+    stray = ClauseSelection(ref="RC-2023-E:2.1.9.2(m)", category="aplica", reason="del modelo")
+
+    recommendation = pipeline(
+        FakeDecisions({"aprobacion": 0.7}),
+        FakeNotesLLM([]),
+        pcoc_retriever,
+        FakeSelector(extra=(stray,)),
+        pinned=[PINNED_COMPLETENESS],
+    ).review(GOOD_PCOC)
+
+    assert [s for s in recommendation.selection if s.ref == "RC-2023-E:2.1.9.2(m)"] == [
+        PINNED_COMPLETENESS
+    ]
+    assert recommendation.unknown_clause_refs == []
+
+
+def test_a_pin_for_a_clause_that_was_not_retrieved_is_ignored(retriever):
+    # `retriever` holds 2.1.9.3 and 2.1.9.5 only, so the 2.1.9.2(m) pin has nothing to apply to.
+    recommendation = pipeline(
+        FakeDecisions({"aprobacion": 0.7}),
+        FakeNotesLLM([]),
+        retriever,
+        pinned=[PINNED_COMPLETENESS],
+    ).review(GOOD_PCOC)
+
+    assert "RC-2023-E:2.1.9.2(m)" not in {s.ref for s in recommendation.selection}

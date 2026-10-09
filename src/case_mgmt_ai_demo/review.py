@@ -1,17 +1,19 @@
 """The review pipeline: one Permit Request in, one Recommendation out.
 
-A LangGraph graph `intake → retrieve → decide → write_notes → validate_citations`. The Decisions
-API client, the Notes LLM and the Section retriever are injected adapters, so tests can fake them.
+A LangGraph graph
+`intake → retrieve → select_requirements → decide → write_notes → validate_citations`. The Section
+retriever, the requirement selector, the Decisions API client and the Notes LLM are injected
+adapters, so tests can fake them.
 """
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import Any, Literal, Protocol, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_core import ErrorDetails
 
-from case_mgmt_ai_demo.chunks import Chunk
+from case_mgmt_ai_demo.chunks import Chunk, Clause, split_clauses
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.permit_request import PermitRequest
 
@@ -32,7 +34,38 @@ entre corchetes (p. ej. RC-2023-E:2.1.9.5). Puede precisar el inciso: RC-2023-E:
 - `curable` es verdadero cuando la Nota describe una deficiencia que el Solicitante puede \
 subsanar (requerimiento de subsanación), y falso en otro caso."""
 
+SELECTION_INSTRUCTIONS = """\
+Eres un asistente que prepara la evaluación de una Solicitud de Permiso en Puerto Rico.
+Clasifica CADA inciso del Reglamento listado abajo en una de tres categorías, para esta solicitud:
+- "aplica": un requisito que el Solicitante o su solicitud deben cumplir para este tipo de \
+solicitud. Clasifícalo como "aplica" AUNQUE la solicitud no lo cumpla o no lo mencione: \
+un requisito incumplido u omitido sigue aplicando y es una deficiencia.
+- "tramite_del_sistema": un paso procesal que realiza o verifica el sistema o la agencia \
+(presentación y carga de documentos en el SUI, validación, plazos de la agencia, archivo), y \
+que no se acredita con los datos de la solicitud. Los pagos de derechos y aranceles son \
+"tramite_del_sistema" aunque el inciso se los imponga al solicitante: se verifican aparte.
+- "no_aplica": no aplica a esta solicitud (p. ej. asuntos discrecionales cuando la solicitud \
+es ministerial, proyectos públicos cuando el solicitante es privado, prórrogas cuando no se \
+solicita una, obligaciones que surgen después de expedido el permiso, disposiciones \
+meramente definitorias o declarativas sin requisito).
+Devuelve una clasificación por inciso, con `ref` exactamente como aparece entre corchetes, y \
+una razón breve en español."""
+
 Verdict = Literal["approve", "not_approve", "manual_review"]
+ClauseCategory = Literal["aplica", "tramite_del_sistema", "no_aplica"]
+
+
+class ClauseSelection(BaseModel):
+    """Whether one clause is a requirement this Permit Request must meet, and why."""
+
+    ref: str = Field(description="Clause reference, e.g. 'RC-2023-E:2.1.9.2(k)'.")
+    category: ClauseCategory
+    reason: str
+
+    @property
+    def set_aside(self) -> bool:
+        """Only `aplica` clauses are requirements the request is scored against."""
+        return self.category != "aplica"
 
 
 class DraftNote(BaseModel):
@@ -60,6 +93,19 @@ class Recommendation(BaseModel):
     borderline: bool
     notes: list[Note]
     retrieved_section_ids: list[str]
+    selection: list[ClauseSelection] = Field(
+        description="Every retrieved clause the selector classified, in Reglamento order."
+    )
+    unclassified_clause_refs: list[str] = Field(
+        description="Retrieved clauses the selector left out; kept for decide."
+    )
+    unknown_clause_refs: list[str] = Field(
+        description="References the selector returned that match no retrieved clause; dropped."
+    )
+
+    @property
+    def set_aside_count(self) -> int:
+        return sum(1 for s in self.selection if s.set_aside)
 
 
 class InvalidPermitRequest(ValueError):
@@ -82,6 +128,12 @@ class SectionRetriever(Protocol):
     def retrieve(self, request: PermitRequest) -> list[Chunk]: ...
 
 
+class RequirementSelector(Protocol):
+    def select(self, clauses: list[Clause], request: PermitRequest) -> list[ClauseSelection]:
+        """One classification per clause; may omit clauses or return unknown references."""
+        ...
+
+
 class ReviewInput(TypedDict):
     raw: Mapping[str, Any]
 
@@ -91,6 +143,10 @@ class ReviewState(ReviewInput):
 
     request: PermitRequest
     sections: list[Chunk]
+    clauses: list[Clause]
+    selection: list[ClauseSelection]
+    unclassified_clause_refs: list[str]
+    unknown_clause_refs: list[str]
     approval_score: float | None
     draft_notes: list[DraftNote]
     notes: list[Note]
@@ -102,21 +158,28 @@ class ReviewPipeline:
         decisions: DecisionsClient,
         notes_llm: NotesLLM,
         retriever: SectionRetriever,
+        selector: RequirementSelector,
         settings: Settings,
+        pinned: Iterable[ClauseSelection] = (),
     ):
+        """`pinned` fixes the category of general clauses the selector is unsteady on."""
         self._decisions = decisions
         self._notes_llm = notes_llm
         self._retriever = retriever
+        self._selector = selector
         self._settings = settings
+        self._pinned = {selection.ref: selection for selection in pinned}
         graph = StateGraph(ReviewState, input_schema=ReviewInput)
         graph.add_node("intake", self._intake)
         graph.add_node("retrieve", self._retrieve)
+        graph.add_node("select_requirements", self._select_requirements)
         graph.add_node("decide", self._decide)
         graph.add_node("write_notes", self._write_notes)
         graph.add_node("validate_citations", self._validate_citations)
         graph.add_edge(START, "intake")
         graph.add_edge("intake", "retrieve")
-        graph.add_edge("retrieve", "decide")
+        graph.add_edge("retrieve", "select_requirements")
+        graph.add_edge("select_requirements", "decide")
         graph.add_edge("decide", "write_notes")
         graph.add_edge("write_notes", "validate_citations")
         graph.add_edge("validate_citations", END)
@@ -134,6 +197,9 @@ class ReviewPipeline:
             and self._settings.borderline_low <= score <= self._settings.borderline_high,
             notes=state["notes"],
             retrieved_section_ids=list(dict.fromkeys(c.section_id for c in state["sections"])),
+            selection=state["selection"],
+            unclassified_clause_refs=state["unclassified_clause_refs"],
+            unknown_clause_refs=state["unknown_clause_refs"],
         )
 
     def _verdict(self, score: float | None) -> Verdict:
@@ -148,11 +214,29 @@ class ReviewPipeline:
             raise InvalidPermitRequest([_error_es(e) for e in error.errors()]) from error
 
     def _retrieve(self, state: ReviewState) -> dict[str, Any]:
-        return {"sections": self._retriever.retrieve(state["request"])}
+        sections = self._retriever.retrieve(state["request"])
+        return {"sections": sections, "clauses": [c for s in sections for c in split_clauses(s)]}
+
+    def _select_requirements(self, state: ReviewState) -> dict[str, Any]:
+        clauses = state["clauses"]
+        asked = [clause for clause in clauses if clause.ref not in self._pinned]
+        returned: dict[str, ClauseSelection] = {}
+        for selection in self._selector.select(asked, state["request"]):
+            returned.setdefault(selection.ref, selection)
+        returned |= {c.ref: self._pinned[c.ref] for c in clauses if c.ref in self._pinned}
+        known = {clause.ref for clause in clauses}
+        return {
+            "selection": [returned[c.ref] for c in clauses if c.ref in returned],
+            "unclassified_clause_refs": [c.ref for c in clauses if c.ref not in returned],
+            "unknown_clause_refs": [ref for ref in returned if ref not in known],
+        }
 
     def _decide(self, state: ReviewState) -> dict[str, Any]:
+        # An unclassified clause may be a requirement, so it stays rather than being set aside.
+        set_aside = {s.ref for s in state["selection"] if s.set_aside}
+        requirements = [c for c in state["clauses"] if c.ref not in set_aside]
         answers = self._decisions.predicates(
-            _context(state["sections"], state["request"]),
+            _requirements_context(requirements, state["request"]),
             {APPROVAL_QUESTION: APPROVAL_INSTRUCTIONS},
         )
         return {"approval_score": answers[APPROVAL_QUESTION]}
@@ -208,10 +292,38 @@ def _was_retrieved(cited: str, retrieved: set[str]) -> bool:
     return cited in retrieved or cited.split("(", 1)[0] in retrieved
 
 
+def selection_prompt(clauses: list[Clause], request: PermitRequest) -> str:
+    """The Spanish prompt asking a model to classify every clause for this request."""
+    listing = "\n\n".join(f"[{c.ref}] {c.heading}\n{c.text}" for c in clauses)
+    return (
+        f"{SELECTION_INSTRUCTIONS}\n\nINCISOS DEL REGLAMENTO\n\n{listing}\n\n"
+        f"SOLICITUD DE PERMISO\n{_fields(request)}"
+    )
+
+
 def _context(sections: list[Chunk], request: PermitRequest) -> str:
-    """The shared Spanish context: Section texts, then the request fields."""
+    """The Notes context: whole Section texts, then the request fields."""
     section_texts = "\n\n".join(
         f"[{chunk.section_id}] {chunk.heading}\n{chunk.text}" for chunk in sections
     )
-    fields = "\n".join(f"- {label}: {value}" for label, value in request.fields_es().items())
-    return f"SECCIONES DEL REGLAMENTO\n\n{section_texts}\n\nSOLICITUD DE PERMISO\n{fields}"
+    return (
+        f"SECCIONES DEL REGLAMENTO\n\n{section_texts}\n\nSOLICITUD DE PERMISO\n{_fields(request)}"
+    )
+
+
+def _requirements_context(clauses: list[Clause], request: PermitRequest) -> str:
+    """The decide context: the selected clauses grouped under their Section, then the fields."""
+    by_section: dict[str, list[Clause]] = {}
+    for clause in clauses:
+        by_section.setdefault(clause.section_id, []).append(clause)
+    section_texts = "\n\n".join(
+        f"[{section_id}] {group[0].heading}\n" + "\n".join(c.text for c in group)
+        for section_id, group in by_section.items()
+    )
+    return (
+        f"SECCIONES DEL REGLAMENTO\n\n{section_texts}\n\nSOLICITUD DE PERMISO\n{_fields(request)}"
+    )
+
+
+def _fields(request: PermitRequest) -> str:
+    return "\n".join(f"- {label}: {value}" for label, value in request.fields_es().items())

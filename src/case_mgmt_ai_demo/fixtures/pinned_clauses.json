@@ -1,0 +1,42 @@
+[
+  {
+    "ref": "RC-2023-E:2.1.9.2(a)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: la presentación electrónica en el SUI es parte de la radicación y no se acredita con los datos de la solicitud."
+  },
+  {
+    "ref": "RC-2023-E:2.1.9.2(m)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: inciso general de completitud; la completitud se juzga por los requisitos específicos que aplican."
+  },
+  {
+    "ref": "RC-2023-E:2.1.9.2(n)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: pago de derechos de radicación; se verifica aparte."
+  },
+  {
+    "ref": "RC-2023-E:2.1.9.2(r)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: pago del 90% restante tras la validación; se verifica aparte."
+  },
+  {
+    "ref": "RC-2023-E:2.1.9.2(u)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: pago del derecho de la Orden Administrativa de Cobro; se verifica aparte."
+  },
+  {
+    "ref": "RC-2023-E:2.1.9.2(w)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: la carga al SUI y su notificación de recibo son parte de la radicación."
+  },
+  {
+    "ref": "RC-2023-E:2.2.1.3(a)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: describe cómo evalúa la agencia las solicitudes ministeriales, no un requisito del Solicitante."
+  },
+  {
+    "ref": "RC-2023-E:2.2.1.3(b)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: limita el juicio de los funcionarios al evaluar, no es un requisito del Solicitante."
+  }
+]

@@ -36,7 +36,9 @@ Shared core:
 5. Calificación (zoning district)
 6. Attached-documents checklist (per Request Type)
 
-PCOC adds: work description; estimated work value ($); floors/height + gross floor area; declared fee ($).
+PCOC adds: work description; estimated work value ($) and how it was calculated (OGPe guides or another method, 2.1.9.3(b)); floors/height + gross floor area; the district parameters of 2.2.1.3(d) (lot size, density, occupation area, yards, parking, loading), each beside the district's limit; how the plans are certified (professional, licence, drafter, sheet certifications, compliance certification, file format, north orientation; 2.1.9.2(k)); whether the OGPe catastral records match (2.1.9.2(j)); declared fee ($).
+
+**Evidence rule.** A Permit Request carries a field for every requirement that applies to its Request Type and that the record could evidence. The model judges an unevidenced requirement as unmet, so a good request that lacks the field to show compliance scores as a bad one (see *Requirement selection* below).
 
 Permiso Único adds: proposed use / business type; employees, parking, hours; licences requested (sanitaria, CPI, alcohol) + validity term (1–3 years); declared fee ($).
 
@@ -47,31 +49,39 @@ Permiso Único adds: proposed use / business type; employees, parking, hours; li
 ## Pipeline (LangGraph)
 
 ```
-intake ──► fee_check ─────────────────────────┐
-   └────► retrieve ──► decide ──► write_notes ├─► validate_citations ──► END (Recommendation)
-                                     ▲                │
-                                     └── retry once ──┘
+intake ──► fee_check ───────────────────────────────────────────────┐
+   └────► retrieve ──► select_requirements ──► decide ──► write_notes ├─► validate_citations ──► END (Recommendation)
+                                                             ▲                │
+                                                             └── retry once ──┘
 ```
 
 | Node | Behaviour |
 |---|---|
 | `intake` | Validate the Permit Request fields against its Request Type. |
 | `fee_check` | Deterministic, from fee-rules YAML. Emits its own curable Note citing the Anejo A item. Does **not** affect the Approval Score. |
-| `retrieve` | Pinned Sections for each Criterion + Chroma semantic top-k, metadata-filtered by Request Type. |
-| `decide` | One OpenAI Decisions API call (`client.decisions.create`, model `gpt-6-luna`): one overall `predicate` (= Approval Score) plus one `predicate` per Criterion. Context goes in `input` (no system prompt; instructions are per question). |
-| `write_notes` | `gpt-6-luna` with structured output: list of `{text, section_ids[], curable}`. Inputs: Request fields, retrieved Sections, Approval Score, Criterion probabilities, fee-check result. |
+| `retrieve` | Pinned Sections for each Criterion + Chroma semantic top-k, metadata-filtered by Request Type. Code splits each retrieved chunk into Clauses (top-level `a. `, `b. ` …), each identified as `section_id(letter)`, e.g. `RC-2023-E:2.1.9.2(k)`. |
+| `select_requirements` | `gpt-6-luna` with structured output classifies **every** Clause for this Permit Request as `{ref, category, reason}`: `aplica` (a requirement the Applicant or the request must meet; it stays even when the request does not meet or mention it, because then it is a deficiency), `tramite_del_sistema` (a step the system or agency performs: SUI filing, fee payments, validation, agency deadlines), or `no_aplica` (does not apply to this request). The model only picks references; code copies the Clause text word for word. Unknown references are dropped and reported; Clauses the model leaves out are reported and kept for `decide`. General Clauses the model is unsteady on have their category fixed by configuration (`fixtures/pinned_clauses.json`) and are not asked. |
+| `decide` | One OpenAI Decisions API call (`client.decisions.create`, model `gpt-6-luna`): one overall `predicate` (= Approval Score) plus one `predicate` per Criterion. `input` holds only the `aplica` Clauses, verbatim and grouped under their Section heading, then the Request fields (no system prompt; instructions are per question). |
+| `write_notes` | `gpt-6-luna` with structured output: list of `{text, section_ids[], curable}`. Inputs: Request fields, the full retrieved Sections, Approval Score, Criterion probabilities, fee-check result. |
 | `validate_citations` | Reject any citation whose Section prefix was not retrieved; retry `write_notes` once, then drop offending Notes. |
 
+- **Adapters:** the Section retriever, the requirement selector, the Decisions API client and the Notes LLM are injected into the graph, so tests run it with fakes.
+- **Selection in the trace:** the full classification (all three categories, with reasons) is kept in graph state and in the Recommendation; `review` prints how many Clauses were set aside and lists them with `--selection`.
 - **Verdict:** configurable cutoff on the Approval Score plus a configurable **Borderline** band (e.g. 0.4–0.6) flagged in the UI.
 - **Failure handling:** a refused overall predicate yields "No score — manual review" (Notes still generated); a refused Criterion predicate is shown as "not assessed". API errors surface in the trace.
 - **Determination is outside the graph** — plain app state in SQLite. (Revisit LangGraph `interrupt()` only if post-Determination steps are added.)
 - Graph state per node feeds the in-app pipeline trace.
+
+### Requirement selection (CMAWD-4 finding)
+
+In the first terminal slice (CMAWD-4), `decide` received whole retrieved Sections and the good PCOC example scored 0.24 (Not approve). Sección 2.1.9.2 alone has Clauses a–w, many of them procedural (SUI filing, the 10%/90% payments, validation deadlines) that a Permit Request record cannot evidence, and asked whether the request meets "todos los requisitos de las Secciones citadas" the model counts anything unevidenced as unmet. No single Section caused it, and rewording the question topped out at 0.46. Two changes were both needed: selecting the Clauses that apply (`select_requirements`), and Permit Request fields that can evidence them (the evidence rule above). Without fixed categories, the selector still varied run to run on the general Clauses (SUI filing, fee payments, completeness 2.1.9.2(m), 2.2.1.3(a)–(b)), and one bad run was enough to pull the good request below the cutoff; those Clauses are now fixed by configuration. With all three, the good example scores at or above the cutoff and the bad one below 0.1 (opt-in real-model test, three repeats each).
 
 ## Models
 
 | Use | Model |
 |---|---|
 | Approval Score + Criterion probabilities | `gpt-6-luna` via Decisions API (public beta; requires `openai>=3.26.0`) |
+| Requirement selection | `gpt-6-luna` (structured output); model ID configurable |
 | Notes | `gpt-6-luna` (structured output); model ID configurable |
 | Embeddings | `text-embedding-3-large` |
 
@@ -93,11 +103,11 @@ The ingestion output every downstream component builds against:
 | `heading` | `REQUISITOS DE PRESENTACIÓN` |
 | `parents` | `["Tomo III", "Capítulo 3.7", "Regla 3.7.1"]` |
 | `page_start`, `page_end` | source PDF pages |
-| `text` | full Section text, incisos preserved |
-| `part` | `1-of-N` when a long Section is split at inciso boundaries (same `section_id`) |
+| `text` | full Section text, Clauses preserved |
+| `part` | `1-of-N` when a long Section is split at Clause boundaries (same `section_id`) |
 
 - Chunk at **Sección** level (Regla level when a Regla has no Secciones). Strip running headers/footers; skip the RC table of contents; index the Tomo XII glossary one chunk per term.
-- Citations may go down to inciso (`RC-2023-E:2.1.9.2(m)`); validation matches on Section prefix.
+- Citations may go down to a Clause (`RC-2023-E:2.1.9.2(m)`); validation matches on Section prefix.
 - Implemented as a Pydantic model, with a ~10-chunk hand-typed fixture so the graph and UI can be built before real ingestion.
 
 ### Retrieval evaluation (part of ingestion)

@@ -131,14 +131,16 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
         for error in recommendation.errors:
             subject = f" [{error.subject}]" if error.subject else ""
             lines.append(f"  ⚠ {error.step}{subject}: {error.message}")
-    lines += ["", "Notas:"]
+    retried = " (reescritas una vez: citas no válidas en el primer intento)"
+    lines += ["", f"Notas{retried if recommendation.notes_retried else ''}:"]
     for number, note in enumerate(recommendation.notes, start=1):
         curable = " (subsanable)" if note.curable else ""
         lines.append(f"  {number}. {note.text} [{', '.join(note.section_ids)}]{curable}")
-        for section_id in note.unretrieved_section_ids:
-            lines.append(
-                f"     ⚠ Cita no verificada: {section_id} no está entre las Secciones que aplican"
-            )
+    if recommendation.dropped_notes:
+        lines += ["", "Notas descartadas (citas no válidas tras un reintento):"]
+        for dropped in recommendation.dropped_notes:
+            cited = f" [{', '.join(dropped.section_ids)}]" if dropped.section_ids else ""
+            lines.append(f"  ⚠ {dropped.text}{cited}: {dropped.problem_es()}")
     if show_selection:
         if not_applicable:
             lines += ["", "Secciones que no aplican:"]

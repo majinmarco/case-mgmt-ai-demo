@@ -1,8 +1,10 @@
 """The review pipeline: one Permit Request in, one Recommendation out.
 
 A LangGraph graph `intake → retrieve → validate_sections → select_requirements → decide →
-write_notes → validate_citations`. The Section retriever, the Section validator, the requirement
-selector, the Decisions API client and the Notes LLM are injected adapters, so tests can fake them.
+write_notes → validate_citations`; Notes citing a Section that does not apply go back to
+write_notes once, and are dropped if they still do. The Section retriever, the Section validator,
+the requirement selector, the Decisions API client and the Notes LLM are injected adapters, so
+tests can fake them.
 
 The Approval Score is not one question over everything retrieved: each Requirement is assessed on
 its own, and the score is the lowest probability. A Requirement is a Criterion (its pinned
@@ -48,6 +50,12 @@ entre corchetes (p. ej. RC-2023-E:2.1.9.5). Puede precisar el inciso: RC-2023-E:
 - `curable` es verdadero cuando la Nota describe una deficiencia que el Solicitante puede \
 subsanar (requerimiento de subsanación), y falso en otro caso."""
 
+CITATION_CORRECTION_INSTRUCTIONS = """\
+CORRECCIÓN DE CITAS
+En el intento anterior, estas Notas no citaron ninguna Sección o citaron Secciones que no están \
+entre las SECCIONES DEL REGLAMENTO proporcionadas. Escribe de nuevo todas las Notas y cita \
+únicamente identificadores que aparecen entre corchetes en esas Secciones:"""
+
 RELEVANCE_INSTRUCTIONS = """\
 Eres un asistente que prepara la evaluación de una Solicitud de Permiso en Puerto Rico.
 Una búsqueda recuperó la Sección del Reglamento que aparece abajo. Decide si esta Sección \
@@ -78,6 +86,8 @@ una razón breve en español."""
 
 Verdict = Literal["approve", "not_approve", "manual_review"]
 ClauseCategory = Literal["aplica", "tramite_del_sistema", "no_aplica"]
+# write_notes runs at most twice: once, then once more if a citation is invalid.
+NOTES_ATTEMPTS = 2
 ModelStep = Literal["validate_sections", "select_requirements", "decide", "write_notes"]
 
 
@@ -105,22 +115,27 @@ class FixedCategory(ClauseSelection):
         return self.request_types is None or request_type in self.request_types
 
 
-class DraftNote(BaseModel):
-    """A Note as the Notes LLM writes it, before its citations are checked."""
+class Note(BaseModel):
+    """A Note as the Notes LLM writes it; it reaches the Recommendation if its citations hold."""
 
     text: str
     section_ids: list[str]
     curable: bool
 
 
-class Note(DraftNote):
+class DroppedNote(Note):
+    """A Note left out of the Recommendation: its citations were still invalid after the retry."""
+
     unretrieved_section_ids: list[str] = Field(
-        default_factory=list, description="Cited Sections that were not retrieved."
+        description="Cited Sections that are not among those that apply; empty when it cited none."
     )
 
-    @property
-    def flagged(self) -> bool:
-        return bool(self.unretrieved_section_ids)
+    def problem_es(self) -> str:
+        """What is wrong with its citations, for the retry prompt and `review` output."""
+        if self.unretrieved_section_ids:
+            cited = ", ".join(self.unretrieved_section_ids)
+            return f"{cited} no está entre las Secciones que aplican"
+        return "no cita ninguna Sección"
 
 
 class SectionRelevance(BaseModel):
@@ -164,7 +179,13 @@ class Recommendation(BaseModel):
     requirements: list[RequirementAssessment] = Field(
         description="Criteria in curated order, then Sections' Requirements in retrieval order."
     )
-    notes: list[Note]
+    notes: list[Note] = Field(description="Each cites at least one Section that applies.")
+    notes_retried: bool = Field(
+        default=False, description="write_notes was sent back once over invalid citations."
+    )
+    dropped_notes: list[DroppedNote] = Field(
+        default_factory=list, description="Notes whose citations were still invalid after it."
+    )
     retrieved_section_ids: list[str]
     section_relevance: list[SectionRelevance] = Field(
         description="Every retrieved Section, whether it applies, and why."
@@ -225,7 +246,7 @@ class DecisionsClient(Protocol):
 
 
 class NotesLLM(Protocol):
-    def write_notes(self, prompt: str) -> list[DraftNote]: ...
+    def write_notes(self, prompt: str) -> list[Note]: ...
 
 
 class SectionRetriever(Protocol):
@@ -268,8 +289,11 @@ class ReviewState(ReviewInput):
     unknown_clause_refs: list[str]
     requirements: list[RequirementAssessment]
     approval_score: float | None
-    draft_notes: list[DraftNote]
+    notes_attempts: int
+    draft_notes: list[Note]
+    rejected_notes: list[DroppedNote]
     notes: list[Note]
+    dropped_notes: list[DroppedNote]
     errors: Annotated[list[ModelFailure], operator.add]
 
 
@@ -310,7 +334,7 @@ class ReviewPipeline:
         graph.add_edge("select_requirements", "decide")
         graph.add_edge("decide", "write_notes")
         graph.add_edge("write_notes", "validate_citations")
-        graph.add_edge("validate_citations", END)
+        graph.add_conditional_edges("validate_citations", _after_citations, ["write_notes", END])
         self._graph = graph.compile()
 
     def review(self, raw: Mapping[str, Any]) -> Recommendation:
@@ -328,6 +352,8 @@ class ReviewPipeline:
             and self._settings.borderline_low <= score <= self._settings.borderline_high,
             requirements=state["requirements"],
             notes=state["notes"],
+            notes_retried=state["notes_attempts"] > 1,  # the first attempt is not a retry
+            dropped_notes=state["dropped_notes"],
             retrieved_section_ids=list(dict.fromkeys(c.section_id for c in state["sections"])),
             section_relevance=state["section_relevance"],
             selection=state["selection"],
@@ -515,28 +541,40 @@ class ReviewPipeline:
             f"EVALUACIÓN POR REQUISITO (probabilidad de cumplimiento, 0-1)\n{requirements}\n\n"
             f"PUNTUACIÓN DE APROBACIÓN (0-1, la del requisito más débil): {shown}"
         )
+        if rejected := state.get("rejected_notes"):
+            corrections = "\n".join(f"- «{note.text}»: {note.problem_es()}" for note in rejected)
+            prompt += f"\n\n{CITATION_CORRECTION_INSTRUCTIONS}\n{corrections}"
+        attempts = state.get("notes_attempts", 0) + 1
         try:
-            return {"draft_notes": self._notes_llm.write_notes(prompt)}
+            return {"notes_attempts": attempts, "draft_notes": self._notes_llm.write_notes(prompt)}
         except ModelError as error:
-            # The score and verdict stand on their own; the Reviewer sees no Notes and the error.
+            # The score and verdict stand on their own. A failed retry leaves the first
+            # attempt's Notes, whose invalid ones are then dropped; a failed first attempt, none.
             return {
-                "draft_notes": [],
+                "notes_attempts": attempts,
+                "draft_notes": state.get("draft_notes", []),
                 "errors": [ModelFailure(step="write_notes", message=str(error))],
             }
 
     def _validate_citations(self, state: ReviewState) -> dict[str, Any]:
+        """Keep the Notes that cite only Sections that apply; after the retry, drop the rest."""
         # Only Sections that apply were shown to the Notes LLM, so only they may be cited.
         retrieved = {chunk.section_id for chunk in state["applicable_sections"]}
-        return {
-            "notes": [
-                Note(
-                    **draft.model_dump(),
-                    unretrieved_section_ids=[
-                        cited for cited in draft.section_ids if not _was_retrieved(cited, retrieved)
-                    ],
+        valid: list[Note] = []
+        rejected: list[DroppedNote] = []
+        for draft in state["draft_notes"]:
+            unretrieved = [c for c in draft.section_ids if not _was_retrieved(c, retrieved)]
+            if draft.section_ids and not unretrieved:
+                valid.append(draft)
+            else:
+                rejected.append(
+                    DroppedNote(**draft.model_dump(), unretrieved_section_ids=unretrieved)
                 )
-                for draft in state["draft_notes"]
-            ]
+        final = not _retry_notes(rejected, state["notes_attempts"])
+        return {
+            "rejected_notes": rejected,
+            "notes": valid,
+            "dropped_notes": rejected if final else [],
         }
 
 
@@ -548,6 +586,15 @@ class _Question(BaseModel):
     instructions: str
     clauses: list[Clause]
     criterion: Criterion | None = None
+
+
+def _retry_notes(rejected: list[DroppedNote], attempts: int) -> bool:
+    """Notes with invalid citations go back to write_notes once."""
+    return bool(rejected) and attempts < NOTES_ATTEMPTS
+
+
+def _after_citations(state: ReviewState) -> str:
+    return "write_notes" if _retry_notes(state["rejected_notes"], state["notes_attempts"]) else END
 
 
 def _approval_score(requirements: list[RequirementAssessment]) -> float | None:

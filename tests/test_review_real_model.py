@@ -20,9 +20,8 @@ def test_good_pcoc_request_gets_scored_recommendation_with_cited_notes_from_real
 
     assert recommendation.approval_score is not None, "overall predicate was refused"
     assert recommendation.notes, "no Notes were written"
-    assert all(note.section_ids for note in recommendation.notes), "a Note cites no Section"
-    assert not any(note.flagged for note in recommendation.notes), [
-        note.unretrieved_section_ids for note in recommendation.notes
+    assert not recommendation.dropped_notes, [
+        note.unretrieved_section_ids for note in recommendation.dropped_notes
     ]
 
 

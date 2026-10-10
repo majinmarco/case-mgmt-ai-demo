@@ -10,11 +10,11 @@ from case_mgmt_ai_demo.permit_request import PermitRequest
 from case_mgmt_ai_demo.review import (
     ClauseCategory,
     ClauseSelection,
-    DraftNote,
     FixedCategory,
     InvalidPermitRequest,
     MissingPinnedClause,
     ModelError,
+    Note,
     ReviewPipeline,
     SectionRelevance,
 )
@@ -130,11 +130,11 @@ class FakeSectionValidator:
 class FakeNotesLLM:
     """Returns each batch in turn; a batch that is a ModelError is raised instead."""
 
-    def __init__(self, *batches: list[DraftNote] | ModelError):
+    def __init__(self, *batches: list[Note] | ModelError):
         self.batches = list(batches)
         self.prompts: list[str] = []
 
-    def write_notes(self, prompt: str) -> list[DraftNote]:
+    def write_notes(self, prompt: str) -> list[Note]:
         self.prompts.append(prompt)
         batch = self.batches.pop(0)
         if isinstance(batch, ModelError):
@@ -188,12 +188,12 @@ class FakeRetriever:
         return [c for c in load_fixture_chunks() if c.section_id in section_ids]
 
 
-STANDING_NOTE = DraftNote(
+STANDING_NOTE = Note(
     text="La solicitante es dueña y presenta copia de la escritura pública.",
     section_ids=["RC-2023-E:2.1.9.5(b)"],
     curable=False,
 )
-VALUE_NOTE = DraftNote(
+VALUE_NOTE = Note(
     text="Se incluye la certificación del valor estimado de la obra.",
     section_ids=["RC-2023-E:2.1.9.3"],
     curable=False,
@@ -243,7 +243,7 @@ def test_good_request_gets_approve_recommendation_with_cited_notes(retriever):
     assert not recommendation.borderline
     assert [note.text for note in recommendation.notes] == [STANDING_NOTE.text, VALUE_NOTE.text]
     assert recommendation.notes[0].section_ids == ["RC-2023-E:2.1.9.5(b)"]
-    assert not any(note.flagged for note in recommendation.notes)
+    assert recommendation.dropped_notes == []
     assert recommendation.retrieved_section_ids == ["RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5"]
 
 
@@ -307,33 +307,108 @@ def test_missing_required_field_is_invalid_intake(retriever):
         pipeline(FakeDecisions(), FakeNotesLLM(), retriever).review(raw)
 
 
-def test_note_citing_a_section_that_was_not_retrieved_is_flagged(retriever):
-    stray = DraftNote(
-        text="El permiso puede prorrogarse hasta dos veces.",
-        section_ids=["RC-2023-E:2.1.9.3", "RC-2023-E:2.2.6(c)"],
-        curable=False,
-    )
-    notes_llm = FakeNotesLLM([STANDING_NOTE, stray])
+STRAY_NOTE = Note(
+    text="El permiso puede prorrogarse hasta dos veces.",
+    section_ids=["RC-2023-E:2.1.9.3", "RC-2023-E:2.2.6(c)"],
+    curable=False,
+)
+
+
+def test_valid_citations_are_accepted_without_a_retry(retriever):
+    notes_llm = FakeNotesLLM([STANDING_NOTE, VALUE_NOTE])
 
     recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
         GOOD_PCOC
     )
 
-    standing, flagged = recommendation.notes
-    assert not standing.flagged
-    assert flagged.flagged
-    assert flagged.unretrieved_section_ids == ["RC-2023-E:2.2.6(c)"]
+    assert len(notes_llm.prompts) == 1
+    assert recommendation.notes == [STANDING_NOTE, VALUE_NOTE]
+    assert not recommendation.notes_retried
+    assert recommendation.dropped_notes == []
 
 
-def test_citing_a_sibling_section_with_a_shared_prefix_is_flagged(retriever):
+def test_an_unretrieved_citation_sends_write_notes_back_once_with_the_error(retriever):
+    notes_llm = FakeNotesLLM([STANDING_NOTE, STRAY_NOTE], [STANDING_NOTE, VALUE_NOTE])
+
+    recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
+        GOOD_PCOC
+    )
+
+    first, retry = notes_llm.prompts
+    assert retry.startswith(first)
+    feedback = retry.removeprefix(first)
+    assert STRAY_NOTE.text in feedback
+    assert "RC-2023-E:2.2.6(c)" in feedback
+    assert STANDING_NOTE.text not in feedback
+    assert recommendation.notes == [STANDING_NOTE, VALUE_NOTE]
+    assert recommendation.notes_retried
+    assert recommendation.dropped_notes == []
+
+
+def test_a_note_still_citing_an_unretrieved_section_after_the_retry_is_dropped(retriever):
+    notes_llm = FakeNotesLLM([STRAY_NOTE], [STANDING_NOTE, STRAY_NOTE])
+
+    recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
+        GOOD_PCOC
+    )
+
+    assert len(notes_llm.prompts) == 2
+    assert recommendation.notes == [STANDING_NOTE]
+    [dropped] = recommendation.dropped_notes
+    assert dropped.text == STRAY_NOTE.text
+    assert dropped.section_ids == STRAY_NOTE.section_ids
+    assert dropped.unretrieved_section_ids == ["RC-2023-E:2.2.6(c)"]
+
+
+def test_a_note_citing_no_section_is_invalid(retriever):
+    uncited = Note(text="La solicitud está completa.", section_ids=[], curable=False)
+    notes_llm = FakeNotesLLM([uncited], [uncited])
+
+    recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
+        GOOD_PCOC
+    )
+
+    assert len(notes_llm.prompts) == 2
+    assert "no cita ninguna Sección" in notes_llm.prompts[1]
+    assert recommendation.notes == []
+    assert [d.text for d in recommendation.dropped_notes] == [uncited.text]
+
+
+def test_clause_level_citations_validate_by_their_section_prefix(retriever):
+    clause = Note(text="...", section_ids=["RC-2023-E:2.1.9.5(b)"], curable=True)
+    notes_llm = FakeNotesLLM([clause])
+
+    recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
+        GOOD_PCOC
+    )
+
+    assert len(notes_llm.prompts) == 1
+    assert recommendation.notes == [clause]
+
+
+def test_citing_a_sibling_section_with_a_shared_prefix_is_invalid(retriever):
     # 2.1.9.3 was retrieved; 2.1.9.30 is a different Section, not a clause of it.
-    sibling = DraftNote(text="...", section_ids=["RC-2023-E:2.1.9.30"], curable=False)
+    sibling = Note(text="...", section_ids=["RC-2023-E:2.1.9.30"], curable=False)
 
     recommendation = pipeline(
-        FakeDecisions(default=0.86), FakeNotesLLM([sibling]), retriever
+        FakeDecisions(default=0.86), FakeNotesLLM([sibling], [sibling]), retriever
     ).review(GOOD_PCOC)
 
-    assert recommendation.notes[0].unretrieved_section_ids == ["RC-2023-E:2.1.9.30"]
+    assert recommendation.notes == []
+    assert recommendation.dropped_notes[0].unretrieved_section_ids == ["RC-2023-E:2.1.9.30"]
+
+
+def test_a_failed_retry_keeps_the_valid_notes_of_the_first_attempt(retriever):
+    notes_llm = FakeNotesLLM([STANDING_NOTE, STRAY_NOTE], ModelError("Notes model: timeout"))
+
+    recommendation = pipeline(FakeDecisions(default=0.86), notes_llm, retriever).review(
+        GOOD_PCOC
+    )
+
+    assert recommendation.notes == [STANDING_NOTE]
+    assert [d.text for d in recommendation.dropped_notes] == [STRAY_NOTE.text]
+    assert [e.step for e in recommendation.errors] == ["write_notes"]
+    assert recommendation.verdict == "manual_review"
 
 
 def test_every_requirement_refused_means_manual_review_but_notes_are_still_written(retriever):
@@ -934,16 +1009,17 @@ def test_a_section_pinned_by_a_criterion_always_applies(pcoc_retriever):
     assert "pcoc_legitimacion" in relevance["RC-2023-E:2.1.9.5"].reason
 
 
-def test_a_note_citing_a_section_that_does_not_apply_is_flagged():
+def test_a_note_citing_a_section_that_does_not_apply_is_dropped_after_the_retry():
     retriever = FakeRetriever({"RC-2023-E:2.1.9.3", "RC-2023-E:2.2.6"})
     validator = FakeSectionValidator({"RC-2023-E:2.2.6": "No se solicita una prórroga."})
-    extension = DraftNote(text="...", section_ids=["RC-2023-E:2.2.6(c)"], curable=False)
+    extension = Note(text="...", section_ids=["RC-2023-E:2.2.6(c)"], curable=False)
 
     recommendation = pipeline(
-        FakeDecisions(), FakeNotesLLM([extension]), retriever, validator=validator
+        FakeDecisions(), FakeNotesLLM([extension], [extension]), retriever, validator=validator
     ).review(GOOD_PCOC)
 
-    assert recommendation.notes[0].unretrieved_section_ids == ["RC-2023-E:2.2.6(c)"]
+    assert recommendation.notes == []
+    assert recommendation.dropped_notes[0].unretrieved_section_ids == ["RC-2023-E:2.2.6(c)"]
 
 
 def test_a_section_whose_clauses_are_all_set_aside_is_no_requirement(pcoc_retriever):

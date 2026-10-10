@@ -8,6 +8,7 @@ from case_mgmt_ai_demo import main
 from case_mgmt_ai_demo.permit_request import parse_permit_request
 from case_mgmt_ai_demo.review import (
     ClauseSelection,
+    DroppedNote,
     InvalidPermitRequest,
     Note,
     ModelFailure,
@@ -64,9 +65,8 @@ def recommendation(**overrides) -> Recommendation:
             ),
             Note(
                 text="Falta la determinación de cumplimiento ambiental.",
-                section_ids=["RC-2023-E:2.1.9.2(g)", "RC-2023-E:3.1.3.2"],
+                section_ids=["RC-2023-E:2.1.9.2(g)"],
                 curable=True,
-                unretrieved_section_ids=["RC-2023-E:3.1.3.2"],
             ),
         ],
         retrieved_section_ids=["RC-2023-E:2.1.9.2", "RC-2023-E:2.1.9.5", "RC-2023-E:2.2.6"],
@@ -122,8 +122,46 @@ def test_review_prints_score_verdict_and_cited_notes_in_spanish(request_file, ca
     assert "Veredicto: Aprobar" in out
     assert "1. La solicitante es dueña" in out
     assert "[RC-2023-E:2.1.9.5(b)]" in out
-    assert "[RC-2023-E:2.1.9.2(g), RC-2023-E:3.1.3.2] (subsanable)" in out
-    assert "Cita no verificada: RC-2023-E:3.1.3.2" in out
+    assert (
+        "2. Falta la determinación de cumplimiento ambiental. [RC-2023-E:2.1.9.2(g)] (subsanable)"
+    ) in out
+    assert "Notas descartadas" not in out
+
+
+def test_review_lists_notes_dropped_over_invalid_citations(request_file, capsys):
+    dropped = DroppedNote(
+        text="El permiso puede prorrogarse.",
+        section_ids=["RC-2023-E:2.2.6(c)"],
+        curable=False,
+        unretrieved_section_ids=["RC-2023-E:2.2.6(c)"],
+    )
+    uncited = DroppedNote(
+        text="La solicitud está completa.",
+        section_ids=[],
+        curable=False,
+        unretrieved_section_ids=[],
+    )
+    pipeline = FakePipeline(
+        recommendation(notes_retried=True, dropped_notes=[dropped, uncited])
+    )
+
+    main(["review", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert (
+        "Notas descartadas (citas no válidas tras un reintento):\n"
+        "  ⚠ El permiso puede prorrogarse. [RC-2023-E:2.2.6(c)]: "
+        "RC-2023-E:2.2.6(c) no está entre las Secciones que aplican\n"
+        "  ⚠ La solicitud está completa.: no cita ninguna Sección\n"
+    ) in out
+
+
+def test_review_says_when_notes_were_rewritten_over_invalid_citations(request_file, capsys):
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(notes_retried=True)))
+
+    out = capsys.readouterr().out
+    assert "Notas (reescritas una vez: citas no válidas en el primer intento):\n" in out
+    assert "Notas descartadas" not in out
 
 
 def test_review_prints_every_requirement_and_names_the_weakest(request_file, capsys):

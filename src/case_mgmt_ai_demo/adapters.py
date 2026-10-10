@@ -14,9 +14,9 @@ from case_mgmt_ai_demo.criteria import load_criteria
 from case_mgmt_ai_demo.permit_request import PermitRequest
 from case_mgmt_ai_demo.review import (
     ClauseSelection,
-    DraftNote,
     FixedCategory,
     ModelError,
+    Note,
     ReviewPipeline,
     SectionRelevance,
     relevance_prompt,
@@ -70,7 +70,7 @@ class OpenAIDecisions:
 
 
 class _NotesOutput(BaseModel):
-    notes: list[DraftNote]
+    notes: list[Note]
 
 
 class OpenAINotesLLM:
@@ -80,7 +80,7 @@ class OpenAINotesLLM:
         self._client = client
         self._model = model
 
-    def write_notes(self, prompt: str) -> list[DraftNote]:
+    def write_notes(self, prompt: str) -> list[Note]:
         return _parse(self._client, self._model, prompt, _NotesOutput, "Notes").notes
 
 

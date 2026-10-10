@@ -110,7 +110,7 @@ The ingestion output every downstream component builds against:
 | `level` | `tomo` \| `capitulo` \| `regla` \| `seccion` \| `anejo_item` \| `glossary_term` |
 | `heading` | `REQUISITOS DE PRESENTACIÓN` |
 | `parents` | `["Tomo III", "Capítulo 3.7", "Regla 3.7.1"]` |
-| `page_start`, `page_end` | source PDF pages |
+| `page_start`, `page_end` | source PDF pages: physical, 1-based page index (not the printed footer number), also stored in the index metadata so a citation links to `<pdf>#page=N` |
 | `text` | full Section text, Clauses preserved |
 | `part` | `1-of-N` when a long Section is split at Clause boundaries (same `section_id`) |
 
@@ -145,7 +145,7 @@ Ingestion is not complete until retrieval has been evaluated; this validates bot
 ## UI
 
 1. **Queue** — Permit Requests with Request Type, Applicant, verdict badge, score.
-2. **Case view** — Request fields; Approval Score gauge and verdict (Borderline flag); Notes with clickable citations opening the Section text in a side panel; fee check result; collapsible pipeline trace (retrieved Sections + scores, Criterion probabilities); Determination buttons (Accept / Override with reason / Cure Request).
+2. **Case view** — Request fields; Approval Score gauge and verdict (Borderline flag); Notes with clickable citations opening the source PDF on the cited page (`#page=N` from the chunk's `page_start`) in a side panel; fee check result; collapsible pipeline trace (retrieved Sections + scores, Criterion probabilities); Determination buttons (Accept / Override with reason / Cure Request).
 3. **New request form** — create Permit Requests live.
 
 ## Ownership

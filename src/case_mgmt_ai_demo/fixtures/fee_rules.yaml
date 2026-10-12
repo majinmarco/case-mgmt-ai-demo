@@ -1,0 +1,122 @@
+# Fee rules from the fee order COBROS OA-2022-07. Drafted by Claude; pending developer review.
+#
+# The Fee Check calculates the fee a Permit Request owes from these rules and compares it with
+# the fee it declares. Amounts are dollars. Every charge has a `kind`, the column of the
+# TERCERO.3 table that sets how much of it each Applicant type pays.
+#
+# Open points for the reviewer:
+# - TERCERO.3 has no row for non-profit entities, so they pay in full here. Its rows for
+#   indigent persons, educational entities, the Governor's office, Ley 489-2004 matters and
+#   the OA 2018-02 class members have no Applicant type, so they are not curated.
+# - Every Permiso Único is charged as a commercial use, 41(a); the other uses of Anejo A, 41
+#   (41(c)-(z), e.g. institutional or industrial) are not curated.
+# - A renewal is charged as a new Permiso Único; Anejo A, 42(c) (late renewal, $75 plus
+#   licences and certifications) is not curated.
+# - Anejo A, 28(a) over 100,000 p.c. ($110 plus $25 per additional 10,000 p.c.) is not curated:
+#   the Fee Check reports such a request as unverifiable.
+
+# TERCERO.3: the percentage of each kind of charge an Applicant type pays (100 = in full).
+exemptions:
+  section_id: "COBROS:TERCERO"
+  applicant_types:
+    privado:
+      description_es: Privado
+      percent: {licencias: 100, servicios: 100, aranceles: 100, estampillas: 100}
+    gobierno:
+      description_es: Gobierno estatal, federal o municipal
+      percent: {licencias: 25, servicios: 25, aranceles: 100, estampillas: 100}
+      # "Si las obras son llevadas a cabo en su totalidad por el Gobierno."
+      percent_works_by_government: {aranceles: 25, estampillas: 0}
+    cooperativa:
+      description_es: Entidad cooperativa (Leyes Núm. 255-2002 y 239-2004)
+      percent: {licencias: 0, servicios: 0, aranceles: 0, estampillas: 0}
+    sin_fines_de_lucro:
+      description_es: Entidad sin fines de lucro
+      percent: {licencias: 100, servicios: 100, aranceles: 100, estampillas: 100}
+
+# Anejo A, 6: Permiso de Construcción (PCOC). Each charge is `rate` per `value_unit` dollars of
+# the estimated work value, or fraction of it.
+pcoc:
+  section_id: "COBROS:AnejoA:6"
+  value_unit: 1000
+  charges:
+    - ref: 6(a)
+      concept_es: Radicación (cargo por servicio)
+      kind: servicios
+      rate: 0.35
+      minimum: 100
+    - ref: 6(b)
+      concept_es: Aranceles
+      kind: aranceles
+      rate: 5.00
+    - ref: 6(c)
+      concept_es: Sellos del CIAPR y CAAPPR
+      kind: estampillas
+      rate: 1.00
+
+permiso_unico:
+  # Anejo A, 28(a): Certificación de Prevención de Incendios, per year requested, by the floor
+  # area of the premises in square feet (p.c.). Charged when that certificate is requested.
+  prevencion_incendios:
+    section_id: "COBROS:AnejoA:28"
+    ref: 28(a)
+    concept_es: Certificación de Prevención de Incendios
+    kind: licencias
+    tiers:
+      - {up_to_sqft: 1000, per_year: 60}
+      - {up_to_sqft: 3000, per_year: 70}
+      - {up_to_sqft: 5000, per_year: 80}
+      - {up_to_sqft: 20000, per_year: 90}
+      - {up_to_sqft: 50000, per_year: 100}
+      - {up_to_sqft: 100000, per_year: 110}
+
+  # Anejo A, 30: Licencia Sanitaria, per year requested, by establishment type. Charged when
+  # that licence is requested. Rows 30(f)-(x) are not curated.
+  licencia_sanitaria:
+    section_id: "COBROS:AnejoA:30"
+    per_year:
+      no_alimentos:
+        ref: 30(a)
+        concept_es: "Licencia Sanitaria: otros establecimientos no de alimentos y oficinas profesionales"
+        kind: licencias
+        rate: 25
+      cafetin:
+        ref: 30(b)
+        concept_es: "Licencia Sanitaria: cafetín"
+        kind: licencias
+        rate: 50
+      cafeteria:
+        ref: 30(c)
+        concept_es: "Licencia Sanitaria: cafetería"
+        kind: licencias
+        rate: 75
+      restaurante:
+        ref: 30(d)
+        concept_es: "Licencia Sanitaria: restaurante"
+        kind: licencias
+        rate: 100
+      otros_alimentos:
+        ref: 30(e)
+        concept_es: "Licencia Sanitaria: otros establecimientos de alimentos"
+        kind: licencias
+        rate: 25
+      supermercado:
+        ref: 30(k)
+        concept_es: "Licencia Sanitaria: supermercados, hipermercados"
+        kind: licencias
+        rate: 100
+
+  # Anejo A, 41: Uso para Estructura o Local. Every curated establishment type is a commercial
+  # use, 41(a); selling alcohol adds 41(b), charged when that licence is requested.
+  uso:
+    section_id: "COBROS:AnejoA:41"
+    base:
+      ref: 41(a)
+      concept_es: Uso comercial
+      kind: servicios
+      amount: 100
+    bebidas_alcoholicas:
+      ref: 41(b)
+      concept_es: Uso comercial, venta de bebidas alcohólicas
+      kind: servicios
+      amount: 150

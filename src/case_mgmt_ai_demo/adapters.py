@@ -11,6 +11,7 @@ from pydantic import BaseModel, ValidationError
 from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.criteria import load_criteria
+from case_mgmt_ai_demo.fee_check import load_fee_rules
 from case_mgmt_ai_demo.permit_request import PermitRequest
 from case_mgmt_ai_demo.review import (
     ClauseSelection,
@@ -150,4 +151,5 @@ def build_review_pipeline(settings: Settings, client: OpenAI) -> ReviewPipeline:
         settings,
         fixed=load_fixed_clause_categories(),
         criteria=load_criteria(),
+        fee_rules=load_fee_rules(),
     )

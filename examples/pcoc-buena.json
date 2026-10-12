@@ -21,7 +21,7 @@
   "floors": 2,
   "height_m": 7.5,
   "gross_floor_area_m2": 210,
-  "declared_fee": 1850,
+  "declared_fee": 1210,
   "district_parameters": {
     "lot_area_m2": 450,
     "min_lot_area_m2": 300,

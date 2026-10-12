@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Protocol
 
+from case_mgmt_ai_demo.fee_check import FeeCheck, money
 from case_mgmt_ai_demo.review import InvalidPermitRequest, Recommendation
 
 COMMANDS = {
@@ -131,6 +132,8 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
         for error in recommendation.errors:
             subject = f" [{error.subject}]" if error.subject else ""
             lines.append(f"  ⚠ {error.step}{subject}: {error.message}")
+    if recommendation.fee_check:
+        lines += ["", *_fee_check_lines(recommendation.fee_check)]
     retried = " (reescritas una vez: citas no válidas en el primer intento)"
     lines += ["", f"Notas{retried if recommendation.notes_retried else ''}:"]
     for number, note in enumerate(recommendation.notes, start=1):
@@ -151,3 +154,22 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
             category = CATEGORIES_ES[selection.category]
             lines.append(f"  {category:<{width}}  {selection.ref}: {selection.reason}")
     return "\n".join(lines)
+
+
+def _fee_check_lines(fee_check: FeeCheck) -> list[str]:
+    if fee_check.matches is None:
+        outcome = f"⚠ no se pudo verificar: {fee_check.unverifiable_es}"
+    else:
+        outcome = "coinciden" if fee_check.matches else "⚠ no coinciden"
+    lines = [
+        f"Verificación de derechos: {outcome} [{', '.join(fee_check.section_ids)}]",
+        f"  Declarados: {money(fee_check.declared_fee)}",
+    ]
+    if fee_check.expected_fee is not None:
+        lines.append(f"  Calculados: {money(fee_check.expected_fee)}")
+    for charge in fee_check.charges:
+        exempted = "" if charge.percent == 100 else f" ({charge.percent}% de {money(charge.base)})"
+        lines.append(f"    {money(charge.amount):>10}  {charge.ref} {charge.concept_es}{exempted}")
+    if fee_check.exemption_es:
+        lines.append(f"  Exención aplicada: {fee_check.exemption_es}")
+    return lines

@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from case_mgmt_ai_demo import main
+from case_mgmt_ai_demo.fee_check import check_fee, load_fee_rules
 from case_mgmt_ai_demo.permit_request import parse_permit_request
 from case_mgmt_ai_demo.review import (
     ClauseSelection,
@@ -162,6 +163,74 @@ def test_review_says_when_notes_were_rewritten_over_invalid_citations(request_fi
     out = capsys.readouterr().out
     assert "Notas (reescritas una vez: citas no válidas en el primer intento):\n" in out
     assert "Notas descartadas" not in out
+
+
+def fee_check(raw):
+    return check_fee(parse_permit_request(raw), load_fee_rules())
+
+
+def test_review_prints_the_fee_check_with_each_charge_and_its_cited_item(request_file, capsys):
+    check = fee_check(GOOD_PCOC | {"declared_fee": 1210})
+
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(fee_check=check)))
+
+    out = capsys.readouterr().out
+    assert (
+        "Verificación de derechos: coinciden [COBROS:AnejoA:6]\n"
+        "  Declarados: $1,210.00\n"
+        "  Calculados: $1,210.00\n"
+        "       $100.00  6(a) Radicación (cargo por servicio)\n"
+        "       $925.00  6(b) Aranceles\n"
+        "       $185.00  6(c) Sellos del CIAPR y CAAPPR\n"
+        "\n"
+        "Notas:"
+    ) in out
+    assert "Exención" not in out
+
+
+def test_review_flags_a_fee_mismatch(request_file, capsys):
+    check = fee_check(GOOD_PCOC)
+
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(fee_check=check)))
+
+    out = capsys.readouterr().out
+    assert "Verificación de derechos: ⚠ no coinciden [COBROS:AnejoA:6]\n" in out
+    assert "  Declarados: $1,850.00\n  Calculados: $1,210.00\n" in out
+
+
+def test_review_prints_the_exemption_applied_and_what_each_charge_was_before_it(
+    request_file, capsys
+):
+    check = fee_check(GOOD_PCOC | {"applicant_type": "gobierno"})
+
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(fee_check=check)))
+
+    out = capsys.readouterr().out
+    assert "[COBROS:AnejoA:6, COBROS:TERCERO]" in out
+    assert "        $25.00  6(a) Radicación (cargo por servicio) (25% de $100.00)\n" in out
+    assert "       $925.00  6(b) Aranceles\n" in out
+    assert "  Exención aplicada: Gobierno estatal, federal o municipal\n" in out
+
+
+def test_review_says_why_a_fee_could_not_be_verified(request_file, capsys):
+    check = fee_check(GOOD_PCOC | {"estimated_work_value": None})
+
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(fee_check=check)))
+
+    out = capsys.readouterr().out
+    assert (
+        "Verificación de derechos: ⚠ no se pudo verificar: no se declaró el valor estimado "
+        "de la obra [COBROS:AnejoA:6]\n"
+        "  Declarados: $1,850.00\n"
+        "\n"
+        "Notas:"
+    ) in out
+
+
+def test_review_without_a_fee_check_prints_no_fee_block(request_file, capsys):
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation()))
+
+    assert "Verificación de derechos" not in capsys.readouterr().out
 
 
 def test_review_prints_every_requirement_and_names_the_weakest(request_file, capsys):

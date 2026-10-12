@@ -37,7 +37,8 @@
     "prevencion_incendios"
   ],
   "validity_years": 3,
-  "declared_fee": 150,
+  "declared_fee": 535,
+  "establishment_type": "cafeteria",
   "site_sketch": {
     "floor_area_m2": 120,
     "shows_internal_layout": true,

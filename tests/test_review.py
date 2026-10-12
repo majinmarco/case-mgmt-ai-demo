@@ -6,6 +6,7 @@ import pytest
 from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks, split_clauses
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.criteria import Criterion
+from case_mgmt_ai_demo.fee_check import load_fee_rules
 from case_mgmt_ai_demo.permit_request import PermitRequest
 from case_mgmt_ai_demo.review import (
     ClauseCategory,
@@ -201,7 +202,14 @@ VALUE_NOTE = Note(
 
 
 def pipeline(
-    decisions, notes_llm, retriever, selector=None, fixed=(), criteria=(), validator=None
+    decisions,
+    notes_llm,
+    retriever,
+    selector=None,
+    fixed=(),
+    criteria=(),
+    validator=None,
+    fee_rules=None,
 ) -> ReviewPipeline:
     settings = Settings(approval_cutoff=0.5, borderline_low=0.4, borderline_high=0.6)
     return ReviewPipeline(
@@ -213,6 +221,7 @@ def pipeline(
         settings,
         fixed=fixed,
         criteria=criteria,
+        fee_rules=fee_rules,
     )
 
 
@@ -1161,3 +1170,89 @@ def test_a_model_error_is_never_borderline_even_with_a_score_in_the_band(retriev
 
     assert (recommendation.approval_score, recommendation.verdict) == (0.55, "manual_review")
     assert not recommendation.borderline
+
+
+FEE_RULES = load_fee_rules()
+# GOOD_PCOC's $185,000 of work owes $1,210 (COBROS Anejo A, 6).
+CORRECT_FEE = GOOD_PCOC | {"declared_fee": 1210}
+
+
+def test_a_correct_fee_adds_no_note_and_its_fee_check_is_in_the_recommendation(retriever):
+    recommendation = pipeline(
+        FakeDecisions(), FakeNotesLLM([STANDING_NOTE]), retriever, fee_rules=FEE_RULES
+    ).review(CORRECT_FEE)
+
+    assert recommendation.notes == [STANDING_NOTE]
+    assert recommendation.fee_check is not None
+    assert recommendation.fee_check.matches is True
+    assert (recommendation.fee_check.declared_fee, recommendation.fee_check.expected_fee) == (
+        1210,
+        1210,
+    )
+
+
+def test_a_wrong_fee_adds_one_curable_note_citing_the_anejo_a_item(retriever):
+    recommendation = pipeline(
+        FakeDecisions(), FakeNotesLLM([STANDING_NOTE]), retriever, fee_rules=FEE_RULES
+    ).review(GOOD_PCOC)
+
+    [written, fee_note] = recommendation.notes
+    assert written == STANDING_NOTE
+    assert fee_note.curable
+    assert fee_note.section_ids == ["COBROS:AnejoA:6"]
+    assert "$1,850.00" in fee_note.text
+    assert "$1,210.00" in fee_note.text
+    assert recommendation.fee_check is not None
+    assert recommendation.fee_check.matches is False
+    assert recommendation.dropped_notes == []
+    assert not recommendation.notes_retried
+
+
+def test_a_fee_mismatch_changes_neither_the_approval_score_nor_the_verdict(retriever):
+    def review(raw):
+        return pipeline(
+            FakeDecisions(default=0.55), FakeNotesLLM([]), retriever, fee_rules=FEE_RULES
+        ).review(raw)
+
+    correct, wrong = review(CORRECT_FEE), review(GOOD_PCOC)
+
+    assert wrong.fee_check is not None and wrong.fee_check.matches is False
+    assert wrong.approval_score == correct.approval_score == 0.55
+    assert (wrong.verdict, wrong.borderline) == (correct.verdict, correct.borderline)
+    assert wrong.requirements == correct.requirements
+
+
+def test_a_fee_that_cannot_be_calculated_adds_a_curable_note(retriever):
+    recommendation = pipeline(
+        FakeDecisions(), FakeNotesLLM([]), retriever, fee_rules=FEE_RULES
+    ).review(GOOD_PCOC | {"estimated_work_value": None})
+
+    [fee_note] = recommendation.notes
+    assert fee_note.curable
+    assert fee_note.section_ids == ["COBROS:AnejoA:6"]
+    assert "valor estimado" in fee_note.text
+
+
+def test_the_fee_note_survives_a_notes_error(retriever):
+    notes_llm = FakeNotesLLM(ModelError("Notes LLM: 500"))
+
+    recommendation = pipeline(
+        FakeDecisions(), notes_llm, retriever, fee_rules=FEE_RULES
+    ).review(GOOD_PCOC)
+
+    assert [note.section_ids for note in recommendation.notes] == [["COBROS:AnejoA:6"]]
+
+
+def test_the_fee_check_is_not_shown_to_the_notes_llm(retriever):
+    notes_llm = FakeNotesLLM([])
+
+    pipeline(FakeDecisions(), notes_llm, retriever, fee_rules=FEE_RULES).review(GOOD_PCOC)
+
+    assert "COBROS" not in notes_llm.prompts[0]
+
+
+def test_without_fee_rules_there_is_no_fee_check(retriever):
+    recommendation = pipeline(FakeDecisions(), FakeNotesLLM([]), retriever).review(GOOD_PCOC)
+
+    assert recommendation.fee_check is None
+    assert recommendation.notes == []

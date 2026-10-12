@@ -63,6 +63,10 @@ License = Literal["sanitaria", "prevencion_incendios", "bebidas_alcoholicas"]
 UseAuthorization = Literal["ministerial", "variacion_aprobada", "no_permitido"]
 # A new request, or the renewal of an issued Permiso Único (Sección 3.7.1.4).
 ApplicationKind = Literal["nueva", "renovacion"]
+# The establishments whose Licencia Sanitaria rate is curated from COBROS Anejo A, 30.
+EstablishmentType = Literal[
+    "no_alimentos", "cafetin", "cafeteria", "restaurante", "otros_alimentos", "supermercado"
+]
 
 LABELS: dict[str, str] = {
     "privado": "persona privada",
@@ -273,6 +277,11 @@ class PcocPermitRequest(PermitRequestCore):
     height_m: Decimal = Field(gt=0)
     gross_floor_area_m2: Decimal = Field(gt=0)
     declared_fee: Decimal = Field(ge=0)
+    works_by_government: bool = Field(
+        default=False,
+        description="The works are carried out wholly by the Government (COBROS TERCERO.3); "
+        "read only by the Fee Check, for a government Applicant.",
+    )
     district_parameters: DistrictParameters | None = None
     plans_certification: PlansCertification | None = None
 
@@ -373,6 +382,11 @@ class PermisoUnicoPermitRequest(PermitRequestCore):
     licenses_requested: list[License]
     validity_years: int = Field(ge=1, le=3, description="RC-2023-E Sección 3.7.1.3(a).")
     declared_fee: Decimal = Field(ge=0)
+    establishment_type: EstablishmentType | None = Field(
+        default=None,
+        description="Sets the Licencia Sanitaria rate (COBROS Anejo A, 30); read only by the "
+        "Fee Check.",
+    )
     site_sketch: SiteSketch | None = None
     in_flood_zone: bool | None = Field(default=None, description="RC-2023-E Sección 3.7.1.1(k).")
     renewal: Renewal | None = None

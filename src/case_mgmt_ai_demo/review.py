@@ -6,6 +6,9 @@ write_notes once, and are dropped if they still do. The Section retriever, the S
 the requirement selector, the Decisions API client and the Notes LLM are injected adapters, so
 tests can fake them.
 
+The Fee Check runs beside all of that, straight after intake. It is deterministic, never changes
+the Approval Score, and adds its own curable Note when the declared fee is not the fee owed.
+
 The Approval Score is not one question over everything retrieved: each Requirement is assessed on
 its own, and the score is the lowest probability. A Requirement is a Criterion (its pinned
 Clauses) or a Section that applies (its other applicable Clauses). Sections that do not apply to
@@ -28,6 +31,7 @@ from pydantic_core import ErrorDetails
 from case_mgmt_ai_demo.chunks import Chunk, Clause, RequestType, split_clauses
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.criteria import Criterion
+from case_mgmt_ai_demo.fee_check import FeeCheck, FeeRules, check_fee
 from case_mgmt_ai_demo.permit_request import PermitRequest, parse_permit_request
 
 # The compliance wording scored best in the CMAWD-2 spike (docs/spikes/cmawd-2-decisions-api.md).
@@ -179,7 +183,10 @@ class Recommendation(BaseModel):
     requirements: list[RequirementAssessment] = Field(
         description="Criteria in curated order, then Sections' Requirements in retrieval order."
     )
-    notes: list[Note] = Field(description="Each cites at least one Section that applies.")
+    notes: list[Note] = Field(
+        description="Each cites at least one Section that applies; then the Fee Check's Note, "
+        "if any, citing its COBROS Sections."
+    )
     notes_retried: bool = Field(
         default=False, description="write_notes was sent back once over invalid citations."
     )
@@ -201,6 +208,9 @@ class Recommendation(BaseModel):
     )
     errors: list[ModelFailure] = Field(
         default_factory=list, description="Model calls that failed, in pipeline order."
+    )
+    fee_check: FeeCheck | None = Field(
+        default=None, description="None when the pipeline has no fee rules."
     )
 
     @property
@@ -294,6 +304,7 @@ class ReviewState(ReviewInput):
     rejected_notes: list[DroppedNote]
     notes: list[Note]
     dropped_notes: list[DroppedNote]
+    fee_check: FeeCheck | None
     errors: Annotated[list[ModelFailure], operator.add]
 
 
@@ -308,9 +319,11 @@ class ReviewPipeline:
         settings: Settings,
         fixed: Iterable[FixedCategory] = (),
         criteria: Iterable[Criterion] = (),
+        fee_rules: FeeRules | None = None,
     ):
         """`fixed` fixes the category of general clauses the selector is unsteady on;
-        `criteria` holds the Criteria of every Request Type."""
+        `criteria` holds the Criteria of every Request Type; without `fee_rules` there is
+        no Fee Check."""
         self._decisions = decisions
         self._notes_llm = notes_llm
         self._retriever = retriever
@@ -319,8 +332,10 @@ class ReviewPipeline:
         self._settings = settings
         self._fixed = list(fixed)
         self._criteria = list(criteria)
+        self._fee_rules = fee_rules
         graph = StateGraph(ReviewState, input_schema=ReviewInput)
         graph.add_node("intake", self._intake)
+        graph.add_node("fee_check", self._fee_check)
         graph.add_node("retrieve", self._retrieve)
         graph.add_node("validate_sections", self._validate_sections)
         graph.add_node("select_requirements", self._select_requirements)
@@ -328,6 +343,8 @@ class ReviewPipeline:
         graph.add_node("write_notes", self._write_notes)
         graph.add_node("validate_citations", self._validate_citations)
         graph.add_edge(START, "intake")
+        graph.add_edge("intake", "fee_check")  # in parallel with retrieval
+        graph.add_edge("fee_check", END)
         graph.add_edge("intake", "retrieve")
         graph.add_edge("retrieve", "validate_sections")
         graph.add_edge("validate_sections", "select_requirements")
@@ -343,6 +360,7 @@ class ReviewPipeline:
         score = state["approval_score"]
         errors = state.get("errors", [])
         verdict = self._verdict(score, errors)
+        fee_check = state["fee_check"]
         return Recommendation(
             request=state["request"],
             approval_score=score,
@@ -351,7 +369,7 @@ class ReviewPipeline:
             and score is not None
             and self._settings.borderline_low <= score <= self._settings.borderline_high,
             requirements=state["requirements"],
-            notes=state["notes"],
+            notes=state["notes"] + _fee_notes(fee_check),
             notes_retried=state["notes_attempts"] > 1,  # the first attempt is not a retry
             dropped_notes=state["dropped_notes"],
             retrieved_section_ids=list(dict.fromkeys(c.section_id for c in state["sections"])),
@@ -360,6 +378,7 @@ class ReviewPipeline:
             unclassified_clause_refs=state["unclassified_clause_refs"],
             unknown_clause_refs=state["unknown_clause_refs"],
             errors=errors,
+            fee_check=fee_check,
         )
 
     def _verdict(self, score: float | None, errors: list[ModelFailure]) -> Verdict:
@@ -377,6 +396,11 @@ class ReviewPipeline:
             "request": request,
             "criteria": [c for c in self._criteria if c.applies_to(request)],
         }
+
+    def _fee_check(self, state: ReviewState) -> dict[str, Any]:
+        if self._fee_rules is None:
+            return {"fee_check": None}
+        return {"fee_check": check_fee(state["request"], self._fee_rules)}
 
     def _retrieve(self, state: ReviewState) -> dict[str, Any]:
         sections = self._retriever.retrieve(state["request"])
@@ -595,6 +619,13 @@ def _retry_notes(rejected: list[DroppedNote], attempts: int) -> bool:
 
 def _after_citations(state: ReviewState) -> str:
     return "write_notes" if _retry_notes(state["rejected_notes"], state["notes_attempts"]) else END
+
+
+def _fee_notes(fee_check: FeeCheck | None) -> list[Note]:
+    """The Fee Check's Note: curable, since the Applicant can pay or declare the right fee."""
+    if fee_check is None or (problem := fee_check.problem_es()) is None:
+        return []
+    return [Note(text=problem, section_ids=fee_check.section_ids, curable=True)]
 
 
 def _approval_score(requirements: list[RequirementAssessment]) -> float | None:

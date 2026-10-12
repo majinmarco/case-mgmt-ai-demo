@@ -448,12 +448,37 @@ def test_review_requires_a_file_argument(capsys):
     assert exc.value.code == 2
 
 
-@pytest.mark.parametrize("command", ["ingest", "serve"])
-def test_placeholder_subcommands_report_not_implemented(command, capsys):
-    exit_code = main([command])
+def test_serve_reports_not_implemented(capsys):
+    exit_code = main(["serve"])
 
     assert exit_code == 1
-    assert f"'{command}' is not implemented yet" in capsys.readouterr().err
+    assert "'serve' is not implemented yet" in capsys.readouterr().err
+
+
+def test_ingest_without_index_writes_the_report_and_prints_a_summary(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+
+    exit_code = main(["ingest", "--no-index", "--no-ocr"])
+
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    report = json.loads((tmp_path / "RC-2023-E.ingestion_report.json").read_text())
+    assert report["config"]["max_chunk_chars"] == 6000
+    assert f"Fragmentos: {report['chunks']} de {report['sections']} Secciones" in out
+    assert "Índice: sin tocar (--no-index)" in out
+    assert "Sin OCR" in out
+    assert not (tmp_path / "chroma").exists()
+
+
+def test_ingest_reports_a_missing_pdf(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+
+    exit_code = main(["ingest", "--pdf", str(tmp_path / "nope.pdf")])
+
+    assert exit_code == 1
+    assert "No se encontró el PDF del Reglamento" in capsys.readouterr().err
 
 
 def test_unknown_subcommand_exits_with_usage_error(capsys):

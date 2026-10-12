@@ -1,0 +1,29 @@
+# How RC-2023-E.pdf is extracted and chunked. Pages are physical PDF pages (1-based), not
+# the number printed in the running header.
+doc: RC-2023-E
+
+# The body: Tomos I-XI. Before it come the cover, the Governor's certification (pp. 6-10 are
+# scans) and the table of contents (pp. 11-51). After it comes Tomo XII, the glossary, which
+# has no Reglas or Secciones and is indexed one chunk per term (CMAWD-10).
+first_page: 53
+last_page: 824
+
+# The running header ("REGLAMENTO CONJUNTO | 25") is printed in a band at the foot of the page.
+footer_top: 738
+
+# Sections longer than this are split into parts where a Clause starts. Well under the
+# 8,191-token input limit of text-embedding-3-large (Spanish runs at about 3-4 characters per
+# token), so each part stays focused enough to retrieve.
+max_chunk_chars: 6000
+
+# Request Types a Section is relevant to, by Section number prefix; the longest prefix wins.
+# Only parts of the Reglamento that plainly concern one Request Type are narrowed.
+request_types:
+  default: [PCOC, PERMISO_UNICO]
+  "2.1.9.3": [PCOC]        # Valor estimado de la obra
+  "2.2.6": [PCOC]          # Prórroga a la vigencia de permiso de construcción
+  "2.8": [PCOC]            # Especificaciones y requerimientos de dibujos para planos
+  "3.2": [PCOC]            # Edificación y conservación de energía
+  "3.7": [PERMISO_UNICO]   # Permisos Únicos
+  "4": [PERMISO_UNICO]     # Tomo IV: licencias y certificaciones para la operación de negocios
+  "8": [PCOC]              # Tomo VIII: edificabilidad y construcción

@@ -1,7 +1,8 @@
 """The chunk contract: one citable Section of the Reglamento as stored for retrieval.
 
-Ingestion produces these and every downstream component builds against them. Until real
-ingestion exists, `load_fixture_chunks()` serves ~10 hand-typed RC-2023-E Sections.
+Ingestion produces these and every downstream component builds against them. Until
+retrieval reads the real index, `load_fixture_chunks()` serves ~10 hand-typed RC-2023-E
+Sections.
 """
 
 import json
@@ -31,6 +32,11 @@ class Chunk(BaseModel):
         default=None, pattern=r"^\d+-of-\d+$", description="'1-of-N' for a split Section."
     )
     request_types: list[RequestType] = Field(min_length=1)
+
+    @property
+    def part_number(self) -> int:
+        """Position among the parts of its Section; 1 when the Section is not split."""
+        return int(self.part.split("-")[0]) if self.part else 1
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:

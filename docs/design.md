@@ -105,7 +105,7 @@ The ingestion output every downstream component builds against:
 
 | Field | Example / values |
 |---|---|
-| `section_id` | `RC-2023-E:3.7.1.2`, `COBROS:AnejoA:6` (canonical, unique per Section) |
+| `section_id` | `RC-2023-E:3.7.1.2`, `COBROS:AnejoA:6` (canonical, unique per Section); `RC-2023-E:2.2.6` for a Regla, `RC-2023-E:1.2` for a Capítulo, `RC-2023-E:Tomo-II` for a Tomo |
 | `doc` | `RC-2023-E` \| `COBROS-OA-2022-07` |
 | `level` | `tomo` \| `capitulo` \| `regla` \| `seccion` \| `anejo_item` \| `glossary_term` |
 | `heading` | `REQUISITOS DE PRESENTACIÓN` |
@@ -115,6 +115,24 @@ The ingestion output every downstream component builds against:
 | `part` | `1-of-N` when a long Section is split at Clause boundaries (same `section_id`) |
 
 - Chunk at **Sección** level (Regla level when a Regla has no Secciones). Strip running headers/footers; skip the RC table of contents; index the Tomo XII glossary one chunk per term.
+- A Regla, Capítulo or Tomo is also a chunk for the text it holds directly (a Capítulo without Reglas, or a Regla's text before its first Sección), at its own `level`.
+- `request_types` come from Section number prefixes in the ingestion configuration (`fixtures/ingestion/rc_2023_e.yaml`); a Section no prefix covers is tagged with both.
+
+### Ingestion of RC-2023-E (CMAWD-8)
+
+`ingest` extracts pp. 53–824 (Tomos I–XI), chunks them, embeds each chunk (parents, heading and text) with `text-embedding-3-large` and syncs the Chroma collection `reglamento`: only new or changed chunks are embedded, chunks no longer produced are removed. Each chunk's metadata holds every contract field except the text, so a Section ID resolves to its document and pages from the index alone. The configuration, counts and flagged chunks are written beside the index.
+
+Findings about the PDF:
+
+- **Text drawn as outlines.** The PDF was made with "Microsoft: Print To PDF", which drew some runs of text as vector outlines rather than text: 375 runs on about 160 body pages, nearly all on lines with typographic quotes. Text extraction returns nothing for them, which is the gap in Sección 2.1.9.5(a) on p. 80 (`…lo dispuesto en` / `Certi` / `designados en dicha Ley.`). Ingestion finds each run from the page's drawings and reads it from a full-page OCR (Tesseract, Spanish), keeping the PDF's own text everywhere else; a run OCR cannot read, or every run when OCR is unavailable, becomes `[…]`. OCR readings are not guaranteed (e.g. `(8')` read as `(87)` on p. 355), so the report lists them all.
+- **The running header** (`REGLAMENTO CONJUNTO | 25`) is printed at the foot of the page and is dropped by position.
+- **Tomo cover pages** hold only outlined text and are skipped.
+- **Numbering mistakes are kept as printed.** Regla 6.1.16 appears twice (I-P and ARD districts) and so does Sección 6.1.9.2; the second use gets a `-bis` suffix (`RC-2023-E:6.1.16.1-bis`, parent `Regla 6.1.16-bis`) so Section IDs stay unique. Secciones 4.3.10.2–4 sit under Regla 4.3.12 and `116.1.7` under Regla 11.6.1; these keep their printed number and are flagged.
+- **Heading spellings** `CAPITULO`, `SECCION`, `SECCCIÓN` and a number printed as `6.1. 28.2` are accepted.
+- **Tables** (about 140 body pages, mostly the district parameter tables of Tomo VI) rule off their rows but not always their columns, and a label cell is centred beside several lines of description, so reading straight across interleaves the cells. Ingestion takes a table's rows from its horizontal rules and its columns from the gutters no text crosses, and reads it cell by cell: each cell is its own line of chunk text (`Densidad poblacional` / `  a. Solares menores…`). Tables with three or more columns of free text are still not always read cleanly (e.g. Secciones 2.8.2.2 and 6.1.1.3) and are flagged.
+- **Lettered sub-items** under another list item (`e. … / a. … / b. …`) or in a table cell are indented two spaces in the chunk text so they are not read as Clauses of the Section.
+
+Extraction checks (warnings in the report, never a failure): text left unread (`[…]`); a line ending on a bare word followed by a line starting in lower case; running-header remnants; Clause letters out of order within a Section; Secciones out of sequence within a Regla; chunks under 40 characters. Wrapped lines are joined into paragraphs before the checks run, so text dropped in the middle of a paragraph shows up as `[…]`, not as a truncated line. The run with OCR on RC-2023-E raises 52 flags: 5 chunks with unread text, 15 truncated lines (multi-column tables), 24 lettering flags and 8 sequence flags. The lettering and sequence flags looked at so far are the Reglamento's own numbering (e.g. Regla 2.1.4 letters `a.`, `a.`, `b.`); the rest have not been checked against the PDF.
 - Citations may go down to a Clause (`RC-2023-E:2.1.9.2(m)`); validation matches on Section prefix.
 - Implemented as a Pydantic model, with a ~10-chunk hand-typed fixture so the graph and UI can be built before real ingestion.
 
@@ -136,7 +154,7 @@ Ingestion is not complete until retrieval has been evaluated; this validates bot
 
 - Python 3.13, uv; single `uv run` entry point.
 - LangGraph orchestration.
-- Chroma (embedded) vector store, built by a one-off `ingest` command; index cached so the demo starts instantly.
+- Chroma (embedded) vector store, built by a one-off `ingest` command; index cached so the demo starts instantly. OCR of text the PDF draws as outlines needs Tesseract's Spanish model (optional).
 - FastAPI + Jinja + HTMX UI.
 - SQLite for Permit Requests, Recommendations, and Determinations.
 - Recommendations for curated cases cached so the live demo cannot fail.

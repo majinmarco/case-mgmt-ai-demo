@@ -30,6 +30,8 @@ def test_defaults_use_design_models_and_thresholds():
     assert settings.data_dir == Path("data")
     assert settings.index_dir == Path("data/chroma")
     assert settings.db_path == Path("data/app.sqlite")
+    assert settings.reglamento_pdf == Path("docs_to_use/RC-2023-E.pdf")
+    assert settings.tessdata_dir is None
 
 
 def test_paths_follow_overridden_data_dir(monkeypatch):

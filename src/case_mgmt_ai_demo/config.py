@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     borderline_high: float = 0.6
 
     data_dir: Path = Path("data")
+    reglamento_pdf: Path = Path("docs_to_use/RC-2023-E.pdf")
+    # Where the Spanish OCR model (spa.traineddata) lives; unset, the system's is used.
+    tessdata_dir: Path | None = None
 
     @property
     def index_dir(self) -> Path:

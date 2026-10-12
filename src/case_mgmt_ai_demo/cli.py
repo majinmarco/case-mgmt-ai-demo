@@ -5,14 +5,18 @@ import json
 import sys
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from case_mgmt_ai_demo.fee_check import FeeCheck, money
 from case_mgmt_ai_demo.review import InvalidPermitRequest, Recommendation
 
+if TYPE_CHECKING:  # imported when used: Chroma and pymupdf are slow to load
+    from case_mgmt_ai_demo.index import Embedder
+    from case_mgmt_ai_demo.ingest import Ingestion
+
 COMMANDS = {
     "review": "Produce a Recommendation for a Permit Request.",
-    "ingest": "Chunk and index the Reglamento, then evaluate retrieval.",
+    "ingest": "Chunk the Reglamento and load it into the index.",
     "serve": "Run the Reviewer web UI.",
 }
 
@@ -51,13 +55,33 @@ def build_parser() -> argparse.ArgumentParser:
                 action="store_true",
                 help="List every clause with its category and the reason given.",
             )
+        if name == "ingest":
+            subparser.add_argument(
+                "--pdf", type=Path, help="Reglamento PDF (default: PRA_REGLAMENTO_PDF)"
+            )
+            subparser.add_argument(
+                "--no-index",
+                action="store_true",
+                help="Chunk and write the report only: no embeddings, index untouched.",
+            )
+            subparser.add_argument(
+                "--no-ocr",
+                action="store_true",
+                help="Do not read text drawn as outlines; it stays marked […].",
+            )
     return parser
 
 
-def main(argv: list[str] | None = None, pipeline: RecommendationSource | None = None) -> int:
+def main(
+    argv: list[str] | None = None,
+    pipeline: RecommendationSource | None = None,
+    embedder: "Embedder | None" = None,
+) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "review":
         return _review(args.file, pipeline, show_selection=args.selection)
+    if args.command == "ingest":
+        return _ingest(args.pdf, embedder, index=not args.no_index, ocr=not args.no_ocr)
     print(f"'{args.command}' is not implemented yet.", file=sys.stderr)
     return 1
 
@@ -94,6 +118,67 @@ def _real_pipeline() -> RecommendationSource:
     return build_review_pipeline(settings, OpenAI())
 
 
+def _ingest(pdf: Path | None, embedder: "Embedder | None", index: bool, ocr: bool) -> int:
+    from case_mgmt_ai_demo.chunking import load_ingestion_config
+    from case_mgmt_ai_demo.config import load_settings
+    from case_mgmt_ai_demo.extraction import find_tessdata
+    from case_mgmt_ai_demo.ingest import ingest
+
+    settings = load_settings()  # exports .env, so before OpenAI()
+    pdf = pdf or settings.reglamento_pdf
+    if not pdf.is_file():
+        print(f"No se encontró el PDF del Reglamento: {pdf}", file=sys.stderr)
+        return 1
+    if index and embedder is None:
+        from openai import OpenAI
+
+        from case_mgmt_ai_demo.adapters import OpenAIEmbedder
+
+        embedder = OpenAIEmbedder(OpenAI(), settings.embedding_model)
+    tessdata = find_tessdata(settings.tessdata_dir) if ocr else None
+    if tessdata:
+        print("Extrayendo el texto (el OCR de las páginas con texto trazado tarda unos minutos)…")
+    result = ingest(
+        pdf,
+        load_ingestion_config(),
+        settings.data_dir,
+        settings.index_dir,
+        embedder if index else None,
+        tessdata,
+    )
+    print(format_ingestion(result, settings.index_dir))
+    return 0
+
+
+def format_ingestion(result: "Ingestion", index_dir: Path) -> str:
+    report = result.report
+    outlined = report.outlined_text
+    lines = [
+        f"Ingesta de {report.pdf} ({report.config.doc})",
+        f"Fragmentos: {report.chunks} de {report.sections} Secciones "
+        f"({report.split_sections} divididas en partes)",
+        f"Texto trazado como contornos: {outlined.read} tramos leídos por OCR, "
+        f"{outlined.unread} sin leer (marcados […])",
+    ]
+    if not outlined.ocr:
+        lines.append(
+            "  ⚠ Sin OCR (--no-ocr, o falta el modelo de español de Tesseract, "
+            "spa.traineddata: instálelo o indique PRA_TESSDATA_DIR)."
+        )
+    lines.append(f"Avisos de extracción: {len(report.flags)}")
+    lines += [f"  {count:>4}  {check}" for check, count in sorted(report.flags_by_check.items())]
+    if result.indexed:
+        indexed = result.indexed
+        lines.append(
+            f"Índice ({index_dir}): {indexed.embedded} fragmentos incrustados, "
+            f"{indexed.unchanged} sin cambios, {indexed.removed} eliminados"
+        )
+    else:
+        lines.append("Índice: sin tocar (--no-index)")
+    lines += [f"Informe: {result.report_path}", f"Texto de los fragmentos: {result.chunks_path}"]
+    return "\n".join(lines)
+
+
 def format_recommendation(recommendation: Recommendation, show_selection: bool = False) -> str:
     request = recommendation.request
     score = recommendation.approval_score
@@ -122,7 +207,9 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
         for requirement in recommendation.requirements:
             probability = requirement.probability
             shown = NOT_ASSESSED if probability is None else f"{probability:.2f}"
-            lines.append(f"  {shown:<{len(NOT_ASSESSED)}}  {requirement.text_es} [{requirement.id}]")
+            lines.append(
+                f"  {shown:<{len(NOT_ASSESSED)}}  {requirement.text_es} [{requirement.id}]"
+            )
     for ref in recommendation.unclassified_clause_refs:
         lines.append(f"  ⚠ Inciso sin clasificar (se evalúa igualmente): {ref}")
     for ref in recommendation.unknown_clause_refs:

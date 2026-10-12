@@ -1,7 +1,7 @@
 """Real implementations of the review pipeline's adapters."""
 
 import json
-from collections.abc import Collection, Iterator, Mapping
+from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from importlib.resources import files
 
@@ -120,6 +120,18 @@ class OpenAISectionValidator:
         return SectionRelevance(
             section_id=chunks[0].section_id, applies=verdict.applies, reason=verdict.reason
         )
+
+
+class OpenAIEmbedder:
+    """Embeds chunk texts for the Reglamento index."""
+
+    def __init__(self, client: OpenAI, model: str):
+        self._client = client
+        self.model = model
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        response = self._client.embeddings.create(model=self.model, input=list(texts))
+        return [item.embedding for item in response.data]
 
 
 class FixtureRetriever:

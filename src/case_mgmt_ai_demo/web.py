@@ -7,13 +7,13 @@ Section, and opens it in a side panel.
 """
 
 import json
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Annotated, Any, Protocol
 from urllib.parse import parse_qs, quote
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -23,8 +23,9 @@ from fastapi.responses import (
 )
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import ValidationError
 
-from case_mgmt_ai_demo.chunks import Chunk, Doc, split_clauses
+from case_mgmt_ai_demo.chunks import Chunk, Doc, RequestType, split_clauses
 from case_mgmt_ai_demo.cli import (
     CATEGORIES_ES,
     NOT_ASSESSED,
@@ -40,7 +41,16 @@ from case_mgmt_ai_demo.determination import (
     determine,
 )
 from case_mgmt_ai_demo.fee_check import money
-from case_mgmt_ai_demo.review import InvalidPermitRequest, Recommendation
+from case_mgmt_ai_demo.permit_request import LABELS, parse_permit_request
+from case_mgmt_ai_demo.request_form import (
+    DEFAULT_REQUEST_TYPE,
+    REQUEST_TYPES_ES,
+    core_groups,
+    errors_by_field,
+    raw_fields,
+    type_groups,
+)
+from case_mgmt_ai_demo.review import InvalidPermitRequest, Recommendation, intake_errors_es
 from case_mgmt_ai_demo.store import AlreadyDetermined, PermitRequestStore, StoredPermitRequest
 
 _HERE = Path(__file__).parent
@@ -105,6 +115,8 @@ def create_app(
         "RC-2023-E": settings.reglamento_pdf,
         "COBROS-OA-2022-07": settings.cobros_pdf,
     }
+    # Why the review of a Permit Request just created failed, until its case page has said so.
+    failed_reviews: dict[int, list[str]] = {}
 
     @app.exception_handler(AlreadyDetermined)
     def already_determined(request: Request, error: AlreadyDetermined) -> Response:
@@ -140,6 +152,17 @@ def create_app(
             "settings": settings,
         }
 
+    def reviewed(stored: StoredPermitRequest) -> list[str]:
+        """Review a Permit Request and store its Recommendation; when that fails, why."""
+        try:
+            rec = pipeline.review(stored.request.model_dump(mode="json"))
+        except InvalidPermitRequest as error:
+            return error.errors
+        except Exception as error:  # shown to the Reviewer: a missing index, a Criteria mismatch
+            return [f"{type(error).__name__}: {error}"]
+        store.save_recommendation(stored.id, rec)
+        return []
+
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request) -> HTMLResponse:
         queue = [
@@ -150,11 +173,76 @@ def create_app(
             request, "home.html", {"queue": queue, "verdicts": VERDICTS_ES}
         )
 
+    def form_context(
+        request_type: RequestType,
+        values: Mapping[str, Sequence[str]],
+        errors: Sequence[tuple[str, str]] = (),
+    ) -> dict[str, Any]:
+        shown, other = errors_by_field(request_type, errors)
+        return {
+            "request_type": request_type,
+            "request_types": REQUEST_TYPES_ES,
+            "core_groups": core_groups(),
+            "type_groups": type_groups(request_type),
+            "labels": LABELS,
+            "values": values,
+            "errors": shown,
+            "other_errors": other,  # listed above the form
+        }
+
+    # Before the case page, whose path would otherwise take "nueva" for a request ID.
+    @app.get("/solicitudes/nueva", response_class=HTMLResponse)
+    def new_request(
+        request: Request, request_type: RequestType = DEFAULT_REQUEST_TYPE
+    ) -> HTMLResponse:
+        return templates.TemplateResponse(
+            request, "new_request.html", form_context(request_type, {})
+        )
+
+    @app.get("/solicitudes/nueva/campos", response_class=HTMLResponse)
+    def request_type_fields(request: Request, request_type: RequestType) -> HTMLResponse:
+        """The fields of a Request Type, for HTMX to swap into the form when it is chosen,
+        holding what the form already has for them (the declared fee, which every type has)."""
+        context = form_context(request_type, parse_qs(request.url.query))
+        return templates.TemplateResponse(
+            request, "_request_fields.html", context | {"groups": context["type_groups"]}
+        )
+
+    @app.post("/solicitudes", response_class=HTMLResponse)
+    def create_request(
+        request: Request, submitted: Annotated[dict[str, list[str]], Depends(_submitted_form)]
+    ) -> Response:
+        """Store the Permit Request the form declares, review it and open its case page; an
+        invalid one gets the form back, with each error under its field."""
+        htmx = "HX-Request" in request.headers
+        request_type = (submitted.get("request_type") or [""])[0]
+        try:
+            permit_request = parse_permit_request(raw_fields(request_type, submitted))
+        except ValidationError as error:
+            known: dict[str, RequestType] = {name: name for name in REQUEST_TYPES_ES}
+            shown = known.get(request_type, DEFAULT_REQUEST_TYPE)
+            return templates.TemplateResponse(
+                request,
+                "_request_form.html" if htmx else "new_request.html",
+                form_context(shown, submitted, intake_errors_es(error)),
+                status_code=422,
+            )
+        stored = StoredPermitRequest(store.add(permit_request), permit_request)
+        if review_errors := reviewed(stored):
+            failed_reviews[stored.id] = review_errors
+        case_url = f"/solicitudes/{stored.id}"
+        if htmx:  # HTMX would follow a redirect itself and swap the page in: tell it to navigate
+            return Response(status_code=204, headers={"HX-Redirect": case_url})
+        return RedirectResponse(case_url, status_code=303)
+
     @app.get("/solicitudes/{request_id}", response_class=HTMLResponse)
     def case_page(request: Request, request_id: int) -> HTMLResponse:
         stored = stored_or_404(request_id)
         return templates.TemplateResponse(
-            request, "case.html", context(stored, store.recommendation(request_id))
+            request,
+            "case.html",
+            context(stored, store.recommendation(request_id))
+            | {"review_errors": failed_reviews.pop(request_id, [])},
         )
 
     @app.post("/solicitudes/{request_id}/recomendacion", response_class=HTMLResponse)
@@ -164,19 +252,11 @@ def create_app(
         if store.determination(request_id) is not None:
             # The Determination was made on the stored Recommendation, which therefore stays.
             raise AlreadyDetermined(request_id)
-        try:
-            rec = pipeline.review(stored.request.model_dump(mode="json"))
-        except InvalidPermitRequest as error:
-            failure = {"review_errors": error.errors}
-        except Exception as error:  # shown to the Reviewer: a missing index, a Criteria mismatch
-            failure = {"review_errors": [f"{type(error).__name__}: {error}"]}
-        else:
-            store.save_recommendation(request_id, rec)
-            failure = {}
+        review_errors = reviewed(stored)
         return templates.TemplateResponse(
             request,
             "_recommendation.html",
-            context(stored, store.recommendation(request_id)) | failure,
+            context(stored, store.recommendation(request_id)) | {"review_errors": review_errors},
         )
 
     @app.post("/solicitudes/{request_id}/determinacion", response_class=HTMLResponse)
@@ -219,6 +299,11 @@ def create_app(
         return FileResponse(path, media_type="application/pdf")
 
     return app
+
+
+async def _submitted_form(request: Request) -> dict[str, list[str]]:
+    """The values of each field of a submitted form, as the browser encodes them."""
+    return parse_qs((await request.body()).decode(errors="replace"), keep_blank_values=True)
 
 
 def _memoised(citation: Callable[[str], Citation]) -> Callable[[str], Citation]:

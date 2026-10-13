@@ -1,0 +1,47 @@
+{# The new Permit Request form: included in its page, and what an invalid submission returns
+   for HTMX to swap in, with each error under its field. #}
+<form id="solicitud-nueva" method="post" action="/solicitudes" novalidate
+      hx-post="/solicitudes" hx-target="this" hx-swap="outerHTML show:top" hx-disinherit="*"
+      hx-disabled-elt="find button" hx-indicator="find .revisando">
+  {% if errors %}
+  <section class="tarjeta aviso" role="alert">
+    <h2>La solicitud no es válida</h2>
+    <p>Corrija los campos señalados y envíela de nuevo.</p>
+    {% if other_errors %}
+    <ul>
+      {% for field, message in other_errors.items() %}
+      <li>{{ field }}: {{ message }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <fieldset class="tarjeta grupo">
+    <legend>Tipo de solicitud</legend>
+    <div class="campo{% if errors.get('request_type') %} con-error{% endif %}">
+      <label for="campo-request_type">Tipo de solicitud</label>
+      {# Choosing a Request Type swaps in its fields; the ones every type shares stay as typed. #}
+      <select id="campo-request_type" name="request_type" hx-get="/solicitudes/nueva/campos"
+              hx-target="#campos-tipo" hx-swap="innerHTML" hx-include="#campos-tipo">
+        {% for value, name in request_types.items() %}
+        <option value="{{ value }}"{% if value == request_type %} selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      {% if errors.get("request_type") %}<p class="error-campo">{{ errors["request_type"] }}</p>{% endif %}
+    </div>
+  </fieldset>
+
+  {% with groups = core_groups %}{% include "_request_fields.html" %}{% endwith %}
+  <div id="campos-tipo">
+    {% with groups = type_groups %}{% include "_request_fields.html" %}{% endwith %}
+  </div>
+
+  <div class="revisar">
+    <button type="submit">Crear y revisar la solicitud</button>
+    <span class="revisando htmx-indicator" role="status">
+      <progress aria-label="Revisión en curso"></progress>
+      Revisando la solicitud contra el Reglamento…
+    </span>
+  </div>
+</form>

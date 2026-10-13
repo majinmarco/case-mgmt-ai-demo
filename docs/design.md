@@ -210,6 +210,13 @@ Ingestion is not complete until retrieval has been evaluated; this validates bot
 - **Gauge.** Drawn with the cutoff and Borderline band of the running configuration, which may differ from those a stored Recommendation's verdict was reached with.
 - Spanish only; the English toggle is not built.
 
+### New request form as built (CMAWD-15)
+
+- **Fields.** `request_form.py` lists the form's fields for each Request Type. A field is named by the path of the Permit Request field it fills (`renewal.expiry_date`), so the form posts what a request file holds and an intake error names its input. A field left blank is not declared; a nested field (district parameters, plans certification, site sketch, renewal) is declared when any of its inputs is filled.
+- **Request Type.** Choosing one makes HTMX fetch that type's fields (`/solicitudes/nueva/campos`) and swap them in; the shared fields stay as typed.
+- **Validation.** The submission is validated by the same parser as pipeline intake, and each of its Spanish messages is shown under its field (status 422, the values kept). Nothing is stored and no review runs.
+- **Submission.** A valid request is stored and reviewed in the same call, with an indeterminate progress indicator on the form while it runs (the pipeline does not report its steps), and then the case page opens. A review that fails leaves the request stored: its case page says why, once, and offers the review again.
+
 ### Queue and Determinations as built (CMAWD-14)
 
 - **Queue.** `/` lists every stored Permit Request with its Request Type, Applicant, verdict badge, Approval Score, Borderline flag and Determination status ("Pendiente" until one is recorded; "Sin revisar" without a Recommendation), each linking to its case page.

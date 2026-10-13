@@ -477,7 +477,9 @@ class ReviewPipeline:
         try:
             request = parse_permit_request(state["raw"])
         except ValidationError as error:
-            raise InvalidPermitRequest([_error_es(e) for e in error.errors()]) from error
+            raise InvalidPermitRequest(
+                [f"{field}: {message}" for field, message in intake_errors_es(error)]
+            ) from error
         return {
             "request": request,
             "criteria": [c for c in self._criteria if c.applies_to(request)],
@@ -783,7 +785,13 @@ INTAKE_ERRORS_ES = {
 }
 
 
-def _error_es(error: ErrorDetails) -> str:
+def intake_errors_es(error: ValidationError) -> list[tuple[str, str]]:
+    """Why raw fields are not a Permit Request: each field at fault, as its dotted path, with
+    a Spanish message."""
+    return [_error_es(details) for details in error.errors()]
+
+
+def _error_es(error: ErrorDetails) -> tuple[str, str]:
     template = INTAKE_ERRORS_ES.get(error["type"])
     message = template.format(**error.get("ctx", {})) if template else error["msg"]
     loc = list(error["loc"])
@@ -791,7 +799,7 @@ def _error_es(error: ErrorDetails) -> str:
         loc = loc[1:]  # the Request Type the fields were validated as, not a field
     elif error["type"].startswith("union_tag_"):
         loc = ["request_type"]
-    return f"{'.'.join(map(str, loc)) or '(solicitud)'}: {message}"
+    return ".".join(map(str, loc)) or "(solicitud)", message
 
 
 def _probability_es(probability: float | None) -> str:

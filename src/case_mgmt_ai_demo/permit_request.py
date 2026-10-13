@@ -121,6 +121,12 @@ LABELS: dict[str, str] = {
     "ministerial": "uso permitido ministerialmente en el distrito",
     "variacion_aprobada": "variación en el uso previamente autorizada",
     "no_permitido": "uso no permitido en el distrito y sin variación autorizada",
+    "no_alimentos": "establecimiento que no es de alimentos u oficina profesional",
+    "cafetin": "cafetín",
+    "cafeteria": "cafetería",
+    "restaurante": "restaurante",
+    "otros_alimentos": "otro establecimiento de alimentos",
+    "supermercado": "supermercado",
 }
 
 

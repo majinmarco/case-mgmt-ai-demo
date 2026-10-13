@@ -144,3 +144,17 @@ button:disabled { opacity: 0.6; cursor: progress; }
   #visor { flex-basis: auto; width: 100%; height: 80vh; position: static; border-left: 0; border-top: 1px solid var(--borde); }
   .campos { grid-template-columns: 1fr; }
 }
+
+/* The new Permit Request form. */
+.accion { display: inline-block; padding: 0.35rem 0.9rem; border: 1px solid var(--borde); border-radius: 6px; background: var(--tarjeta); text-decoration: none; }
+.grupo { min-width: 0; }
+.grupo legend { padding: 0 0.4rem; font-weight: 600; font-size: 1.1rem; }
+.grupo > .tipo { margin: 0 0 0.5rem; }
+.campo { margin-bottom: 0.75rem; }
+.campo label[for] { display: block; }
+.campo input:not([type="checkbox"]), .campo select { width: 100%; max-width: 32rem; padding: 0.35rem 0.6rem; font: inherit; border: 1px solid var(--borde); border-radius: 6px; background: var(--tarjeta); }
+.campo small { display: block; }
+.casillas { margin: 0; padding: 0; list-style: none; columns: 2 18rem; }
+.con-error input:not([type="checkbox"]), .con-error select { border-color: var(--no-aprobar); }
+.error-campo { margin: 0.15rem 0 0; color: var(--no-aprobar); font-size: 0.9rem; font-weight: 600; }
+.revisando progress { vertical-align: middle; margin-right: 0.5rem; }

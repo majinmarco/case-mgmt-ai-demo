@@ -1,0 +1,50 @@
+{# Groups of fields of the new Permit Request form: included in the form, and what choosing a
+   Request Type returns for HTMX to swap into #campos-tipo. #}
+{% for group in groups %}
+<fieldset class="tarjeta grupo">
+  <legend>{{ group.title }}{% if group.optional %} <span class="tipo">(opcional)</span>{% endif %}</legend>
+  {% if group.hint %}<p class="tipo">{{ group.hint }}</p>{% endif %}
+  {% for field in group.fields %}
+  {% set chosen = values.get(field.name, []) %}
+  {% set value = chosen[0] if chosen else "" %}
+  {% set error = errors.get(field.name) %}
+  {% set id = "campo-" ~ field.name %}
+  <div class="campo{% if error %} con-error{% endif %}">
+    {% if field.kind == "checklist" %}
+    <ul class="casillas" aria-label="{{ field.label }}">
+      {% for option in field.options %}
+      <li><label><input type="checkbox" name="{{ field.name }}" value="{{ option }}"{% if option in chosen %} checked{% endif %}> {{ labels[option] }}</label></li>
+      {% endfor %}
+    </ul>
+    {% elif field.kind == "check" %}
+    <label><input type="checkbox" name="{{ field.name }}" value="true"{% if value %} checked{% endif %}> {{ field.label }}</label>
+    {% else %}
+    <label for="{{ id }}">{{ field.label }}{% if not field.required %} <span class="tipo">(opcional)</span>{% endif %}</label>
+    {% if field.kind == "choice" %}
+    <select id="{{ id }}" name="{{ field.name }}"{% if error %} aria-invalid="true"{% endif %}>
+      <option value="">—</option>
+      {% for option in field.options %}
+      <option value="{{ option }}"{% if option == value %} selected{% endif %}>{{ labels[option] }}</option>
+      {% endfor %}
+    </select>
+    {% elif field.kind == "yes_no" %}
+    <select id="{{ id }}" name="{{ field.name }}"{% if error %} aria-invalid="true"{% endif %}>
+      <option value="">—</option>
+      <option value="true"{% if value == "true" %} selected{% endif %}>Sí</option>
+      <option value="false"{% if value == "false" %} selected{% endif %}>No</option>
+    </select>
+    {% else %}
+    {# A number is typed as text: a number input would send nothing for "dos", and intake
+       could not say what is wrong with it. #}
+    <input id="{{ id }}" name="{{ field.name }}" value="{{ value }}"
+           type="{{ "date" if field.kind == "date" else "text" }}"
+           {%- if field.kind == "integer" %} inputmode="numeric"{% elif field.kind == "decimal" %} inputmode="decimal"{% endif %}
+           {%- if error %} aria-invalid="true"{% endif %}>
+    {% endif %}
+    {% endif %}
+    {% if field.hint %}<small class="tipo">{{ field.hint }}</small>{% endif %}
+    {% if error %}<p class="error-campo">{{ error }}</p>{% endif %}
+  </div>
+  {% endfor %}
+</fieldset>
+{% endfor %}

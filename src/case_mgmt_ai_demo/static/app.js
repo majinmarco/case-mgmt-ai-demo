@@ -32,3 +32,12 @@
     holder.replaceChildren();
   });
 })();
+
+// An invalid new Permit Request comes back with status 422 and its errors under each field:
+// HTMX swaps that form in, which it does not do for an error status on its own.
+document.addEventListener("htmx:beforeSwap", function (event) {
+  if (event.detail.xhr.status === 422 && event.detail.target.id === "solicitud-nueva") {
+    event.detail.shouldSwap = true;
+    event.detail.isError = false;
+  }
+});

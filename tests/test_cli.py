@@ -1,5 +1,6 @@
 import io
 import json
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -632,6 +633,10 @@ def test_serve_starts_the_web_app_with_the_example_permit_requests(served, capsy
     assert "Aprobar" in client.post("/solicitudes/1/recomendacion").text
 
 
+def case_links(home: str) -> list[str]:
+    return re.findall(r'href="/solicitudes/\d+"', home)
+
+
 def test_serve_keeps_what_is_stored_when_started_again(served):
     main(["serve"], pipeline=FakePipeline(recommendation()))
     TestClient(served[0]["app"]).post("/solicitudes/2/recomendacion")
@@ -639,7 +644,7 @@ def test_serve_keeps_what_is_stored_when_started_again(served):
     main(["serve"], pipeline=FakePipeline(recommendation()))
 
     client = TestClient(served[1]["app"])
-    assert client.get("/").text.count('href="/solicitudes/') == 2  # the examples, loaded once
+    assert len(case_links(client.get("/").text)) == 2  # the examples, loaded once
     assert "Puntuación de aprobación" in client.get("/solicitudes/2").text
 
 
@@ -651,7 +656,7 @@ def test_serve_skips_an_example_that_is_not_a_valid_permit_request(served, tmp_p
 
     err = capsys.readouterr().err
     assert "3-rota.json" in err and "4-no-json.json" in err
-    assert TestClient(served[0]["app"]).get("/").text.count('href="/solicitudes/') == 2
+    assert len(case_links(TestClient(served[0]["app"]).get("/").text)) == 2
 
 
 def test_ingest_without_index_writes_the_report_and_prints_a_summary(

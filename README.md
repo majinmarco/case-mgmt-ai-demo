@@ -42,6 +42,8 @@ Permit Requests, Recommendations and Determinations are kept in SQLite (`data/ap
 
 The start page is the queue: every Permit Request with its Request Type, Applicant, verdict, Approval Score, Borderline flag and Determination. On the case page the Reviewer records the Determination, once: accept the Recommendation, override it (a reason is required), or issue a Cure Request, whose list of deficiencies starts from the curable Notes. A request with a Determination is not reviewed again.
 
+"Nueva Solicitud de Permiso" on the start page opens a form that creates a Permit Request: choosing the Request Type swaps in that type's fields and its documents checklist. Submitting validates it as `review` does (each error is shown under its field), stores it, reviews it (real model calls) and opens its case page.
+
 ## Ingest the Reglamento
 
 ```sh

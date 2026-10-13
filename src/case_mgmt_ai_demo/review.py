@@ -6,6 +6,10 @@ write_notes once, and are dropped if they still do. The Section retriever, the S
 the requirement selector, the Decisions API client and the Notes LLM are injected adapters, so
 tests can fake them.
 
+A Section's Clauses do not depend on the Permit Request, so they come from a Clause source (the
+Clause store, which extracts each Section's once). Whether a Section applies and how each Clause
+is classified are decided from the request, on every review.
+
 The Fee Check runs beside all of that, straight after intake. It is deterministic, never changes
 the Approval Score, and adds its own curable Note when the declared fee is not the fee owed.
 
@@ -23,7 +27,7 @@ what each node added to the graph state, in the order the nodes ran.
 
 import operator
 import re
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from typing import Annotated, Any, Literal, Protocol, TypedDict, get_args
 
@@ -31,7 +35,8 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError, computed_field
 from pydantic_core import ErrorDetails, to_jsonable_python
 
-from case_mgmt_ai_demo.chunks import Chunk, Clause, RequestType, split_clauses
+from case_mgmt_ai_demo.chunks import Chunk, Clause, RequestType
+from case_mgmt_ai_demo.clause_store import RegexClauseExtractor
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.criteria import Criterion
 from case_mgmt_ai_demo.fee_check import FeeCheck, FeeRules, check_fee
@@ -339,6 +344,19 @@ class SectionRetriever(Protocol):
         ...
 
 
+class ClauseSource(Protocol):
+    def clauses(self, section: Sequence[Chunk]) -> list[Clause]:
+        """The Clauses of one Section, given all its parts in order, in Reglamento order."""
+        ...
+
+
+class _ExtractedEachTime:
+    """The Clause source of a pipeline without a Clause store."""
+
+    def clauses(self, section: Sequence[Chunk]) -> list[Clause]:
+        return RegexClauseExtractor().extract(section)
+
+
 class SectionValidator(Protocol):
     def validate(self, chunks: list[Chunk], request: PermitRequest) -> SectionRelevance:
         """Whether the Section these chunks (all its parts) hold applies to the request."""
@@ -361,6 +379,7 @@ class ReviewState(ReviewInput):
     request: PermitRequest
     criteria: list[Criterion]
     sections: list[Chunk]
+    section_clauses: list[Clause]
     retrieved: list[RetrievedSection]
     section_relevance: list[SectionRelevance]
     applicable_sections: list[Chunk]
@@ -391,10 +410,11 @@ class ReviewPipeline:
         fixed: Iterable[FixedCategory] = (),
         criteria: Iterable[Criterion] = (),
         fee_rules: FeeRules | None = None,
+        clause_source: ClauseSource | None = None,
     ):
         """`fixed` fixes the category of general clauses the selector is unsteady on;
         `criteria` holds the Criteria of every Request Type; without `fee_rules` there is
-        no Fee Check."""
+        no Fee Check; without `clause_source`, each Section's Clauses are extracted on every review."""
         self._decisions = decisions
         self._notes_llm = notes_llm
         self._retriever = retriever
@@ -404,6 +424,7 @@ class ReviewPipeline:
         self._fixed = list(fixed)
         self._criteria = list(criteria)
         self._fee_rules = fee_rules
+        self._clause_source = clause_source or _ExtractedEachTime()
         graph = StateGraph(ReviewState, input_schema=ReviewInput)
         graph.add_node("intake", self._intake)
         graph.add_node("fee_check", self._fee_check)
@@ -506,7 +527,19 @@ class ReviewPipeline:
             for chunk in self._retriever.fetch(set(pinned))
             if (chunk.section_id, chunk.part) not in found
         ]
-        clauses = [c for s in sections for c in split_clauses(s)]
+        by_section: dict[str, list[Chunk]] = {}
+        for chunk in sections:
+            by_section.setdefault(chunk.section_id, []).append(chunk)
+        clauses: list[Clause] = []
+        for section_id, parts in by_section.items():
+            try:
+                clauses += self._clause_source.clauses(parts)
+            except ModelError as error:
+                # Its lettered paragraphs are read directly, so its requirements are still scored.
+                clauses += RegexClauseExtractor().extract(parts)
+                errors.append(
+                    ModelFailure(step="retrieve", subject=section_id, message=str(error))
+                )
         for criterion in state["criteria"]:
             if unmatched := criterion.unmatched_pins(clauses):
                 raise MissingPinnedClause(
@@ -514,20 +547,18 @@ class ReviewPipeline:
                     "which no retrieved Section holds"
                 )
         similarity = {r.chunk.section_id: r.similarity for r in retrieved}
-        headings: dict[str, str] = {}
-        for chunk in sections:
-            headings.setdefault(chunk.section_id, chunk.heading)
         return {
             "sections": sections,
+            "section_clauses": clauses,
             "retrieved": [
                 RetrievedSection(
                     section_id=section_id,
-                    heading=heading,
+                    heading=parts[0].heading,
                     similarity=similarity.get(section_id),
                     pinned_by=[c.id for c in state["criteria"] if section_id in c.pinned_section_ids],
                     clause_refs=[c.ref for c in clauses if c.section_id == section_id],
                 )
-                for section_id, heading in headings.items()
+                for section_id, parts in by_section.items()
             ],
             "errors": errors,
         }
@@ -564,7 +595,7 @@ class ReviewPipeline:
         return {
             "section_relevance": relevance,
             "applicable_sections": sections,
-            "clauses": [c for s in sections for c in split_clauses(s)],
+            "clauses": [c for c in state["section_clauses"] if c.section_id in applies],
             "errors": [error for _, error in validated if error],
         }
 
@@ -731,7 +762,7 @@ def _step_output(update: Mapping[str, Any] | None) -> dict[str, Any]:
     for key, value in (update or {}).items():
         if key in ("sections", "applicable_sections"):
             value = list(dict.fromkeys(chunk.section_id for chunk in value))
-        elif key == "clauses":
+        elif key in ("clauses", "section_clauses"):
             value = [clause.ref for clause in value]
         elif key == "criteria":
             value = [criterion.id for criterion in value]

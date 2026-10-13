@@ -8,7 +8,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from case_mgmt_ai_demo import main, unlimited_ocr
+from case_mgmt_ai_demo.chunks import load_fixture_chunks
+from case_mgmt_ai_demo.clause_store import build_clause_store
 from case_mgmt_ai_demo.cli import ProgressBar, _refs
+from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.fee_check import check_fee, load_fee_rules
 from case_mgmt_ai_demo.permit_request import parse_permit_request
 from case_mgmt_ai_demo.review import (
@@ -701,7 +704,26 @@ def test_ingest_of_one_document_leaves_the_other_alone(tmp_path, monkeypatch, ca
     assert sorted(path.name for path in tmp_path.iterdir()) == [
         "COBROS-OA-2022-07.chunks.jsonl",
         "COBROS-OA-2022-07.ingestion_report.json",
+        "clauses.sqlite",
     ]
+
+
+def test_ingest_can_forget_every_stored_clause_of_the_document_it_ingests(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+    settings = Settings(data_dir=tmp_path)
+    fee_item = load_fixture_chunks()[0].model_copy(
+        update={"section_id": "COBROS:AnejoA:6", "doc": "COBROS-OA-2022-07", "part": None}
+    )
+    build_clause_store(settings).clauses([fee_item])
+
+    exit_code = main(["ingest", "--no-index", "--doc", "COBROS-OA-2022-07", "--clear-clauses"])
+
+    assert exit_code == 0
+    out = capsys.readouterr().out
+    assert "Secciones de COBROS-OA-2022-07 con incisos guardados descartados: todas (1)" in out
+    assert build_clause_store(settings).clear() == 0
 
 
 def test_ingest_reads_outlined_text_with_the_ocr_engine_asked_for(tmp_path, monkeypatch, capsys):

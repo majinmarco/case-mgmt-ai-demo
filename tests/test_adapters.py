@@ -15,6 +15,7 @@ from case_mgmt_ai_demo.adapters import (
     OpenAIRequirementSelector,
     OpenAISectionValidator,
     build_retriever,
+    build_review_pipeline,
     load_fixed_clause_categories,
 )
 from case_mgmt_ai_demo.chunks import load_fixture_chunks, split_clauses
@@ -219,3 +220,12 @@ def test_an_index_holding_only_the_fee_order_is_reported_rather_than_searched(tm
 
     with pytest.raises(IndexNotBuilt):
         build_retriever(settings, OpenAI(api_key="sk-test"))
+
+
+def test_the_review_pipeline_keeps_its_clause_store_in_the_data_directory(tmp_path):
+    settings = Settings(retriever="fixture", data_dir=tmp_path)
+
+    build_review_pipeline(settings, OpenAI(api_key="sk-test"))
+
+    assert settings.clause_store_path == tmp_path / "clauses.sqlite"
+    assert settings.clause_store_path.is_file()

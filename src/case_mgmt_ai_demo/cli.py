@@ -107,6 +107,12 @@ def build_parser() -> argparse.ArgumentParser:
                 help="What reads text drawn as outlines (default: PRA_OCR_ENGINE, or tesseract).",
             )
             subparser.add_argument(
+                "--clear-clauses",
+                action="store_true",
+                help="Forget the stored Clauses of each document ingested, so every Section's "
+                "are extracted again when a review next needs them.",
+            )
+            subparser.add_argument(
                 "--no-ocr",
                 action="store_true",
                 help="Do not read text drawn as outlines; it stays marked […].",
@@ -135,6 +141,7 @@ def main(
             embedder,
             index=not args.no_index,
             ocr=None if args.no_ocr else args.ocr or "",
+            clear_clauses=args.clear_clauses,
         )
     return _serve(args.host, args.port, pipeline)
 
@@ -243,11 +250,17 @@ def _store_examples(directory: Path, store: "PermitRequestStore") -> None:
 
 
 def _ingest(
-    pdfs: Mapping[str, Path | None], embedder: "Embedder | None", index: bool, ocr: str | None
+    pdfs: Mapping[str, Path | None],
+    embedder: "Embedder | None",
+    index: bool,
+    ocr: str | None,
+    clear_clauses: bool = False,
 ) -> int:
     """Ingests each document in `pdfs`; None stands for the configured PDF. `ocr` names the
-    OCR engine: empty for the configured one, None for no OCR."""
+    OCR engine: empty for the configured one, None for no OCR. `clear_clauses` forgets every
+    stored Clause of each document, not only those of the Sections that changed."""
     from case_mgmt_ai_demo.chunking import load_ingestion_config
+    from case_mgmt_ai_demo.clause_store import build_clause_store
     from case_mgmt_ai_demo.config import load_settings
     from case_mgmt_ai_demo.ingest import ingest
 
@@ -272,22 +285,28 @@ def _ingest(
         except OcrUnavailable as error:
             print(f"No se puede usar el OCR {error}", file=sys.stderr)
             return 1
+    clause_store = build_clause_store(settings)
     for doc, pdf in sources.items():
         if engine and doc == "RC-2023-E":
             print(
                 f"El OCR ({engine.name}) de las páginas con texto trazado tarda unos minutos.",
                 file=sys.stderr,
             )
+        config = load_ingestion_config(INGESTION_CONFIGS[doc])
         result = ingest(
             pdf,
-            load_ingestion_config(INGESTION_CONFIGS[doc]),
+            config,
             settings.data_dir,
             settings.index_dir,
             embedder if index else None,
             engine,
             ProgressBar(sys.stderr),
+            clause_store,
         )
         print(format_ingestion(result, settings.index_dir))
+        if clear_clauses:
+            cleared = clause_store.clear(config.doc)
+            print(f"Secciones de {doc} con incisos guardados descartados: todas ({cleared})")
     return 0
 
 
@@ -362,6 +381,11 @@ def format_ingestion(result: "Ingestion", index_dir: Path) -> str:
         )
     else:
         lines.append("Índice: sin tocar (--no-index)")
+    if result.clauses_forgotten is not None:
+        lines.append(
+            f"Secciones con incisos guardados descartados: {result.clauses_forgotten} "
+            "(cambiaron o ya no existen; se extraen de nuevo al revisar)"
+        )
     lines += [f"Informe: {result.report_path}", f"Texto de los fragmentos: {result.chunks_path}"]
     return "\n".join(lines)
 

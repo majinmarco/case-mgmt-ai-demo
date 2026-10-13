@@ -9,6 +9,7 @@ from typing import Literal, Protocol
 from pydantic import BaseModel
 
 from case_mgmt_ai_demo.chunking import Chunking, IngestionConfig, chunk_glossary, chunk_lines
+from case_mgmt_ai_demo.clause_store import ClauseStore
 from case_mgmt_ai_demo.extraction import Extraction, OcrEngine, extract_lines
 from case_mgmt_ai_demo.extraction_checks import Flag, check_chunks
 from case_mgmt_ai_demo.fee_order import chunk_fee_order
@@ -57,6 +58,7 @@ class Ingestion:
     report_path: Path
     chunks_path: Path
     indexed: SyncResult | None
+    clauses_forgotten: int | None = None  # Sections whose stored Clauses were out of date
 
 
 def ingest(
@@ -67,9 +69,12 @@ def ingest(
     embedder: Embedder | None,
     ocr: OcrEngine | None = None,
     progress: Progress | None = None,
+    clause_store: ClauseStore | None = None,
 ) -> Ingestion:
     """Without an `embedder` the chunks and the report are written but the index is left
-    alone, so chunking can be reviewed without calling the embeddings API."""
+    alone, so chunking can be reviewed without calling the embeddings API. When the index is
+    synced, a Clause store is pruned with it: the Clauses stored for Sections that are gone
+    or changed are forgotten, and the rest are kept."""
     extraction, chunking = _chunked(pdf, config, ocr, progress)
     chunks = chunking.chunks
     flags = check_chunks(chunks)
@@ -103,12 +108,18 @@ def ingest(
     chunks_path.write_text(
         "".join(chunk.model_dump_json() + "\n" for chunk in chunks), encoding="utf-8"
     )
-    indexed = None
+    indexed = clauses_forgotten = None
     if embedder:
         embedded = (lambda done, total: progress("embed", done, total)) if progress else None
         indexed = ReglamentoIndex(index_dir).sync(config.doc, chunks, embedder, embedded)
+        if clause_store:
+            clauses_forgotten = clause_store.prune(config.doc, chunks)
     return Ingestion(
-        report=report, report_path=report_path, chunks_path=chunks_path, indexed=indexed
+        report=report,
+        report_path=report_path,
+        chunks_path=chunks_path,
+        indexed=indexed,
+        clauses_forgotten=clauses_forgotten,
     )
 
 

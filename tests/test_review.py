@@ -4,6 +4,7 @@ from collections.abc import Collection, Mapping
 import pytest
 
 from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks, split_clauses
+from case_mgmt_ai_demo.clause_store import ClauseStore
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.criteria import Criterion
 from case_mgmt_ai_demo.fee_check import load_fee_rules
@@ -21,6 +22,7 @@ from case_mgmt_ai_demo.review import (
     SectionRelevance,
     selection_prompt,
 )
+from test_clause_store import CountingExtractor
 
 GOOD_PCOC = {
     "request_type": "PCOC",
@@ -225,6 +227,7 @@ def pipeline(
     criteria=(),
     validator=None,
     fee_rules=None,
+    clause_source=None,
 ) -> ReviewPipeline:
     settings = Settings(approval_cutoff=0.5, borderline_low=0.4, borderline_high=0.6)
     return ReviewPipeline(
@@ -237,6 +240,7 @@ def pipeline(
         fixed=fixed,
         criteria=criteria,
         fee_rules=fee_rules,
+        clause_source=clause_source,
     )
 
 
@@ -1439,3 +1443,74 @@ def test_the_selection_prompt_lists_what_the_form_can_declare(pcoc_retriever):
     assert "CAMPOS DEL FORMULARIO" in prompt
     assert "- Documentos adjuntos: solo estos documentos: planos sellados" in prompt
     assert '"no_verificable"' in prompt
+
+
+def test_a_second_review_reads_the_sections_clauses_from_the_store(tmp_path, retriever):
+    extractor = CountingExtractor()
+    store = ClauseStore(tmp_path / "clauses.sqlite", extractor)
+    validator, selector = FakeSectionValidator(), FakeSelector()
+    reviewer = pipeline(
+        FakeDecisions(),
+        FakeNotesLLM([STANDING_NOTE], [STANDING_NOTE]),
+        retriever,
+        selector,
+        validator=validator,
+        clause_source=store,
+    )
+
+    reviewer.review(GOOD_PCOC)
+    reviewer.review(GOOD_PCOC | {"applicant_name": "Otra Solicitante"})
+
+    assert extractor.extracted == ["RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5"]
+    # Whether a Section applies and how each Clause is classified is still asked per request.
+    assert len(validator.calls) == 4
+    assert len(selector.calls) == 2
+
+
+def test_a_review_is_the_same_with_and_without_the_clause_store(tmp_path, pcoc_retriever):
+    def review(clause_source: ClauseStore | None):
+        return pipeline(
+            criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8),
+            FakeNotesLLM([STANDING_NOTE]),
+            pcoc_retriever,
+            FakeSelector({"RC-2023-E:2.1.9.2(c)": "no_verificable"}),
+            criteria=CRITERIA,
+            validator=FakeSectionValidator({"RC-2023-E:2.1.9.3": "No hay obra que valorar."}),
+            fee_rules=load_fee_rules(),
+            clause_source=clause_source,
+        ).review(GOOD_PCOC)
+
+    store = ClauseStore(tmp_path / "clauses.sqlite", CountingExtractor())
+
+    without = review(None)
+    extracted = review(store)
+    stored = review(store)
+
+    assert without.requirements and without.trace.retrieved[0].clause_refs
+    assert extracted == without
+    assert stored == without
+
+
+def test_a_failed_clause_extraction_is_recorded_and_the_review_carries_on(tmp_path, retriever):
+    failing = CountingExtractor(fail=True)
+    store = ClauseStore(tmp_path / "clauses.sqlite", failing)
+
+    recommendation = pipeline(
+        FakeDecisions(default=0.86), FakeNotesLLM([STANDING_NOTE]), retriever, clause_source=store
+    ).review(GOOD_PCOC)
+
+    # The lettered paragraphs are read directly, so the Requirements are still assessed.
+    assert [r.id for r in recommendation.requirements] == ["seccion_2_1_9_3", "seccion_2_1_9_5"]
+    assert "RC-2023-E:2.1.9.5(b)" in recommendation.requirements[1].clause_refs
+    assert recommendation.approval_score == 0.86
+    assert recommendation.verdict == "manual_review"
+    assert [(e.step, e.subject) for e in recommendation.errors] == [
+        ("retrieve", "RC-2023-E:2.1.9.3"),
+        ("retrieve", "RC-2023-E:2.1.9.5"),
+    ]
+    assert "Clause extractor: 500" in recommendation.errors[0].message
+    # Each Section was asked for once in the review, and nothing was stored.
+    assert failing.extracted == ["RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5"]
+    working = CountingExtractor()
+    ClauseStore(tmp_path / "clauses.sqlite", working).clauses(retriever.chunks[:1])
+    assert working.extracted == ["RC-2023-E:2.1.9.3"]

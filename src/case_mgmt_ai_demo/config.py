@@ -55,6 +55,11 @@ class Settings(BaseSettings):
         """SQLite file for Permit Requests, Recommendations and Determinations."""
         return self.data_dir / "app.sqlite"
 
+    @property
+    def clause_store_path(self) -> Path:
+        """SQLite file for the Clause store: each Section's Clauses, extracted once."""
+        return self.data_dir / "clauses.sqlite"
+
     @model_validator(mode="after")
     def _borderline_band_contains_cutoff(self) -> "Settings":
         if not (0 <= self.borderline_low <= self.approval_cutoff <= self.borderline_high <= 1):

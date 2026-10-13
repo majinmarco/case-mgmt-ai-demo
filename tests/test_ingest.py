@@ -10,10 +10,12 @@ import pytest
 from chromadb.config import Settings as ChromaSettings
 
 from case_mgmt_ai_demo.chunking import load_ingestion_config
-from case_mgmt_ai_demo.chunks import Chunk, split_clauses
+from case_mgmt_ai_demo.chunks import Chunk, load_fixture_chunks, split_clauses
+from case_mgmt_ai_demo.clause_store import ClauseStore
 from case_mgmt_ai_demo.index import COLLECTION, ReglamentoIndex, chunk_id
 from case_mgmt_ai_demo.ingest import ingest
 from conftest import COBROS_PDF, RC_PDF
+from test_clause_store import CountingExtractor
 from test_index import FakeEmbedder
 
 
@@ -332,3 +334,43 @@ def test_every_written_cobros_chunk_validates_against_the_chunk_contract(with_co
     assert all(Chunk.model_validate_json(line) for line in lines)
     assert cobros.report.flags == []
     assert cobros.report.chunks_by_level == {"seccion": 10, "anejo_item": 58}
+
+
+def test_ingesting_a_document_forgets_only_its_stored_clauses_that_are_out_of_date(
+    tmp_path, cobros_chunking
+):
+    extractor = CountingExtractor()
+    store = ClauseStore(tmp_path / "clauses.sqlite", extractor)
+    [fee_item] = [c for c in cobros_chunking.chunks if c.section_id == "COBROS:AnejoA:6"]
+    [other_item] = [c for c in cobros_chunking.chunks if c.section_id == "COBROS:AnejoA:7"]
+    outdated = other_item.model_copy(update={"text": "a. Texto de una ingesta anterior."})
+    [standing] = [c for c in load_fixture_chunks() if c.section_id == "RC-2023-E:2.1.9.5"]
+    for chunk in (fee_item, outdated, standing):
+        store.clauses([chunk])
+    config = load_ingestion_config("cobros_oa_2022_07")
+
+    result = ingest(
+        COBROS_PDF, config, tmp_path, tmp_path / "chroma", FakeEmbedder(), clause_store=store
+    )
+
+    assert result.clauses_forgotten == 1
+    extractor.extracted.clear()
+    for chunk in (fee_item, other_item, standing):
+        store.clauses([chunk])
+    assert extractor.extracted == ["COBROS:AnejoA:7"]
+
+
+def test_ingesting_without_touching_the_index_leaves_the_clause_store_alone(tmp_path):
+    extractor = CountingExtractor()
+    store = ClauseStore(tmp_path / "clauses.sqlite", extractor)
+    outdated = load_fixture_chunks()[0].model_copy(
+        update={"section_id": "COBROS:AnejoA:6", "doc": "COBROS-OA-2022-07", "part": None}
+    )
+    store.clauses([outdated])
+    config = load_ingestion_config("cobros_oa_2022_07")
+
+    result = ingest(COBROS_PDF, config, tmp_path, tmp_path / "chroma", None, clause_store=store)
+
+    assert result.clauses_forgotten is None
+    store.clauses([outdated])
+    assert extractor.extracted == ["COBROS:AnejoA:6"]

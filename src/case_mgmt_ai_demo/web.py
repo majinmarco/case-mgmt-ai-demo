@@ -1,4 +1,5 @@
-"""The Reviewer web UI: a stored Permit Request and its Recommendation, in Spanish.
+"""The Reviewer web UI: the queue of stored Permit Requests, and each one with its
+Recommendation and the Reviewer's Determination, in Spanish.
 
 FastAPI serves Jinja pages; HTMX swaps in the Recommendation when a review is asked for. Every
 citation links to the Reglamento PDF the app serves, on the page the index gives for the cited
@@ -10,19 +11,37 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
-from urllib.parse import quote
+from urllib.parse import parse_qs, quote
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from case_mgmt_ai_demo.chunks import Chunk, Doc, split_clauses
-from case_mgmt_ai_demo.cli import CATEGORIES_ES, NOT_ASSESSED, RecommendationSource, verdict_es
+from case_mgmt_ai_demo.cli import (
+    CATEGORIES_ES,
+    NOT_ASSESSED,
+    VERDICTS_ES,
+    RecommendationSource,
+    verdict_es,
+)
 from case_mgmt_ai_demo.config import Settings
+from case_mgmt_ai_demo.determination import (
+    Determination,
+    InvalidDetermination,
+    cure_request_draft,
+    determine,
+)
 from case_mgmt_ai_demo.fee_check import money
 from case_mgmt_ai_demo.review import InvalidPermitRequest, Recommendation
-from case_mgmt_ai_demo.store import PermitRequestStore, StoredPermitRequest
+from case_mgmt_ai_demo.store import AlreadyDetermined, PermitRequestStore, StoredPermitRequest
 
 _HERE = Path(__file__).parent
 PDF_ROUTE = "/reglamento"
@@ -42,6 +61,15 @@ class Citation:
 
     ref: str
     href: str | None  # None when there is nothing to open: shown as plain text
+
+
+@dataclass(frozen=True)
+class QueueEntry:
+    """A Permit Request in the queue, with what has been done on it so far."""
+
+    stored: StoredPermitRequest
+    rec: Recommendation | None
+    determination: Determination | None
 
 
 def cited_page(citation: str, chunks: Sequence[Chunk]) -> int | None:
@@ -78,6 +106,11 @@ def create_app(
         "COBROS-OA-2022-07": settings.cobros_pdf,
     }
 
+    @app.exception_handler(AlreadyDetermined)
+    def already_determined(request: Request, error: AlreadyDetermined) -> Response:
+        """Also what a review that ends after the Determination was recorded comes to."""
+        return PlainTextResponse("La solicitud ya tiene una Determinación", status_code=409)
+
     def citation(ref: str) -> Citation:
         chunks = sections.section(ref.split("(", 1)[0])
         page = cited_page(ref, chunks)
@@ -96,6 +129,8 @@ def create_app(
         return {
             "stored": stored,
             "rec": rec,
+            "determination": store.determination(stored.id),
+            "cure_request_draft": cure_request_draft(rec) if rec else "",
             "citation": _memoised(citation),
             "verdict": verdict_es(rec) if rec else None,
             "relevance": {r.section_id: r for r in rec.section_relevance} if rec else {},
@@ -107,7 +142,13 @@ def create_app(
 
     @app.get("/", response_class=HTMLResponse)
     def home(request: Request) -> HTMLResponse:
-        return templates.TemplateResponse(request, "home.html", {"permit_requests": store.all()})
+        queue = [
+            QueueEntry(stored, store.recommendation(stored.id), store.determination(stored.id))
+            for stored in store.all()
+        ]
+        return templates.TemplateResponse(
+            request, "home.html", {"queue": queue, "verdicts": VERDICTS_ES}
+        )
 
     @app.get("/solicitudes/{request_id}", response_class=HTMLResponse)
     def case_page(request: Request, request_id: int) -> HTMLResponse:
@@ -120,6 +161,9 @@ def create_app(
     def review(request: Request, request_id: int) -> HTMLResponse:
         """Review the Permit Request, store its Recommendation and return it for HTMX to swap in."""
         stored = stored_or_404(request_id)
+        if store.determination(request_id) is not None:
+            # The Determination was made on the stored Recommendation, which therefore stays.
+            raise AlreadyDetermined(request_id)
         try:
             rec = pipeline.review(stored.request.model_dump(mode="json"))
         except InvalidPermitRequest as error:
@@ -134,6 +178,37 @@ def create_app(
             "_recommendation.html",
             context(stored, store.recommendation(request_id)) | failure,
         )
+
+    @app.post("/solicitudes/{request_id}/determinacion", response_class=HTMLResponse)
+    async def record_determination(request: Request, request_id: int) -> Response:
+        """Record the Reviewer's Determination and go back to the case page, which shows it."""
+        stored = stored_or_404(request_id)
+        rec = store.recommendation(request_id)
+        if rec is None:
+            raise HTTPException(status_code=409, detail="La solicitud no tiene una Recomendación")
+        if store.determination(request_id) is not None:
+            raise AlreadyDetermined(request_id)
+        # A plain form post, read here: FastAPI's own form parsing needs another dependency.
+        body = (await request.body()).decode(errors="replace")
+        fields = parse_qs(body, keep_blank_values=True)
+        form = {name: values[-1] for name, values in fields.items()}
+        try:
+            determination = determine(
+                rec,
+                form.get("kind", ""),
+                reason=form.get("reason", ""),
+                outcome=form.get("outcome", ""),
+                deficiencies=form.get("deficiencies", ""),
+            )
+        except InvalidDetermination as error:
+            return templates.TemplateResponse(
+                request,
+                "case.html",
+                context(stored, rec) | {"determination_error": str(error), "form": form},
+                status_code=422,
+            )
+        store.save_determination(request_id, determination)
+        return RedirectResponse(f"/solicitudes/{request_id}", status_code=303)
 
     @app.get(PDF_ROUTE + "/{filename}")
     def reglamento_pdf(filename: str) -> FileResponse:

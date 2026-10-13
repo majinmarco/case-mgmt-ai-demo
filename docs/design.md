@@ -205,10 +205,20 @@ Ingestion is not complete until retrieval has been evaluated; this validates bot
 ### Case view as built (CMAWD-13)
 
 - **Storage.** A Permit Request and its Recommendation are each stored whole, as the JSON of their models, in `data/app.sqlite` (`store.py`). `serve` stores the requests in `examples/` when it has none.
-- **Review on request.** A stored request without a Recommendation has a button; HTMX posts to `/solicitudes/{id}/recomendacion`, which runs the pipeline, stores the Recommendation and returns it as a fragment. The pipeline is built at the first review, so stored Recommendations are shown without an API key or an index. Until the Queue (CMAWD-14), `/` is a bare list of the stored requests.
+- **Review on request.** A stored request without a Recommendation has a button; HTMX posts to `/solicitudes/{id}/recomendacion`, which runs the pipeline, stores the Recommendation and returns it as a fragment. The pipeline is built at the first review, so stored Recommendations are shown without an API key or an index.
 - **Citations.** The app serves the two PDFs under `/reglamento/`. A citation's page is looked up in the index when the page is rendered, not stored: the `page_start` of the cited Section or, for a Clause of a split Section, of the part whose Clauses include it (a sub-item such as `3.7.1.2(b)(3)` goes by its Clause, `(b)`). A Section the index does not hold is plain text. The side panel is a new `iframe` on each click, because changing only `#page=N` of a PDF already shown does not move it; without JavaScript the link opens the PDF itself.
 - **Gauge.** Drawn with the cutoff and Borderline band of the running configuration, which may differ from those a stored Recommendation's verdict was reached with.
 - Spanish only; the English toggle is not built.
+
+### Queue and Determinations as built (CMAWD-14)
+
+- **Queue.** `/` lists every stored Permit Request with its Request Type, Applicant, verdict badge, Approval Score, Borderline flag and Determination status ("Pendiente" until one is recorded; "Sin revisar" without a Recommendation), each linking to its case page.
+- **Determination.** Recorded on the case page, in a card right after the Recommendation, by a plain form post to `/solicitudes/{id}/determinacion` that redirects back to the case page; a rejected one re-renders the page with the error (422). Stored whole as JSON in its own table, with the verdict of the Recommendation it was made on (`determination.py`, `store.py`).
+  - **Accept** determines the recommended verdict.
+  - **Override** needs a reason and determines the other verdict.
+  - **Cure Request** lists deficiencies, one per line, in a text box pre-filled with the curable Notes and their citations, which the Reviewer may edit; it must list at least one.
+  - A Recommendation without a verdict (manual review) cannot be accepted: the Reviewer names the outcome, Approve or Not approve, with a reason (or issues a Cure Request).
+- **Final.** A Permit Request has one Determination: a second is refused (409), and so is reviewing the request again, since the Determination was made on the stored Recommendation. A request without a Recommendation cannot be determined. The store enforces both, so a review still running when the Determination is recorded does not replace the Recommendation either.
 
 ## Ownership
 

@@ -38,7 +38,9 @@ Starts the Reviewer web UI (FastAPI, Jinja and HTMX, in Spanish). The page of a 
 
 Each citation is a link to the Reglamento PDF, which the app serves, on the cited Section's page (`#page=N`, from `page_start` in the index; for a Clause of a split Section, the part that holds the Clause). It opens in a panel beside the page, with a link to open it in a new tab. A citation whose Section is not in the index is plain text, so ingest first to get the links.
 
-Permit Requests and Recommendations are kept in SQLite (`data/app.sqlite`). The first time it runs, `serve` stores the Permit Requests in `examples/` (`PRA_EXAMPLES_DIR`). A request without a Recommendation has a button that reviews it (real model calls, as `review` makes) and stores the Recommendation; stored Recommendations are shown without an API key.
+Permit Requests, Recommendations and Determinations are kept in SQLite (`data/app.sqlite`). The first time it runs, `serve` stores the Permit Requests in `examples/` (`PRA_EXAMPLES_DIR`). A request without a Recommendation has a button that reviews it (real model calls, as `review` makes) and stores the Recommendation; stored Recommendations are shown without an API key.
+
+The start page is the queue: every Permit Request with its Request Type, Applicant, verdict, Approval Score, Borderline flag and Determination. On the case page the Reviewer records the Determination, once: accept the Recommendation, override it (a reason is required), or issue a Cure Request, whose list of deficiencies starts from the curable Notes. A request with a Determination is not reviewed again.
 
 ## Ingest the Reglamento
 

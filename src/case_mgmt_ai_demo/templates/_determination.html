@@ -1,0 +1,42 @@
+{# The Reviewer's Determination on a Recommendation: what was recorded or, until then, the
+   ways to record one. Plain forms: recording reloads the case page. `form` holds what the
+   Reviewer sent when it was rejected. #}
+{% set action = "/solicitudes/%d/determinacion"|format(stored.id) %}
+{% set no_verdict = rec.verdict == "manual_review" %}
+<section class="tarjeta determinacion" id="determinacion">
+  <h2>Determinación</h2>
+  {% if determination %}
+  <p class="determinada"><strong>{{ determination.status_es }}</strong></p>
+  {% if determination.reason %}<p>Razón: {{ determination.reason }}</p>{% endif %}
+  {% if determination.deficiencies %}
+  <p>Se requiere al Solicitante subsanar:</p>
+  <ul class="deficiencias">
+    {% for deficiency in determination.deficiencies %}
+    <li class="deficiencia">{{ deficiency }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% else %}
+  {% if determination_error %}<p class="alerta" role="alert">{{ determination_error }}</p>{% endif %}
+  {% if not no_verdict %}
+  <form method="post" action="{{ action }}">
+    <button type="submit" name="kind" value="accept">Aceptar la Recomendación</button>
+  </form>
+  {% endif %}
+  <form method="post" action="{{ action }}">
+    <label for="razon">{{ "Razón de la Determinación" if no_verdict else "Razón para anular la Recomendación" }}</label>
+    <textarea id="razon" name="reason" rows="2" required>{{ form.reason if form else "" }}</textarea>
+    {% if no_verdict %}
+    <p class="tipo">La Recomendación no tiene veredicto: indique el resultado.</p>
+    <label><input type="radio" name="outcome" value="approve" required{{ " checked" if form and form.outcome == "approve" }}> Aprobar</label>
+    <label><input type="radio" name="outcome" value="not_approve" required{{ " checked" if form and form.outcome == "not_approve" }}> No aprobar</label>
+    {% endif %}
+    <button type="submit" name="kind" value="override">{{ "Registrar la Determinación" if no_verdict else "Anular la Recomendación" }}</button>
+  </form>
+  <form method="post" action="{{ action }}">
+    <label for="deficiencias">Deficiencias a subsanar, una por línea (parte de las Notas subsanables)</label>
+    <textarea id="deficiencias" name="deficiencies" rows="4" required>{{ cure_request_draft }}</textarea>
+    <button type="submit" name="kind" value="cure_request">Emitir Requerimiento de subsanación</button>
+  </form>
+  {% endif %}
+</section>

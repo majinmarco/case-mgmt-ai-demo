@@ -42,9 +42,14 @@
 {% if not rec %}
 <section class="tarjeta">
   <h2>Recomendación</h2>
+  {% if determination %}
+  <p class="vacio">La Recomendación sobre la que se determinó ya no se puede leer.</p>
+  {% else %}
   <p class="vacio">Aún no hay una Recomendación para esta solicitud.</p>
   {{ revisar("Revisar la solicitud") }}
+  {% endif %}
 </section>
+{% if determination %}{% include "_determination.html" %}{% endif %}
 {% else %}
 <section class="tarjeta veredicto-{{ rec.verdict }}">
   <h2>Recomendación</h2>
@@ -71,7 +76,7 @@
     {% if rec.borderline %}<span class="insignia limite">Caso límite: revisar con detenimiento</span>{% endif %}
   </p>
   <p class="asesor">La Recomendación es una ayuda: la Determinación es del Revisor.</p>
-  {{ revisar("Revisar de nuevo", "¿Revisar de nuevo? La Recomendación almacenada se reemplaza.") }}
+  {% if not determination %}{{ revisar("Revisar de nuevo", "¿Revisar de nuevo? La Recomendación almacenada se reemplaza.") }}{% endif %}
 
   {% if rec.errors %}
   <div class="aviso">
@@ -84,6 +89,8 @@
   </div>
   {% endif %}
 </section>
+
+{% include "_determination.html" %}
 
 <section class="tarjeta">
   <h2>Requisitos</h2>

@@ -1,7 +1,10 @@
 import sqlite3
 
+import pytest
+
+from case_mgmt_ai_demo.determination import Determination
 from case_mgmt_ai_demo.permit_request import parse_permit_request
-from case_mgmt_ai_demo.store import PermitRequestStore
+from case_mgmt_ai_demo.store import AlreadyDetermined, PermitRequestStore
 from test_cli import fee_check, recommendation
 from test_review import GOOD_PCOC, GOOD_PERMISO_UNICO
 
@@ -74,3 +77,52 @@ def test_saving_again_replaces_the_recommendation(tmp_path):
 
     again = store.recommendation(request_id)
     assert again is not None and again.verdict == "not_approve"
+
+
+def test_a_permit_request_has_no_determination_until_one_is_saved(tmp_path):
+    store = PermitRequestStore(tmp_path / "app.sqlite")
+    request_id = store.add(parse_permit_request(GOOD_PCOC))
+
+    assert store.determination(request_id) is None
+
+
+def test_a_determination_survives_a_restart(tmp_path):
+    path = tmp_path / "app.sqlite"
+    request_id = PermitRequestStore(path).add(parse_permit_request(GOOD_PCOC))
+    saved = Determination(
+        kind="override", recommended="approve", outcome="not_approve", reason="Falta el plano."
+    )
+    PermitRequestStore(path).save_determination(request_id, saved)
+
+    assert PermitRequestStore(path).determination(request_id) == saved
+
+
+ACCEPTED = Determination(kind="accept", recommended="approve", outcome="approve")
+
+
+def test_a_permit_request_has_one_determination(tmp_path):
+    store = PermitRequestStore(tmp_path / "app.sqlite")
+    request_id = store.add(parse_permit_request(GOOD_PCOC))
+    store.save_determination(request_id, ACCEPTED)
+
+    with pytest.raises(AlreadyDetermined):
+        store.save_determination(
+            request_id, ACCEPTED.model_copy(update={"kind": "cure_request", "outcome": None})
+        )
+
+    assert store.determination(request_id) == ACCEPTED
+
+
+def test_a_determined_permit_request_keeps_its_recommendation(tmp_path):
+    store = PermitRequestStore(tmp_path / "app.sqlite")
+    request_id = store.add(parse_permit_request(GOOD_PCOC))
+    store.save_recommendation(request_id, recommendation())
+    store.save_determination(request_id, ACCEPTED)
+
+    with pytest.raises(AlreadyDetermined):
+        store.save_recommendation(
+            request_id, recommendation(approval_score=0.12, verdict="not_approve")
+        )
+
+    kept = store.recommendation(request_id)
+    assert kept is not None and kept.verdict == "approve"

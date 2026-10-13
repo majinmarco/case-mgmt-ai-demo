@@ -1,6 +1,7 @@
 """The Reviewer web UI over HTTP, with the review pipeline and the Reglamento index faked."""
 
 import re
+import sqlite3
 
 import pytest
 from fastapi.testclient import TestClient
@@ -463,3 +464,264 @@ def test_a_refused_requirement_shows_the_clauses_it_was_asked_about_and_why(site
 
     assert "La pregunta fue rechazada, sin razón dada. Se preguntó por:" in page
     assert "RC-2023-E:2.1.9.2(k) Los planos deben estar sellados y certificados." in page
+
+
+def determine(site, request_id, **form):
+    return site.client.post(
+        f"/solicitudes/{request_id}/determinacion", data=form, follow_redirects=False
+    )
+
+
+def test_accepting_the_recommendation_records_the_determination_beside_it(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+
+    response = determine(site, request_id, kind="accept")
+
+    assert response.status_code == 303
+    assert response.headers["location"] == f"/solicitudes/{request_id}"
+    page = text_of(site.client.get(f"/solicitudes/{request_id}").text)
+    assert "Recomendación aceptada: Aprobar" in page
+    assert page.index("Puntuación de aprobación") < page.index("Recomendación aceptada")
+    assert page.index("Recomendación aceptada") < page.index("Requisitos")
+
+
+def test_overriding_the_recommendation_records_the_opposite_outcome_and_the_reason(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+
+    response = determine(
+        site, request_id, kind="override", reason="El plano no corresponde al solar."
+    )
+
+    assert response.status_code == 303
+    page = text_of(site.client.get(f"/solicitudes/{request_id}").text)
+    assert "Recomendación anulada: No aprobar" in page
+    assert "Razón: El plano no corresponde al solar." in page
+
+
+@pytest.mark.parametrize("reason", [None, "", "   "])
+def test_an_override_without_a_reason_is_rejected(site, reason):
+    request_id = site.add(GOOD_PCOC, recommendation())
+    form = {"kind": "override"} | ({} if reason is None else {"reason": reason})
+
+    response = determine(site, request_id, **form)
+
+    assert response.status_code == 422
+    assert "Anular la Recomendación requiere una razón." in text_of(response.text)
+    assert site.store.determination(request_id) is None
+    assert "Recomendación anulada" not in text_of(
+        site.client.get(f"/solicitudes/{request_id}").text
+    )
+
+
+def test_a_recommendation_without_a_verdict_is_determined_with_an_outcome_and_a_reason(site):
+    manual = recommendation(approval_score=None, verdict="manual_review")
+    request_id = site.add(GOOD_PCOC, manual)
+
+    assert determine(site, request_id, kind="accept").status_code == 422
+    assert determine(site, request_id, kind="override", reason="Cumple.").status_code == 422
+    response = determine(
+        site, request_id, kind="override", reason="Cumple.", outcome="approve"
+    )
+
+    assert response.status_code == 303
+    page = text_of(site.client.get(f"/solicitudes/{request_id}").text)
+    assert "Determinación sin veredicto recomendado: Aprobar" in page
+    assert "Razón: Cumple." in page
+
+
+def cure_request_draft(html: str) -> str:
+    [draft] = re.findall(r'<textarea[^>]*name="deficiencies"[^>]*>(.*?)</textarea>', html, re.DOTALL)
+    return draft
+
+
+def test_the_cure_request_is_pre_filled_with_the_curable_notes(site):
+    html = site.page()
+
+    assert cure_request_draft(html).strip() == (
+        "Falta la determinación de cumplimiento ambiental. (RC-2023-E:2.1.9.2(g))"
+    )
+
+
+def test_issuing_a_cure_request_records_the_deficiencies_listed(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+    listed = "Falta la determinación ambiental. (RC-2023-E:2.1.9.2(g))\r\n\r\n  Falta el plano.  "
+
+    response = determine(site, request_id, kind="cure_request", deficiencies=listed)
+
+    assert response.status_code == 303
+    html = site.client.get(f"/solicitudes/{request_id}").text
+    assert "Requerimiento de subsanación" in text_of(html)
+    assert re.findall(r'<li class="deficiencia">\s*(.*?)\s*</li>', html) == [
+        "Falta la determinación ambiental. (RC-2023-E:2.1.9.2(g))",
+        "Falta el plano.",
+    ]
+
+
+def test_a_cure_request_listing_nothing_is_rejected(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+
+    response = determine(site, request_id, kind="cure_request", deficiencies=" \r\n ")
+
+    assert response.status_code == 422
+    assert "debe enumerar al menos una deficiencia" in text_of(response.text)
+    assert site.store.determination(request_id) is None
+
+
+def test_a_rejected_determination_keeps_the_reason_the_reviewer_wrote(site):
+    manual = recommendation(approval_score=None, verdict="manual_review")
+    request_id = site.add(GOOD_PCOC, manual)
+
+    response = determine(site, request_id, kind="override", reason="Cumple con todo.")
+
+    assert response.status_code == 422
+    assert re.search(r'<textarea[^>]*name="reason"[^>]*>Cumple con todo.</textarea>', response.text)
+
+
+def test_a_determination_is_still_there_after_a_restart(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+    determine(site, request_id, kind="override", reason="El plano no corresponde al solar.")
+
+    client = site.restart()
+
+    page = text_of(client.get(f"/solicitudes/{request_id}").text)
+    assert "Recomendación anulada: No aprobar" in page
+    assert "Razón: El plano no corresponde al solar." in page
+
+
+def test_a_determination_is_final(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+    determine(site, request_id, kind="accept")
+
+    again = determine(site, request_id, kind="override", reason="Cambio de parecer.")
+
+    assert again.status_code == 409
+    html = site.client.get(f"/solicitudes/{request_id}").text
+    assert "Recomendación aceptada: Aprobar" in text_of(html)
+    assert 'name="kind"' not in html
+
+
+def test_a_determined_permit_request_is_not_reviewed_again(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+    determine(site, request_id, kind="accept")
+
+    response = site.client.post(f"/solicitudes/{request_id}/recomendacion")
+
+    assert response.status_code == 409
+    assert site.pipeline.reviewed == []
+    assert "Revisar de nuevo" not in site.client.get(f"/solicitudes/{request_id}").text
+
+
+def test_a_permit_request_without_a_recommendation_cannot_be_determined(site):
+    request_id = site.add(GOOD_PCOC)
+
+    assert 'name="kind"' not in site.client.get(f"/solicitudes/{request_id}").text
+    assert determine(site, request_id, kind="accept").status_code == 409
+    assert determine(site, 41, kind="accept").status_code == 404
+
+
+def test_an_unknown_kind_of_determination_is_rejected(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+
+    assert determine(site, request_id, kind="deny").status_code == 422
+    assert determine(site, request_id).status_code == 422
+
+
+def queue_rows(site) -> list[str]:
+    """Each Permit Request of the queue, as its row reads."""
+    html = site.client.get("/").text
+    return [text_of(row).strip() for row in re.findall(r"<tr>(.*?)</tr>", html, re.DOTALL)[1:]]
+
+
+def test_the_queue_lists_each_permit_request_with_its_recommendation(site):
+    site.add(GOOD_PCOC, recommendation())
+    site.add(
+        GOOD_PERMISO_UNICO,
+        recommendation(approval_score=0.45, verdict="not_approve", borderline=True),
+    )
+    site.add(GOOD_PCOC, recommendation(approval_score=None, verdict="manual_review"))
+    site.add(GOOD_PCOC)
+
+    reviewed, borderline, manual, unreviewed = queue_rows(site)
+
+    assert reviewed.split() == (
+        "1 María Isabel Rivera Ortiz Permiso de Construcción Aprobar 0.86 Pendiente".split()
+    )
+    assert "Ana Lucía Torres Rivera Permiso Único" in borderline
+    assert "No aprobar 0.45 Caso límite Pendiente" in borderline
+    assert "Caso límite" not in reviewed
+    assert "Sin puntuación — revisión manual — Pendiente" in manual
+    assert "Sin revisar" in unreviewed and "Pendiente" not in unreviewed
+
+
+def test_the_queue_shows_the_determination_of_each_permit_request(site):
+    accepted = site.add(GOOD_PCOC, recommendation())
+    overridden = site.add(GOOD_PCOC, recommendation())
+    cure = site.add(GOOD_PCOC, recommendation())
+    site.add(GOOD_PCOC, recommendation())
+    determine(site, accepted, kind="accept")
+    determine(site, overridden, kind="override", reason="El plano no corresponde al solar.")
+    determine(site, cure, kind="cure_request", deficiencies="Falta el plano.")
+
+    rows = queue_rows(site.restart() and site)
+
+    assert rows[0].endswith("Recomendación aceptada: Aprobar")
+    assert rows[1].endswith("Recomendación anulada: No aprobar")
+    assert rows[2].endswith("Requerimiento de subsanación")
+    assert rows[3].endswith("Pendiente")
+
+
+def test_an_empty_queue_says_so(site):
+    assert "No hay Solicitudes de Permiso almacenadas." in site.client.get("/").text
+
+
+class DeterminedMeanwhile:
+    """A review during which the Reviewer records a Determination on the stored Recommendation."""
+
+    def __init__(self, site, request_id):
+        self.site, self.request_id = site, request_id
+
+    def review(self, raw):
+        determine(self.site, self.request_id, kind="accept")
+        return recommendation(approval_score=0.12, verdict="not_approve")
+
+
+def test_a_review_that_ends_after_the_determination_does_not_replace_the_recommendation(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+    site.pipeline = DeterminedMeanwhile(site, request_id)
+    client = site.restart()
+
+    response = client.post(f"/solicitudes/{request_id}/recomendacion")
+
+    assert response.status_code == 409
+    page = text_of(client.get(f"/solicitudes/{request_id}").text)
+    assert "Puntuación de aprobación 0.86" in page
+    assert "Recomendación aceptada: Aprobar" in page
+
+
+def test_a_determination_is_shown_even_when_its_recommendation_cannot_be_read(site):
+    request_id = site.add(GOOD_PCOC, recommendation())
+    determine(site, request_id, kind="override", reason="El plano no corresponde al solar.")
+    with sqlite3.connect(site.path) as connection:
+        connection.execute("UPDATE recommendations SET body = '{\"verdict\": \"old\"}'")
+
+    html = site.client.get(f"/solicitudes/{request_id}").text
+
+    assert "Recomendación anulada: No aprobar" in text_of(html)
+    assert "Razón: El plano no corresponde al solar." in text_of(html)
+    assert "hx-post" not in html
+    assert queue_rows(site)[0].endswith("Recomendación anulada: No aprobar")
+
+
+def test_a_curable_note_spanning_lines_is_one_deficiency_of_the_draft(site):
+    note = Note(
+        text="Falta el croquis.\nDebe mostrar los accesos.",
+        section_ids=["RC-2023-E:3.7.1.2(b)(3)", "RC-2023-E:2.1.9.2(m)"],
+        curable=True,
+    )
+
+    draft = cure_request_draft(site.page(notes=[note]))
+
+    assert draft.strip() == (
+        "Falta el croquis. Debe mostrar los accesos. "
+        "(RC-2023-E:3.7.1.2(b)(3), RC-2023-E:2.1.9.2(m))"
+    )

@@ -44,8 +44,15 @@ main { flex: 1 1 0; min-width: 0; max-width: 60rem; margin: 0 auto; padding: 1re
 .campos dt { color: var(--tenue); }
 .campos dd { margin: 0; }
 
-.solicitudes { list-style: none; padding: 0; }
-.solicitudes li { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+/* The queue. */
+.cola { display: table; width: 100%; border-collapse: separate; border-spacing: 0; padding: 0.25rem 1rem; }
+.cola th { text-align: left; color: var(--tenue); font-size: 0.85rem; font-weight: normal; }
+.cola th, .cola td { padding: 0.55rem 0.75rem 0.55rem 0; vertical-align: baseline; }
+.cola tr + tr td { border-top: 1px solid var(--borde); }
+.cola .puntos, .cola .insignia { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.insignia.veredicto-approve { background: #e2f4e9; color: #14633a; border: 1px solid #9fd4b5; }
+.insignia.veredicto-not_approve { background: #fbe6e3; color: #8f2a1f; border: 1px solid #eaaaa2; }
+.insignia.veredicto-manual_review { background: #fdf1d8; color: #7a5210; border: 1px solid #ecc977; }
 
 /* Approval Score gauge: the fill is the score, the tick the cutoff, the shaded band Borderline. */
 .puntuacion { display: flex; align-items: baseline; gap: 0.75rem; margin: 0; }
@@ -99,6 +106,14 @@ span.cita { color: var(--tenue); }
 .cargos { border-collapse: collapse; margin: 0.5rem 0; }
 .cargos td { padding: 0.15rem 1rem 0.15rem 0; }
 .importe { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* The Determination: what was recorded, or the forms that record one. */
+.determinada { margin: 0; font-size: 1.15rem; }
+.determinacion form { margin-top: 0.75rem; }
+.determinacion form + form { padding-top: 0.75rem; border-top: 1px solid var(--borde); }
+.determinacion label[for] { display: block; color: var(--tenue); font-size: 0.85rem; }
+.determinacion textarea { display: block; width: 100%; margin: 0.25rem 0 0.5rem; padding: 0.4rem 0.6rem; font: inherit; border: 1px solid var(--borde); border-radius: 6px; resize: vertical; }
+.deficiencias { margin: 0; padding-left: 1.25rem; }
 
 .revisar { margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; }
 button { font: inherit; padding: 0.35rem 0.9rem; border: 1px solid var(--borde); border-radius: 6px; background: var(--tarjeta); cursor: pointer; }

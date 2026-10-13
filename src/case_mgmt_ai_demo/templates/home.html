@@ -2,15 +2,35 @@
 {% block title %}Solicitudes de Permiso{% endblock %}
 {% block content %}
 <h1>Solicitudes de Permiso</h1>
-{% if permit_requests %}
-<ul class="solicitudes">
-  {% for stored in permit_requests %}
-  <li>
-    <a href="/solicitudes/{{ stored.id }}">{{ stored.request.applicant_name }}</a>
-    <span class="tipo">{{ stored.request.type_name_es }}</span>
-  </li>
+{% if queue %}
+<table class="cola tarjeta">
+  <tr>
+    <th>N.º</th>
+    <th>Solicitante</th>
+    <th>Tipo de solicitud</th>
+    <th>Recomendación</th>
+    <th>Puntuación</th>
+    <th>Determinación</th>
+  </tr>
+  {% for entry in queue %}
+  {% set stored, rec = entry.stored, entry.rec %}
+  <tr>
+    <td>{{ stored.id }}</td>
+    <td><a href="/solicitudes/{{ stored.id }}">{{ stored.request.applicant_name }}</a></td>
+    <td>{{ stored.request.type_name_es }}</td>
+    {% if rec %}
+    <td><span class="insignia veredicto-{{ rec.verdict }}">{{ verdicts[rec.verdict] }}</span></td>
+    <td class="puntos">
+      {{ "—" if rec.approval_score is none else "%.2f"|format(rec.approval_score) }}
+      {% if rec.borderline %}<span class="insignia limite">Caso límite</span>{% endif %}
+    </td>
+    {% else %}
+    <td colspan="2" class="vacio">Sin revisar</td>
+    {% endif %}
+    <td>{% if entry.determination %}{{ entry.determination.status_es }}{% elif rec %}<span class="tipo">Pendiente</span>{% endif %}</td>
+  </tr>
   {% endfor %}
-</ul>
+</table>
 {% else %}
 <p class="vacio">No hay Solicitudes de Permiso almacenadas.</p>
 {% endif %}

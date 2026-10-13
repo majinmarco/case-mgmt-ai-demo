@@ -4,11 +4,12 @@ import hashlib
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal, Protocol
 
 from pydantic import BaseModel
 
 from case_mgmt_ai_demo.chunking import Chunking, IngestionConfig, chunk_glossary, chunk_lines
-from case_mgmt_ai_demo.extraction import Extraction, extract_lines
+from case_mgmt_ai_demo.extraction import Extraction, OcrEngine, extract_lines
 from case_mgmt_ai_demo.extraction_checks import Flag, check_chunks
 from case_mgmt_ai_demo.fee_order import chunk_fee_order
 from case_mgmt_ai_demo.index import EMBEDDED_TEXT, Embedder, ReglamentoIndex, SyncResult
@@ -18,6 +19,7 @@ class OutlinedText(BaseModel):
     """Text the PDF draws as outlines: how much of it there is and how much OCR read."""
 
     ocr: bool
+    engine: str | None  # what read it, e.g. "tesseract"
     read: int
     unread: int
     readings: list[str]  # "p. 80: …", to check against the PDF
@@ -43,6 +45,12 @@ class IngestionReport(BaseModel):
     flags: list[Flag]
 
 
+class Progress(Protocol):
+    """Told how far the slow steps of an ingestion are: pages extracted, chunks embedded."""
+
+    def __call__(self, step: Literal["extract", "embed"], done: int, total: int) -> None: ...
+
+
 @dataclass(frozen=True)
 class Ingestion:
     report: IngestionReport
@@ -57,11 +65,12 @@ def ingest(
     data_dir: Path,
     index_dir: Path,
     embedder: Embedder | None,
-    tessdata: Path | None = None,
+    ocr: OcrEngine | None = None,
+    progress: Progress | None = None,
 ) -> Ingestion:
     """Without an `embedder` the chunks and the report are written but the index is left
     alone, so chunking can be reviewed without calling the embeddings API."""
-    extraction, chunking = _chunked(pdf, config, tessdata)
+    extraction, chunking = _chunked(pdf, config, ocr, progress)
     chunks = chunking.chunks
     flags = check_chunks(chunks)
     read = [run for run in extraction.outlined_runs if run.recovered]
@@ -79,6 +88,7 @@ def ingest(
         repeated_section_ids=chunking.repeated,
         outlined_text=OutlinedText(
             ocr=extraction.ocr,
+            engine=extraction.ocr_engine,
             read=len(read),
             unread=len(extraction.outlined_runs) - len(read),
             readings=[f"p. {run.page}: {run.text}" for run in read],
@@ -93,33 +103,47 @@ def ingest(
     chunks_path.write_text(
         "".join(chunk.model_dump_json() + "\n" for chunk in chunks), encoding="utf-8"
     )
-    indexed = ReglamentoIndex(index_dir).sync(config.doc, chunks, embedder) if embedder else None
+    indexed = None
+    if embedder:
+        embedded = (lambda done, total: progress("embed", done, total)) if progress else None
+        indexed = ReglamentoIndex(index_dir).sync(config.doc, chunks, embedder, embedded)
     return Ingestion(
         report=report, report_path=report_path, chunks_path=chunks_path, indexed=indexed
     )
 
 
 def _chunked(
-    pdf: Path, config: IngestionConfig, tessdata: Path | None
+    pdf: Path, config: IngestionConfig, ocr: OcrEngine | None, progress: Progress | None
 ) -> tuple[Extraction, Chunking]:
     """What was extracted and the chunks made of it, by the document's layout."""
     if config.layout == "fee_order":
         # The fee order has no text drawn as outlines, so it is read without OCR.
         return Extraction(lines=[], outlined_runs=[], ocr=False), chunk_fee_order(pdf, config)
-    extraction = extract_lines(
-        pdf, config.first_page, config.last_page, config.footer_top, tessdata
-    )
-    chunking = chunk_lines(extraction.lines, config)
-    if config.glossary is None:
-        return extraction, chunking
-    pages = config.glossary
-    terms = extract_lines(pdf, pages.first_page, pages.last_page, config.footer_top, tessdata)
-    glossary = chunk_glossary(terms.lines, config)
+    spans = [(config.first_page, config.last_page)]
+    if config.glossary:
+        spans.append((config.glossary.first_page, config.glossary.last_page))
+    total = sum(last - first + 1 for first, last in spans)
+    done = 0
+
+    def on_page() -> None:
+        nonlocal done
+        done += 1
+        if progress:
+            progress("extract", done, total)
+
+    body, *terms = [
+        extract_lines(pdf, first, last, config.footer_top, ocr, on_page) for first, last in spans
+    ]
+    chunking = chunk_lines(body.lines, config)
+    if not terms:
+        return body, chunking
+    glossary = chunk_glossary(terms[0].lines, config)
     return (
         Extraction(
-            lines=extraction.lines + terms.lines,
-            outlined_runs=extraction.outlined_runs + terms.outlined_runs,
-            ocr=extraction.ocr,
+            lines=body.lines + terms[0].lines,
+            outlined_runs=body.outlined_runs + terms[0].outlined_runs,
+            ocr=body.ocr,
+            ocr_engine=body.ocr_engine,
         ),
         Chunking(
             chunks=chunking.chunks + glossary.chunks,

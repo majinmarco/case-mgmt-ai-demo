@@ -21,12 +21,38 @@ dependencies = [
     "uvicorn>=0.54.0",
 ]
 
+[project.optional-dependencies]
+# What the Unlimited-OCR engine needs (`uv sync --extra unlimited-ocr`); the model's own
+# code is written against this version of transformers.
+unlimited-ocr = [
+    "addict>=2.4.0",
+    "easydict>=1.13",
+    "einops>=0.8.2",
+    "matplotlib>=3.10.8",
+    "pillow>=12.1.1",
+    "torch>=2.10.0",
+    "torchvision>=0.25.0",
+    "transformers==4.57.1",
+]
+
 [project.scripts]
 case-mgmt-ai-demo = "case_mgmt_ai_demo:main"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
+
+# PyTorch built for AMD GPUs (ROCm). On an NVIDIA machine, remove these three tables.
+[tool.uv]
+index-strategy = "unsafe-best-match"
+
+[tool.uv.sources]
+torch = { index = "pytorch-rocm" }
+torchvision = { index = "pytorch-rocm" }
+
+[[tool.uv.index]]
+name = "pytorch-rocm"
+url = "https://download.pytorch.org/whl/rocm7.14"
 
 [dependency-groups]
 dev = [

@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from case_mgmt_ai_demo.extraction import GAP, extract_lines, find_tessdata
+from case_mgmt_ai_demo.extraction import GAP, Tesseract, extract_lines, find_tessdata
 from conftest import RC_PDF
 
 FOOTER_TOP = 738
@@ -48,7 +48,9 @@ def test_text_drawn_as_outlines_is_marked_where_it_is_missing_when_not_read():
 
 @pytest.mark.skipif(find_tessdata() is None, reason="needs Tesseract's Spanish model")
 def test_text_drawn_as_outlines_is_read_with_ocr_and_joined_to_the_word_it_continues():
-    extraction = extract_lines(RC_PDF, 80, 80, FOOTER_TOP, find_tessdata())
+    tessdata = find_tessdata()
+    assert tessdata is not None
+    extraction = extract_lines(RC_PDF, 80, 80, FOOTER_TOP, Tesseract(tessdata))
 
     text = page_text(extraction, 80)
     assert (

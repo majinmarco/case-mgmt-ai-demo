@@ -5,7 +5,7 @@ import json
 import sys
 from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, TextIO
 
 from case_mgmt_ai_demo.fee_check import FeeCheck, money
 from case_mgmt_ai_demo.review import (
@@ -16,6 +16,8 @@ from case_mgmt_ai_demo.review import (
 )
 
 if TYPE_CHECKING:  # imported when used: Chroma and pymupdf are slow to load
+    from case_mgmt_ai_demo.config import Settings
+    from case_mgmt_ai_demo.extraction import OcrEngine
     from case_mgmt_ai_demo.index import Embedder
     from case_mgmt_ai_demo.ingest import Ingestion
 
@@ -33,6 +35,12 @@ VERDICTS_ES = {
 
 # Each document of the Reglamento with its ingestion configuration, in the order ingested.
 INGESTION_CONFIGS = {"RC-2023-E": "rc_2023_e", "COBROS-OA-2022-07": "cobros_oa_2022_07"}
+
+OCR_ENGINES = ("tesseract", "unlimited-ocr")
+
+PROGRESS_STEPS_ES = {"extract": "Extrayendo el texto", "embed": "Incrustando fragmentos"}
+PROGRESS_UNITS_ES = {"extract": "páginas", "embed": "fragmentos"}
+_BAR_WIDTH = 30
 
 NOT_ASSESSED = "no evaluado"
 
@@ -87,6 +95,11 @@ def build_parser() -> argparse.ArgumentParser:
                 help="Chunk and write the report only: no embeddings, index untouched.",
             )
             subparser.add_argument(
+                "--ocr",
+                choices=OCR_ENGINES,
+                help="What reads text drawn as outlines (default: PRA_OCR_ENGINE, or tesseract).",
+            )
+            subparser.add_argument(
                 "--no-ocr",
                 action="store_true",
                 help="Do not read text drawn as outlines; it stays marked […].",
@@ -108,7 +121,10 @@ def main(
         pdfs = {"RC-2023-E": args.pdf, "COBROS-OA-2022-07": args.cobros_pdf}
         docs = [args.doc] if args.doc else list(INGESTION_CONFIGS)
         return _ingest(
-            {doc: pdfs[doc] for doc in docs}, embedder, index=not args.no_index, ocr=not args.no_ocr
+            {doc: pdfs[doc] for doc in docs},
+            embedder,
+            index=not args.no_index,
+            ocr=None if args.no_ocr else args.ocr or "",
         )
     print(f"'{args.command}' is not implemented yet.", file=sys.stderr)
     return 1
@@ -166,12 +182,12 @@ def _real_pipeline() -> RecommendationSource:
 
 
 def _ingest(
-    pdfs: Mapping[str, Path | None], embedder: "Embedder | None", index: bool, ocr: bool
+    pdfs: Mapping[str, Path | None], embedder: "Embedder | None", index: bool, ocr: str | None
 ) -> int:
-    """Ingests each document in `pdfs`; None stands for the configured PDF."""
+    """Ingests each document in `pdfs`; None stands for the configured PDF. `ocr` names the
+    OCR engine: empty for the configured one, None for no OCR."""
     from case_mgmt_ai_demo.chunking import load_ingestion_config
     from case_mgmt_ai_demo.config import load_settings
-    from case_mgmt_ai_demo.extraction import find_tessdata
     from case_mgmt_ai_demo.ingest import ingest
 
     settings = load_settings()  # exports .env, so before OpenAI()
@@ -188,11 +204,18 @@ def _ingest(
         from case_mgmt_ai_demo.adapters import OpenAIEmbedder
 
         embedder = OpenAIEmbedder(OpenAI(), settings.embedding_model)
-    tessdata = find_tessdata(settings.tessdata_dir) if ocr else None
+    engine = None
+    if ocr is not None and "RC-2023-E" in sources:  # the fee order draws no text as outlines
+        try:
+            engine = _ocr_engine(ocr or settings.ocr_engine, settings)
+        except OcrUnavailable as error:
+            print(f"No se puede usar el OCR {error}", file=sys.stderr)
+            return 1
     for doc, pdf in sources.items():
-        if tessdata and doc == "RC-2023-E":
+        if engine and doc == "RC-2023-E":
             print(
-                "Extrayendo el texto (el OCR de las páginas con texto trazado tarda unos minutos)…"
+                f"El OCR ({engine.name}) de las páginas con texto trazado tarda unos minutos.",
+                file=sys.stderr,
             )
         result = ingest(
             pdf,
@@ -200,10 +223,52 @@ def _ingest(
             settings.data_dir,
             settings.index_dir,
             embedder if index else None,
-            tessdata,
+            engine,
+            ProgressBar(sys.stderr),
         )
         print(format_ingestion(result, settings.index_dir))
     return 0
+
+
+class OcrUnavailable(Exception):
+    """The chosen OCR engine cannot run; the message completes "No se puede usar el OCR"."""
+
+
+def _ocr_engine(name: str, settings: "Settings") -> "OcrEngine | None":
+    """Tesseract is left out when its Spanish model is missing, as it always was; the engine
+    that has to be asked for fails instead."""
+    if name == "unlimited-ocr":
+        from case_mgmt_ai_demo.unlimited_ocr import UnlimitedOcr, UnlimitedOcrUnavailable
+
+        print("Cargando el modelo Unlimited-OCR…", file=sys.stderr)
+        try:
+            return UnlimitedOcr()
+        except UnlimitedOcrUnavailable as error:
+            raise OcrUnavailable(f"unlimited-ocr: {error}") from error
+    from case_mgmt_ai_demo.extraction import Tesseract, find_tessdata
+
+    tessdata = find_tessdata(settings.tessdata_dir)
+    return Tesseract(tessdata) if tessdata else None
+
+
+class ProgressBar:
+    """One line on a terminal that fills as an ingestion advances; silent anywhere else."""
+
+    def __init__(self, stream: TextIO):
+        self._stream = stream
+
+    def __call__(self, step: str, done: int, total: int) -> None:
+        if not self._stream.isatty() or total <= 0:
+            return
+        filled = _BAR_WIDTH * done // total
+        bar = "█" * filled + "░" * (_BAR_WIDTH - filled)
+        self._stream.write(
+            f"\r{PROGRESS_STEPS_ES[step]} [{bar}] {100 * done // total:>3}% "
+            f"({done}/{total} {PROGRESS_UNITS_ES[step]})"
+        )
+        if done >= total:
+            self._stream.write("\n")
+        self._stream.flush()
 
 
 def format_ingestion(result: "Ingestion", index_dir: Path) -> str:
@@ -224,6 +289,8 @@ def format_ingestion(result: "Ingestion", index_dir: Path) -> str:
                 "  ⚠ Sin OCR (--no-ocr, o falta el modelo de español de Tesseract, "
                 "spa.traineddata: instálelo o indique PRA_TESSDATA_DIR)."
             )
+        else:
+            lines.append(f"  Motor de OCR: {outlined.engine}")
     lines.append(f"Avisos de extracción: {len(report.flags)}")
     lines += [f"  {count:>4}  {check}" for check, count in sorted(report.flags_by_check.items())]
     if result.indexed:

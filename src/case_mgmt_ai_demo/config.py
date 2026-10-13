@@ -38,7 +38,9 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     reglamento_pdf: Path = Path("docs_to_use/RC-2023-E.pdf")
     cobros_pdf: Path = Path("docs_to_use/COBROS OA-2022-07.pdf")
-    # Where the Spanish OCR model (spa.traineddata) lives; unset, the system's is used.
+    # What reads the text a PDF draws as outlines.
+    ocr_engine: Literal["tesseract", "unlimited-ocr"] = "tesseract"
+    # Where Tesseract's Spanish model (spa.traineddata) lives; unset, the system's is used.
     tessdata_dir: Path | None = None
 
     @property

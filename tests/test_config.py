@@ -34,6 +34,7 @@ def test_defaults_use_design_models_and_thresholds():
     assert settings.index_dir == Path("data/chroma")
     assert settings.db_path == Path("data/app.sqlite")
     assert settings.reglamento_pdf == Path("docs_to_use/RC-2023-E.pdf")
+    assert settings.ocr_engine == "tesseract"
     assert settings.retriever == "index"
     assert settings.retrieval_top_k == 8
     assert settings.tessdata_dir is None

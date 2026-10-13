@@ -3,16 +3,16 @@
 The RC-2023-E PDF was made with "Microsoft: Print To PDF", which drew some runs of text as
 vector outlines instead of text (e.g. most of the last sentence of Sección 2.1.9.5(a) on
 p. 80). Plain text extraction silently skips them. Here every outlined run is found from the
-page's drawings and either read back with OCR (when Spanish tessdata is installed) or left
-as a `[…]` marker, so missing text is never silent.
+page's drawings and either read back by an OCR engine or left as a `[…]` marker, so missing
+text is never silent.
 """
 
 import os
 import re
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import pymupdf
 
@@ -63,6 +63,31 @@ class Extraction:
     lines: list[Line]
     outlined_runs: list[OutlinedRun]
     ocr: bool
+    ocr_engine: str | None = None
+
+
+@dataclass(frozen=True)
+class Outline:
+    """Where a page draws a run of text as outlines, with the printed text beside it."""
+
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    before: str | None  # the printed text to its left on the line, if any
+    after: str | None  # the printed text to its right
+    context_x0: float  # from the left of `before` to the right of `after`
+    context_x1: float
+
+
+class OcrEngine(Protocol):
+    """Reads back text drawn as outlines (fakeable in tests)."""
+
+    name: str
+
+    def read(self, page: pymupdf.Page, outlines: Sequence[Outline]) -> list[str]:
+        """One reading per outline, in order; empty where the text could not be read."""
+        ...
 
 
 @dataclass
@@ -91,47 +116,80 @@ def extract_lines(
     first_page: int,
     last_page: int,
     footer_top: float,
-    tessdata: Path | None = None,
+    ocr: OcrEngine | None = None,
+    on_page: Callable[[], None] | None = None,
 ) -> Extraction:
     """Lines of pages `first_page`..`last_page` (physical, 1-based, inclusive), without the
-    running header, which this PDF prints in a band at the foot of the page (`footer_top`)."""
+    running header, which this PDF prints in a band at the foot of the page (`footer_top`).
+    `on_page` is called as each page is done, blank ones included."""
     lines: list[Line] = []
     runs: list[OutlinedRun] = []
     with pymupdf.open(pdf) as document:
         for number in range(first_page, min(last_page, len(document)) + 1):
-            page = document[number - 1]
-            fragments = [f for f in _text_fragments(page) if f.y0 < footer_top]
-            if not fragments:
-                # A Tomo's cover page: its title is all outlines, and the heading on the
-                # next page says the same.
-                continue
-            drawings = [d for d in page.get_drawings() if d["rect"].y0 < footer_top]
-            outlined = list(_outlined_fragments(drawings))
-            words = _ocr_words(page, tessdata) if outlined and tessdata else None
-            for cell, row in _rows_in_reading_order(fragments + outlined, _tables(drawings)):
-                for index, fragment in enumerate(row):
-                    if fragment.outlined:
-                        before = row[index - 1] if index else None
-                        after = row[index + 1] if index + 1 < len(row) else None
-                        if words is not None:
-                            fragment.text = _read_run(fragment, words, before, after) or GAP
-                        runs.append(OutlinedRun(number, fragment.x0, fragment.y0, fragment.text))
-                text = _join(row)
-                if text:
-                    printed = [f for f in row if not f.outlined]
-                    lines.append(
-                        Line(
-                            page=number,
-                            x0=row[0].x0,
-                            y0=min(f.y0 for f in printed or row),
-                            x1=row[-1].x1,
-                            text=text,
-                            bold=bool(printed) and all(f.bold for f in printed),
-                            cell=cell,
-                            bold_spans=_bold_runs(row),
-                        )
-                    )
-    return Extraction(lines=lines, outlined_runs=runs, ocr=tessdata is not None)
+            page_lines, page_runs = _page(document[number - 1], number, footer_top, ocr)
+            lines += page_lines
+            runs += page_runs
+            if on_page:
+                on_page()
+    return Extraction(
+        lines=lines, outlined_runs=runs, ocr=ocr is not None, ocr_engine=ocr.name if ocr else None
+    )
+
+
+def _page(
+    page: pymupdf.Page, number: int, footer_top: float, ocr: OcrEngine | None
+) -> tuple[list[Line], list[OutlinedRun]]:
+    fragments = [f for f in _text_fragments(page) if f.y0 < footer_top]
+    if not fragments:
+        # A Tomo's cover page: its title is all outlines, and the heading on the next page
+        # says the same.
+        return [], []
+    drawings = [d for d in page.get_drawings() if d["rect"].y0 < footer_top]
+    outlined = list(_outlined_fragments(drawings))
+    rows = _rows_in_reading_order(fragments + outlined, _tables(drawings))
+    in_rows = [(fragment, outline) for _, row in rows for fragment, outline in _outlines(row)]
+    if ocr and in_rows:
+        readings = ocr.read(page, [outline for _, outline in in_rows])
+        for (fragment, _), reading in zip(in_rows, readings, strict=True):
+            fragment.text = reading or GAP
+    lines: list[Line] = []
+    for cell, row in rows:
+        text = _join(row)
+        if text:
+            printed = [f for f in row if not f.outlined]
+            lines.append(
+                Line(
+                    page=number,
+                    x0=row[0].x0,
+                    y0=min(f.y0 for f in printed or row),
+                    x1=row[-1].x1,
+                    text=text,
+                    bold=bool(printed) and all(f.bold for f in printed),
+                    cell=cell,
+                    bold_spans=_bold_runs(row),
+                )
+            )
+    return lines, [OutlinedRun(number, f.x0, f.y0, f.text) for f, _ in in_rows]
+
+
+def _outlines(row: Sequence[_Fragment]) -> Iterator[tuple[_Fragment, Outline]]:
+    for index, fragment in enumerate(row):
+        if fragment.outlined:
+            before = row[index - 1] if index else None
+            after = row[index + 1] if index + 1 < len(row) else None
+            yield (
+                fragment,
+                Outline(
+                    fragment.x0,
+                    fragment.y0,
+                    fragment.x1,
+                    fragment.y1,
+                    before=before.text if before and not before.outlined else None,
+                    after=after.text if after and not after.outlined else None,
+                    context_x0=before.x0 if before and not before.outlined else fragment.x0,
+                    context_x1=after.x1 if after and not after.outlined else fragment.x1,
+                ),
+            )
 
 
 def _text_fragments(page: pymupdf.Page) -> Iterator[_Fragment]:
@@ -320,34 +378,42 @@ def _join(row: Sequence[_Fragment]) -> str:
 type _Word = tuple[float, float, float, float, str]
 
 
-def _ocr_words(page: pymupdf.Page, tessdata: Path) -> list[_Word]:
-    textpage = page.get_textpage_ocr(
-        language=OCR_LANGUAGE, dpi=300, full=True, tessdata=str(tessdata)
-    )
-    words: Any = page.get_text("words", textpage=textpage)
-    return [(x0, y0, x1, y1, word) for x0, y0, x1, y1, word, *_ in words]
+class Tesseract:
+    """Tesseract's Spanish model, which reads the whole page and says where each word is."""
+
+    name = "tesseract"
+
+    def __init__(self, tessdata: Path):
+        self._tessdata = tessdata
+
+    def read(self, page: pymupdf.Page, outlines: Sequence[Outline]) -> list[str]:
+        textpage = page.get_textpage_ocr(
+            language=OCR_LANGUAGE, dpi=300, full=True, tessdata=str(self._tessdata)
+        )
+        extracted: Any = page.get_text("words", textpage=textpage)
+        words = [(x0, y0, x1, y1, word) for x0, y0, x1, y1, word, *_ in extracted]
+        return [_read_run(outline, words) for outline in outlines]
 
 
-def _read_run(
-    run: _Fragment, words: Sequence[_Word], before: _Fragment | None, after: _Fragment | None
-) -> str:
+def _read_run(run: Outline, words: Sequence[_Word]) -> str:
     """The OCR words lying on the run. A word that also covers the text beside the run (the
     PDF can switch to outlines mid-word) gives only the letters that text does not have."""
+    before, after = run.before, run.after
     middle = (run.y0 + run.y1) / 2
     read: list[str] = []
     for x0, y0, x1, y1, word in sorted(words):
         overlap = min(x1, run.x1) - max(x0, run.x0)
         if not (y0 <= middle <= y1) or overlap <= 0:
             continue
-        if x0 < run.x0 - _TOUCHING and before is not None and not before.outlined:
-            shared = before.text.split()[-1] if before.text.split() else ""
-            if not before.text[-1:].isspace() and word.startswith(shared):
+        if x0 < run.x0 - _TOUCHING and before is not None:
+            shared = before.split()[-1] if before.split() else ""
+            if not before[-1:].isspace() and word.startswith(shared):
                 word = word[len(shared) :]
             elif overlap < (x1 - x0) / 2:
                 continue
-        if x1 > run.x1 + _TOUCHING and after is not None and not after.outlined:
-            shared = after.text.split()[0] if after.text.split() else ""
-            if not after.text[:1].isspace() and word.endswith(shared):
+        if x1 > run.x1 + _TOUCHING and after is not None:
+            shared = after.split()[0] if after.split() else ""
+            if not after[:1].isspace() and word.endswith(shared):
                 word = word[: len(word) - len(shared)]
             elif overlap < (x1 - x0) / 2:
                 continue

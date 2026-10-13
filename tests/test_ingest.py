@@ -191,6 +191,7 @@ def test_the_report_records_the_configuration_and_the_flagged_chunks(ingested):
     assert report["config"] == load_ingestion_config().model_dump()
     assert report["embedding_model"] == "fake-embedding"
     assert report["outlined_text"]["ocr"] is False
+    assert report["outlined_text"]["engine"] is None
     assert report["outlined_text"]["unread"] > 300
     assert report["flags_by_check"]["unread_text"] > 100
     assert {
@@ -202,6 +203,34 @@ def test_the_report_records_the_configuration_and_the_flagged_chunks(ingested):
     assert "RC-2023-E:116.1.7" in {
         flag["section_id"] for flag in report["flags"] if flag["check"] == "section_out_of_sequence"
     }
+
+
+def test_ingest_tells_how_far_extraction_and_embedding_are(tmp_path):
+    """Pages 80-82 and two pages of the glossary: five pages to extract, then the chunks."""
+    config = load_ingestion_config()
+    assert config.glossary is not None
+    few_pages = config.model_copy(
+        update={
+            "first_page": 80,
+            "last_page": 82,
+            "glossary": config.glossary.model_copy(update={"first_page": 829, "last_page": 830}),
+        }
+    )
+    seen: list[tuple[str, int, int]] = []
+
+    result = ingest(
+        RC_PDF,
+        few_pages,
+        tmp_path,
+        tmp_path / "chroma",
+        FakeEmbedder(),
+        progress=lambda step, done, total: seen.append((step, done, total)),
+    )
+
+    chunks = result.report.chunks
+    assert [s for s in seen if s[0] == "extract"] == [("extract", n, 5) for n in range(1, 6)]
+    assert [s for s in seen if s[0] == "embed"][-1] == ("embed", chunks, chunks)
+    assert seen.index(("extract", 5, 5)) < seen.index(("embed", chunks, chunks))
 
 
 def test_ingesting_again_embeds_nothing_and_leaves_the_same_report_and_index(ingested):

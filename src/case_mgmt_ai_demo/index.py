@@ -5,7 +5,7 @@ metadata), so a Section ID resolves to its PDF and pages without reading the PDF
 """
 
 import hashlib
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -63,9 +63,16 @@ class ReglamentoIndex:
             COLLECTION, configuration={"hnsw": {"space": "cosine"}}, embedding_function=None
         )
 
-    def sync(self, doc: Doc, chunks: Sequence[Chunk], embedder: Embedder) -> SyncResult:
+    def sync(
+        self,
+        doc: Doc,
+        chunks: Sequence[Chunk],
+        embedder: Embedder,
+        on_embedded: Callable[[int, int], None] | None = None,
+    ) -> SyncResult:
         """Make the index hold exactly `chunks` for `doc`. Only new or changed chunks are
-        embedded, so running it again with the same chunks changes nothing."""
+        embedded, so running it again with the same chunks changes nothing. `on_embedded`
+        is told how many of the chunks to embed are done, and how many there are."""
         stored = self._collection.get(where={"doc": doc}, include=["metadatas"])
         fingerprints = {
             stored_id: metadata.get("fingerprint")
@@ -87,6 +94,8 @@ class ReglamentoIndex:
                 documents=[chunk.text for _, chunk in batch],
                 metadatas=[_metadata(chunk, embedder.model) for _, chunk in batch],
             )
+            if on_embedded:
+                on_embedded(start + len(batch), len(changed))
         stale = [id_ for id_ in fingerprints if id_ not in wanted]
         for start in range(0, len(stale), _BATCH):
             self._collection.delete(ids=stale[start : start + _BATCH])

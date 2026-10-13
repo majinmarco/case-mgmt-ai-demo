@@ -1,10 +1,12 @@
+import io
 import json
 from collections.abc import Mapping
 from typing import Any
 
 import pytest
 
-from case_mgmt_ai_demo import main
+from case_mgmt_ai_demo import main, unlimited_ocr
+from case_mgmt_ai_demo.cli import ProgressBar
 from case_mgmt_ai_demo.fee_check import check_fee, load_fee_rules
 from case_mgmt_ai_demo.permit_request import parse_permit_request
 from case_mgmt_ai_demo.review import (
@@ -646,6 +648,73 @@ def test_ingest_of_one_document_leaves_the_other_alone(tmp_path, monkeypatch, ca
         "COBROS-OA-2022-07.chunks.jsonl",
         "COBROS-OA-2022-07.ingestion_report.json",
     ]
+
+
+def test_ingest_reads_outlined_text_with_the_ocr_engine_asked_for(tmp_path, monkeypatch, capsys):
+    """The model is replaced by one that reads the same thing in every image."""
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(unlimited_ocr, "_load_model", lambda: lambda image: "Texto leído")
+
+    exit_code = main(["ingest", "--no-index", "--doc", "RC-2023-E", "--ocr", "unlimited-ocr"])
+
+    assert exit_code == 0
+    report = json.loads((tmp_path / "RC-2023-E.ingestion_report.json").read_text())
+    assert report["outlined_text"]["engine"] == "unlimited-ocr"
+    assert "p. 494: Texto leído" in report["outlined_text"]["readings"]
+    assert "Motor de OCR: unlimited-ocr" in capsys.readouterr().out
+
+
+def test_the_ocr_engine_can_be_set_in_the_environment(tmp_path, monkeypatch):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("PRA_OCR_ENGINE", "unlimited-ocr")
+    monkeypatch.setattr(unlimited_ocr, "_load_model", lambda: lambda image: "")
+
+    exit_code = main(["ingest", "--no-index", "--doc", "RC-2023-E"])
+
+    assert exit_code == 0
+    report = json.loads((tmp_path / "RC-2023-E.ingestion_report.json").read_text())
+    assert report["outlined_text"]["engine"] == "unlimited-ocr"
+
+
+def test_ingest_stops_when_the_ocr_engine_asked_for_cannot_run(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+
+    def no_gpu():
+        raise unlimited_ocr.UnlimitedOcrUnavailable("PyTorch no encuentra una GPU")
+
+    monkeypatch.setattr(unlimited_ocr, "_load_model", no_gpu)
+
+    exit_code = main(["ingest", "--no-index", "--ocr", "unlimited-ocr"])
+
+    assert exit_code == 1
+    assert "unlimited-ocr: PyTorch no encuentra una GPU" in capsys.readouterr().err
+    assert list(tmp_path.iterdir()) == []
+
+
+class Terminal(io.StringIO):
+    def isatty(self) -> bool:
+        return True
+
+
+def test_the_progress_bar_fills_one_line_and_ends_it_when_done():
+    terminal = Terminal()
+    bar = ProgressBar(terminal)
+
+    bar("extract", 1, 4)
+    bar("extract", 4, 4)
+
+    first, last = terminal.getvalue().split("\r")[1:]
+    assert first.startswith("Extrayendo el texto [") and first.endswith(" 25% (1/4 páginas)")
+    assert (first.count("█"), first.count("░")) == (7, 23)
+    assert "░" not in last and last.endswith("100% (4/4 páginas)\n")
+
+
+def test_the_progress_bar_writes_nothing_when_not_on_a_terminal():
+    captured = io.StringIO()
+
+    ProgressBar(captured)("embed", 100, 200)
+
+    assert captured.getvalue() == ""
 
 
 def test_ingest_reports_a_missing_fee_order_pdf_before_ingesting_anything(

@@ -288,7 +288,8 @@ def _term_and_rest(text: str, line: Line) -> tuple[str, str]:
     """The bold text `text` opens with (a term, or more of one) and what follows it."""
     opening = _clean(line.bold_spans[0]) if line.bold_spans else ""
     # Bold that stops mid-word is the PDF switching to outlines, not the end of a term.
-    if not opening or not text.startswith(opening) or text[len(opening) :][:1].isalnum():
+    mid_word = opening[-1:].isalnum() and text[len(opening) :][:1].isalnum()
+    if not opening or not text.startswith(opening) or mid_word:
         return "", text
     rest = text[len(opening) :]
     closing = rest[: len(rest) - len(rest.lstrip(_CLOSING))]  # "(CRMR" + ")" set in regular type

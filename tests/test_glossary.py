@@ -170,3 +170,14 @@ def test_bold_that_stops_inside_a_word_does_not_name_the_term():
     [chunk] = chunk_glossary(lines, CONFIG).chunks
 
     assert (chunk.heading, chunk.text) == ("", "Certificación de Uso Documento expedido.")
+
+
+def test_a_dash_set_against_the_definition_still_ends_the_term():
+    lines = [
+        line(97, "C.", MARGIN, bold="C."),
+        line(122, "1. Chatarra -Cualquier material viejo.", MARGIN, bold="Chatarra -"),
+    ]
+
+    [chunk] = chunk_glossary(lines, CONFIG).chunks
+
+    assert (chunk.heading, chunk.text) == ("Chatarra", "Cualquier material viejo.")

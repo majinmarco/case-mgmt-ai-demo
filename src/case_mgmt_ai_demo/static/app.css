@@ -74,7 +74,7 @@ main { flex: 1 1 0; min-width: 0; max-width: 60rem; margin: 0 auto; padding: 1re
 .alerta { color: var(--no-aprobar); font-weight: 600; }
 .conforme { color: var(--aprobar); font-weight: 600; }
 
-.requisitos, .notas, .no-aplican, .descartadas, .traza-secciones { padding: 0; margin: 0; list-style: none; }
+.requisitos, .notas, .no-aplican, .descartadas, .traza-secciones, .incisos { padding: 0; margin: 0; list-style: none; }
 .requisito { padding: 0.6rem 0.75rem; border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 0.5rem; }
 .requisito.mas-debil { border-color: #ecc977; background: #fffaf0; }
 .requisito-cabecera { display: flex; justify-content: space-between; gap: 1rem; }
@@ -83,7 +83,7 @@ main { flex: 1 1 0; min-width: 0; max-width: 60rem; margin: 0 auto; padding: 1re
 .probabilidad.sin-evaluar { color: var(--manual); }
 .barra { height: 0.35rem; margin-top: 0.35rem; background: #e6e9ee; border-radius: 0.2rem; overflow: hidden; }
 .barra div { height: 100%; background: var(--enlace); }
-.no-aplican li, .descartadas li, .traza-secciones li { padding: 0.3rem 0; border-top: 1px solid var(--borde); }
+.no-aplican li, .descartadas li, .traza-secciones li, .incisos li { padding: 0.3rem 0; border-top: 1px solid var(--borde); }
 
 .notas { counter-reset: nota; }
 .nota { counter-increment: nota; padding: 0.6rem 0.75rem 0.6rem 2.25rem; position: relative; border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 0.5rem; }
@@ -110,6 +110,9 @@ button:disabled { opacity: 0.6; cursor: progress; }
 .traza table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
 .traza td { padding: 0.25rem 0.75rem 0.25rem 0; border-top: 1px solid var(--borde); vertical-align: top; }
 .similitud { font-variant-numeric: tabular-nums; color: var(--tenue); }
+.rechazada { margin-top: 0.5rem; font-size: 0.9rem; }
+.rechazada p { margin: 0 0 0.25rem; color: var(--manual); font-weight: 600; }
+.categoria-no_verificable td:first-child { color: var(--manual); }
 .no-aplica, .categoria-no_aplica td:first-child, .categoria-tramite_del_sistema td:first-child { color: var(--tenue); }
 .nodo pre { overflow-x: auto; background: var(--fondo); padding: 0.75rem; border-radius: 6px; font-size: 0.8rem; white-space: pre-wrap; }
 

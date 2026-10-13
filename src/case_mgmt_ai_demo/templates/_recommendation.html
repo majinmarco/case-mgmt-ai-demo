@@ -100,13 +100,32 @@
       <p class="requisito-detalle">
         {% if weakest %}<span class="insignia debil">Requisito más débil: fija la puntuación</span>{% endif %}
         <span class="tipo">{{ "Criterio" if requirement.criterion else "Sección que aplica" }}</span>
-        {% for ref in requirement.clause_refs %}{{ cita(ref) }} {% endfor %}
+        {% if requirement.probability is not none %}{% for ref in requirement.clause_refs %}{{ cita(ref) }} {% endfor %}{% endif %}
       </p>
+      {% if requirement.probability is none %}
+      {# The Decisions API names no reason, so the Clauses asked about are spelled out. #}
+      <div class="rechazada">
+        <p>La pregunta fue rechazada, sin razón dada. Se preguntó por:</p>
+        <ul class="incisos">
+          {% for ref in requirement.clause_refs %}
+          <li>{{ cita(ref) }} {{ reasons.get(ref, "sin clasificar") }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
     </li>
     {% endfor %}
   </ul>
   {% else %}
   <p class="vacio">Ningún requisito aplicó a esta solicitud.</p>
+  {% endif %}
+  {% if rec.unverifiable %}
+  {% set count = rec.unverifiable|length %}
+  <p class="tipo">
+    {% if count == 1 %}1 requisito más no se puntúa: el formulario no permite acreditarlo
+    {% else %}{{ count }} requisitos más no se puntúan: el formulario no permite acreditarlos{% endif %}
+    (<a href="#no-verificables">ver la lista</a>).
+  </p>
   {% endif %}
 
   {% if rec.sections_not_applicable %}
@@ -143,6 +162,18 @@
   </ul>
   {% endif %}
 </section>
+
+{% if rec.unverifiable %}
+<section class="tarjeta" id="no-verificables">
+  <h2>Requisitos que el formulario no permite acreditar</h2>
+  <p class="tipo">Aplican a la solicitud, pero ningún campo del formulario permite acreditarlos: no cuentan en la puntuación y los verifica el Revisor.</p>
+  <ul class="incisos">
+    {% for selection in rec.unverifiable %}
+    <li>{{ cita(selection.ref) }} {{ selection.reason }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 {% if rec.fee_check %}
 {% set fee = rec.fee_check %}

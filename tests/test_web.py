@@ -9,6 +9,7 @@ from case_mgmt_ai_demo.chunks import Chunk
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.permit_request import parse_permit_request
 from case_mgmt_ai_demo.review import (
+    ClauseSelection,
     InvalidPermitRequest,
     MissingPinnedClause,
     ModelFailure,
@@ -419,3 +420,46 @@ def test_the_home_page_links_to_every_permit_request(site):
     assert f'href="/solicitudes/{first}"' in html
     assert f'href="/solicitudes/{second}"' in html
     assert "María Isabel Rivera Ortiz" in html
+
+
+UNVERIFIABLE = ClauseSelection(
+    ref="RC-2023-E:2.1.9.2(g)",
+    category="no_verificable",
+    reason="El formulario no admite un estudio de suelos.",
+)
+
+
+def test_requirements_the_form_cannot_evidence_are_listed_after_the_notes(site):
+    html = site.page(selection=[UNVERIFIABLE])
+
+    page = text_of(html)
+    listed = page.index("Requisitos que el formulario no permite acreditar")
+    assert page.index("Falta la determinación de cumplimiento ambiental.") < listed
+    assert "RC-2023-E:2.1.9.2(g) El formulario no admite un estudio de suelos." in page[listed:]
+    assert citation_href(html, "RC-2023-E:2.1.9.2(g)") == "/reglamento/RC-2023-E.pdf#page=77"
+
+
+def test_the_requirements_say_how_many_more_the_form_cannot_evidence(site):
+    page = text_of(site.page(selection=[UNVERIFIABLE]))
+
+    assert "1 requisito más no se puntúa: el formulario no permite acreditarlo" in page
+
+
+def test_a_page_with_nothing_the_form_cannot_evidence_does_not_mention_it(site):
+    assert "el formulario no permite acreditar" not in text_of(site.page())
+
+
+def test_a_refused_requirement_shows_the_clauses_it_was_asked_about_and_why(site):
+    refused = RequirementAssessment(
+        id="seccion_2_1_9_2",
+        text_es="Requisitos aplicables de la Sección 2.1.9.2",
+        clause_refs=["RC-2023-E:2.1.9.2(k)"],
+        probability=None,
+    )
+
+    page = text_of(
+        site.page(requirements=[refused], approval_score=None, verdict="manual_review")
+    )
+
+    assert "La pregunta fue rechazada, sin razón dada. Se preguntó por:" in page
+    assert "RC-2023-E:2.1.9.2(k) Los planos deben estar sellados y certificados." in page

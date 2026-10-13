@@ -99,6 +99,7 @@ def create_app(
             "citation": _memoised(citation),
             "verdict": verdict_es(rec) if rec else None,
             "relevance": {r.section_id: r for r in rec.section_relevance} if rec else {},
+            "reasons": {s.ref: s.reason for s in rec.selection} if rec else {},
             "categories": CATEGORIES_ES,
             "not_assessed": NOT_ASSESSED,
             "settings": settings,

@@ -1,0 +1,251 @@
+{# The Recommendation of one Permit Request: included in the case page, and what a review
+   returns for HTMX to swap into #recomendacion. #}
+{% macro cita(ref) -%}
+{% set found = citation(ref) -%}
+{% if found.href -%}
+<a class="cita" href="{{ found.href }}" title="Abrir el documento en la página citada">{{ ref }}</a>
+{%- else -%}
+<span class="cita">{{ ref }}</span>
+{%- endif %}
+{%- endmacro %}
+
+{% macro probabilidad(value) -%}
+{% if value is none %}<span class="probabilidad sin-evaluar">{{ not_assessed }}</span>
+{%- else %}<span class="probabilidad">{{ "%.2f"|format(value) }}</span>{% endif %}
+{%- endmacro %}
+
+{% macro aplicabilidad(found) -%}
+<div class="{{ 'aplica' if found.applies else 'no-aplica' }}">{{ "aplica" if found.applies else "no aplica" }}: {{ found.reason }}</div>
+{%- endmacro %}
+
+{# `confirm`: asked before a review that replaces a stored Recommendation. #}
+{% macro revisar(label, confirm=none) %}
+<form class="revisar" hx-post="/solicitudes/{{ stored.id }}/recomendacion" hx-target="#recomendacion"
+      {% if confirm %}hx-confirm="{{ confirm }}"{% endif %}
+      hx-swap="innerHTML" hx-disabled-elt="find button" hx-indicator="find .revisando">
+  <button type="submit">{{ label }}</button>
+  <span class="revisando htmx-indicator">Revisando la solicitud contra el Reglamento…</span>
+</form>
+{% endmacro %}
+
+{% if review_errors %}
+<section class="tarjeta aviso">
+  <h2>No se pudo revisar la solicitud</h2>
+  <ul>
+    {% for message in review_errors %}
+    <li>{{ message }}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if not rec %}
+<section class="tarjeta">
+  <h2>Recomendación</h2>
+  <p class="vacio">Aún no hay una Recomendación para esta solicitud.</p>
+  {{ revisar("Revisar la solicitud") }}
+</section>
+{% else %}
+<section class="tarjeta veredicto-{{ rec.verdict }}">
+  <h2>Recomendación</h2>
+  <p class="puntuacion">
+    <span>Puntuación de aprobación</span>
+    <strong>{{ "—" if rec.approval_score is none else "%.2f"|format(rec.approval_score) }}</strong>
+  </p>
+  <div class="medidor" role="meter" aria-label="Puntuación de aprobación" aria-valuemin="0"
+       aria-valuemax="1"{% if rec.approval_score is not none %} aria-valuenow="{{ rec.approval_score }}"{% endif %}>
+    <div class="medidor-banda" title="Banda de caso límite"
+         style="left: {{ settings.borderline_low * 100 }}%; width: {{ (settings.borderline_high - settings.borderline_low) * 100 }}%"></div>
+    {% if rec.approval_score is not none %}
+    <div class="medidor-relleno" style="width: {{ rec.approval_score * 100 }}%"></div>
+    {% endif %}
+    <div class="medidor-corte" title="Corte de aprobación" style="left: {{ settings.approval_cutoff * 100 }}%"></div>
+  </div>
+  <p class="medidor-escala">
+    <span>0</span>
+    <span>corte de aprobación: {{ "%.2f"|format(settings.approval_cutoff) }}</span>
+    <span>1</span>
+  </p>
+  <p class="veredicto">
+    <strong>{{ verdict }}</strong>
+    {% if rec.borderline %}<span class="insignia limite">Caso límite: revisar con detenimiento</span>{% endif %}
+  </p>
+  <p class="asesor">La Recomendación es una ayuda: la Determinación es del Revisor.</p>
+  {{ revisar("Revisar de nuevo", "¿Revisar de nuevo? La Recomendación almacenada se reemplaza.") }}
+
+  {% if rec.errors %}
+  <div class="aviso">
+    <h3>Errores de la API (la revisión continuó sin esas respuestas)</h3>
+    <ul>
+      {% for error in rec.errors %}
+      <li>{{ error.step }}{% if error.subject %} [{{ error.subject }}]{% endif %}: {{ error.message }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</section>
+
+<section class="tarjeta">
+  <h2>Requisitos</h2>
+  {% if rec.requirements %}
+  <ul class="requisitos">
+    {% for requirement in rec.requirements %}
+    {% set weakest = rec.weakest_requirement and rec.weakest_requirement.id == requirement.id %}
+    <li class="requisito{{ ' mas-debil' if weakest }}">
+      <div class="requisito-cabecera">
+        <span class="requisito-texto">{{ requirement.text_es }}</span>
+        {{ probabilidad(requirement.probability) }}
+      </div>
+      <div class="barra"><div style="width: {{ (requirement.probability or 0) * 100 }}%"></div></div>
+      <p class="requisito-detalle">
+        {% if weakest %}<span class="insignia debil">Requisito más débil: fija la puntuación</span>{% endif %}
+        <span class="tipo">{{ "Criterio" if requirement.criterion else "Sección que aplica" }}</span>
+        {% for ref in requirement.clause_refs %}{{ cita(ref) }} {% endfor %}
+      </p>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="vacio">Ningún requisito aplicó a esta solicitud.</p>
+  {% endif %}
+
+  {% if rec.sections_not_applicable %}
+  <h3>Secciones recuperadas que no aplican</h3>
+  <ul class="no-aplican">
+    {% for section in rec.sections_not_applicable %}
+    <li>{{ cita(section.section_id) }} {{ section.reason }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+<section class="tarjeta">
+  <h2>Notas{% if rec.notes_retried %} <span class="tipo">reescritas una vez: citas no válidas en el primer intento</span>{% endif %}</h2>
+  {% if rec.notes %}
+  <ol class="notas">
+    {% for note in rec.notes %}
+    <li class="nota{{ ' subsanable' if note.curable }}">
+      {% if note.curable %}<span class="insignia subsanable">Subsanable</span>{% endif %}
+      {{ note.text }}
+      <span class="citas">{% for ref in note.section_ids %}{{ cita(ref) }} {% endfor %}</span>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="vacio">La revisión no produjo Notas.</p>
+  {% endif %}
+  {% if rec.dropped_notes %}
+  <h3>Notas descartadas (citas no válidas tras un reintento)</h3>
+  <ul class="descartadas">
+    {% for note in rec.dropped_notes %}
+    <li>{{ note.text }} <span class="tipo">{{ note.problem_es() }}</span></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+
+{% if rec.fee_check %}
+{% set fee = rec.fee_check %}
+<section class="tarjeta">
+  <h2>Verificación de derechos</h2>
+  {% if fee.matches is none %}
+  <p class="derechos alerta">No se pudo verificar: {{ fee.unverifiable_es }}</p>
+  {% elif fee.matches %}
+  <p class="derechos conforme">Los derechos declarados coinciden con los calculados.</p>
+  {% else %}
+  <p class="derechos alerta">Los derechos declarados no coinciden con los calculados.</p>
+  {% endif %}
+  <dl class="importes">
+    <dt>Declarados</dt>
+    <dd>{{ fee.declared_fee|money }}</dd>
+    {% if fee.expected_fee is not none %}
+    <dt>Calculados</dt>
+    <dd>{{ fee.expected_fee|money }}</dd>
+    {% endif %}
+  </dl>
+  {% if fee.charges %}
+  <table class="cargos">
+    {% for charge in fee.charges %}
+    <tr>
+      <td>{{ charge.ref }} {{ charge.concept_es }}</td>
+      <td class="importe">{{ charge.amount|money }}</td>
+      <td class="tipo">{% if charge.percent != 100 %}{{ charge.percent }}% de {{ charge.base|money }}{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  {% if fee.exemption_es %}<p>Exención aplicada: {{ fee.exemption_es }}</p>{% endif %}
+  <p class="citas">{% for ref in fee.section_ids %}{{ cita(ref) }} {% endfor %}</p>
+</section>
+{% endif %}
+
+<section class="tarjeta">
+  <details class="traza">
+    <summary>Traza del pipeline</summary>
+
+    <h3>Secciones recuperadas (similitud con la solicitud)</h3>
+    <ul class="traza-secciones">
+      {% for section in rec.trace.retrieved %}
+      {% set found = relevance.get(section.section_id) %}
+      <li>
+        <span class="similitud">{{ "—" if section.similarity is none else "%.3f"|format(section.similarity) }}</span>
+        {{ cita(section.section_id) }} {{ section.heading }}
+        {% if section.pinned_by %}<span class="tipo">fijada por {{ section.pinned_by|join(", ") }}</span>{% endif %}
+        {% if found %}
+        {{ aplicabilidad(found) }}
+        {% if not found.applies and section.clause_refs %}
+        <div class="tipo">incisos no evaluados: {{ section.clause_refs|join(", ") }}</div>
+        {% endif %}
+        {% endif %}
+      </li>
+      {% else %}
+      {# A Recommendation without a trace still says which Sections applied. #}
+      {% for found in rec.section_relevance %}
+      <li>
+        {{ cita(found.section_id) }}
+        {{ aplicabilidad(found) }}
+      </li>
+      {% endfor %}
+      {% endfor %}
+    </ul>
+
+    <h3>Selección de incisos</h3>
+    <table class="traza-incisos">
+      {% for selection in rec.selection %}
+      <tr class="categoria-{{ selection.category }}">
+        <td>{{ categories[selection.category] }}</td>
+        <td>{{ cita(selection.ref) }}</td>
+        <td>{{ selection.reason }}</td>
+      </tr>
+      {% endfor %}
+      {% for ref in rec.unclassified_clause_refs %}
+      <tr class="alerta"><td>sin clasificar (se evalúa igualmente)</td><td>{{ cita(ref) }}</td><td></td></tr>
+      {% endfor %}
+      {% for ref in rec.unknown_clause_refs %}
+      <tr class="alerta"><td>desconocido, descartado</td><td>{{ ref }}</td><td></td></tr>
+      {% endfor %}
+    </table>
+
+    <h3>Requisitos y sus incisos</h3>
+    <table class="traza-requisitos">
+      {% for requirement in rec.requirements %}
+      <tr>
+        <td>{{ probabilidad(requirement.probability) }}</td>
+        <td>{{ requirement.id }}</td>
+        <td>{% for ref in requirement.clause_refs %}{{ cita(ref) }} {% endfor %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    {% if rec.trace.steps %}
+    <h3>Salida de cada nodo</h3>
+    {% for step in rec.trace.steps %}
+    <details class="nodo">
+      <summary>{{ step.node }}</summary>
+      <pre>{{ step.output|json_es }}</pre>
+    </details>
+    {% endfor %}
+    {% endif %}
+  </details>
+</section>
+{% endif %}

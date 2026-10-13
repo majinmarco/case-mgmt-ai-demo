@@ -20,6 +20,7 @@ if TYPE_CHECKING:  # imported when used: Chroma and pymupdf are slow to load
     from case_mgmt_ai_demo.extraction import OcrEngine
     from case_mgmt_ai_demo.index import Embedder
     from case_mgmt_ai_demo.ingest import Ingestion
+    from case_mgmt_ai_demo.store import PermitRequestStore
 
 COMMANDS = {
     "review": "Produce a Recommendation for a Permit Request.",
@@ -104,6 +105,9 @@ def build_parser() -> argparse.ArgumentParser:
                 action="store_true",
                 help="Do not read text drawn as outlines; it stays marked […].",
             )
+        if name == "serve":
+            subparser.add_argument("--host", default="127.0.0.1", help="Address to listen on.")
+            subparser.add_argument("--port", type=int, default=8000, help="Port to listen on.")
     return parser
 
 
@@ -126,8 +130,7 @@ def main(
             index=not args.no_index,
             ocr=None if args.no_ocr else args.ocr or "",
         )
-    print(f"'{args.command}' is not implemented yet.", file=sys.stderr)
-    return 1
+    return _serve(args.host, args.port, pipeline)
 
 
 def _review(
@@ -179,6 +182,58 @@ def _real_pipeline() -> RecommendationSource:
 
     settings = load_settings()  # exports .env, so before OpenAI()
     return build_review_pipeline(settings, OpenAI())
+
+
+class _LazyPipeline:
+    """The real pipeline, built at the first review: `serve` shows stored Recommendations
+    without an API key or an index."""
+
+    def __init__(self) -> None:
+        self._pipeline: RecommendationSource | None = None
+
+    def review(self, raw: Mapping[str, Any]) -> Recommendation:
+        if self._pipeline is None:
+            self._pipeline = _real_pipeline()
+        return self._pipeline.review(raw)
+
+
+def _serve(host: str, port: int, pipeline: RecommendationSource | None) -> int:
+    import uvicorn
+
+    from case_mgmt_ai_demo.config import load_settings
+    from case_mgmt_ai_demo.index import ReglamentoIndex
+    from case_mgmt_ai_demo.store import PermitRequestStore
+    from case_mgmt_ai_demo.web import create_app
+
+    settings = load_settings()
+    store = PermitRequestStore(settings.db_path)
+    if not store.all():
+        _store_examples(settings.examples_dir, store)
+    # Citations get their PDF page from the index; without one they are shown as plain text.
+    index = ReglamentoIndex(settings.index_dir)
+    app = create_app(store, pipeline or _LazyPipeline(), index, settings)
+    print(f"Interfaz del Revisor: http://{host}:{port}", file=sys.stderr)
+    uvicorn.run(app, host=host, port=port)
+    return 0
+
+
+def _store_examples(directory: Path, store: "PermitRequestStore") -> None:
+    """Store every Permit Request in the directory (JSON files, by name); one that is not
+    valid is reported and left out."""
+    from pydantic import ValidationError
+
+    from case_mgmt_ai_demo.permit_request import parse_permit_request
+
+    if not directory.is_dir():
+        return
+    for path in sorted(directory.glob("*.json")):
+        try:
+            request = parse_permit_request(json.loads(path.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError, ValidationError) as error:
+            reason = str(error).splitlines()[0]
+            print(f"Ejemplo omitido, no es una solicitud válida: {path} ({reason})", file=sys.stderr)
+            continue
+        store.add(request)
 
 
 def _ingest(
@@ -310,9 +365,7 @@ def format_recommendation(
 ) -> str:
     request = recommendation.request
     score = recommendation.approval_score
-    verdict = VERDICTS_ES[recommendation.verdict]
-    if recommendation.verdict == "manual_review" and recommendation.errors:
-        verdict = "Revisión manual (falló una llamada a la API; ver abajo)"
+    verdict = verdict_es(recommendation)
     if recommendation.borderline:
         verdict += " (caso límite: revisar con detenimiento)"
     set_aside = recommendation.set_aside_count
@@ -367,6 +420,13 @@ def format_recommendation(
     if show_trace:
         lines += ["", *_trace_lines(recommendation)]
     return "\n".join(lines)
+
+
+def verdict_es(recommendation: Recommendation) -> str:
+    """The verdict as shown to a Reviewer; a failed model call is named as the reason."""
+    if recommendation.verdict == "manual_review" and recommendation.errors:
+        return "Revisión manual (falló una llamada a la API; ver abajo)"
+    return VERDICTS_ES[recommendation.verdict]
 
 
 def _selection_lines(recommendation: Recommendation) -> list[str]:

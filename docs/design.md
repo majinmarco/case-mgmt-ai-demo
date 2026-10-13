@@ -201,6 +201,14 @@ Ingestion is not complete until retrieval has been evaluated; this validates bot
 2. **Case view** — Request fields; Approval Score gauge and verdict (Borderline flag); Notes with clickable citations opening the source PDF on the cited page (`#page=N` from the chunk's `page_start`) in a side panel; fee check result; collapsible pipeline trace (retrieved Sections + scores, Criterion probabilities); Determination buttons (Accept / Override with reason / Cure Request).
 3. **New request form** — create Permit Requests live.
 
+### Case view as built (CMAWD-13)
+
+- **Storage.** A Permit Request and its Recommendation are each stored whole, as the JSON of their models, in `data/app.sqlite` (`store.py`). `serve` stores the requests in `examples/` when it has none.
+- **Review on request.** A stored request without a Recommendation has a button; HTMX posts to `/solicitudes/{id}/recomendacion`, which runs the pipeline, stores the Recommendation and returns it as a fragment. The pipeline is built at the first review, so stored Recommendations are shown without an API key or an index. Until the Queue (CMAWD-14), `/` is a bare list of the stored requests.
+- **Citations.** The app serves the two PDFs under `/reglamento/`. A citation's page is looked up in the index when the page is rendered, not stored: the `page_start` of the cited Section or, for a Clause of a split Section, of the part whose Clauses include it (a sub-item such as `3.7.1.2(b)(3)` goes by its Clause, `(b)`). A Section the index does not hold is plain text. The side panel is a new `iframe` on each click, because changing only `#page=N` of a PDF already shown does not move it; without JavaScript the link opens the PDF itself.
+- **Gauge.** Drawn with the cutoff and Borderline band of the running configuration, which may differ from those a stored Recommendation's verdict was reached with.
+- Spanish only; the English toggle is not built.
+
 ## Ownership
 
 - **Chunker / ingestion** — written together (developer + Claude), against the chunk contract.

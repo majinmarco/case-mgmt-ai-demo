@@ -28,6 +28,18 @@ Sections come from the Chroma index that `ingest` builds (below), so ingest firs
 
 The example requests were written against the fixture. Against the real index the good ones did not reach the cutoff (one run each): retrieval brings Sections they have no fields to evidence. See *Retrieval from the real index* in `docs/design.md`.
 
+## Review in the browser
+
+```sh
+uv run case-mgmt-ai-demo serve               # http://127.0.0.1:8000 (--host, --port)
+```
+
+Starts the Reviewer web UI (FastAPI, Jinja and HTMX, in Spanish). The page of a Permit Request shows its fields and its Recommendation: the Approval Score on a gauge with the cutoff and the Borderline band, the verdict (or "Sin puntuación — revisión manual"), every Requirement with its probability (the weakest one marked; "no evaluado" where the question was refused), the retrieved Sections that do not apply, the Notes (curable ones marked "Subsanable"), the Fee Check, and the pipeline trace, collapsed.
+
+Each citation is a link to the Reglamento PDF, which the app serves, on the cited Section's page (`#page=N`, from `page_start` in the index; for a Clause of a split Section, the part that holds the Clause). It opens in a panel beside the page, with a link to open it in a new tab. A citation whose Section is not in the index is plain text, so ingest first to get the links.
+
+Permit Requests and Recommendations are kept in SQLite (`data/app.sqlite`). The first time it runs, `serve` stores the Permit Requests in `examples/` (`PRA_EXAMPLES_DIR`). A request without a Recommendation has a button that reviews it (real model calls, as `review` makes) and stores the Recommendation; stored Recommendations are shown without an API key.
+
 ## Ingest the Reglamento
 
 ```sh

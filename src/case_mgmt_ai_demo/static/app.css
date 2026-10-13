@@ -1,0 +1,128 @@
+:root {
+  --fondo: #f4f5f7;
+  --tarjeta: #ffffff;
+  --texto: #1c2430;
+  --tenue: #5d6878;
+  --borde: #d9dee6;
+  --enlace: #1d5fbf;
+  --aprobar: #1e8a4c;
+  --no-aprobar: #c0392b;
+  --manual: #b7791f;
+  --limite: #b7791f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+a { color: var(--enlace); }
+h1 { font-size: 1.5rem; margin: 0.25rem 0 1rem; }
+h2 { font-size: 1.1rem; margin: 0 0 0.75rem; }
+h3 { font-size: 0.95rem; margin: 1.25rem 0 0.5rem; }
+
+.pagina { display: flex; align-items: flex-start; }
+main { flex: 1 1 0; min-width: 0; max-width: 60rem; margin: 0 auto; padding: 1rem 1.5rem 3rem; }
+.marca { margin: 0; font-size: 0.85rem; }
+.marca a { color: var(--tenue); text-decoration: none; }
+
+.tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.tipo, .vacio, .asesor { color: var(--tenue); font-size: 0.85rem; font-weight: normal; }
+.vacio { font-style: italic; }
+
+.campos { display: grid; grid-template-columns: minmax(10rem, 16rem) 1fr; gap: 0.4rem 1rem; margin: 0; }
+.campos dt { color: var(--tenue); }
+.campos dd { margin: 0; }
+
+.solicitudes { list-style: none; padding: 0; }
+.solicitudes li { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 0.5rem; }
+
+/* Approval Score gauge: the fill is the score, the tick the cutoff, the shaded band Borderline. */
+.puntuacion { display: flex; align-items: baseline; gap: 0.75rem; margin: 0; }
+.puntuacion strong { font-size: 2rem; line-height: 1; }
+.medidor { position: relative; height: 1.1rem; margin-top: 0.5rem; background: #e6e9ee; border-radius: 0.55rem; overflow: hidden; }
+.medidor-relleno { position: absolute; inset: 0 auto 0 0; background: var(--manual); }
+.medidor-banda { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(135deg, rgb(183 121 31 / 35%) 0 4px, transparent 4px 8px); z-index: 1; }
+.medidor-corte { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--texto); z-index: 2; }
+.medidor-escala { display: flex; justify-content: space-between; margin: 0.15rem 0 0.75rem; color: var(--tenue); font-size: 0.8rem; }
+.veredicto { margin: 0; font-size: 1.15rem; }
+.veredicto-approve .medidor-relleno { background: var(--aprobar); }
+.veredicto-approve .veredicto strong { color: var(--aprobar); }
+.veredicto-not_approve .medidor-relleno { background: var(--no-aprobar); }
+.veredicto-not_approve .veredicto strong { color: var(--no-aprobar); }
+.veredicto-manual_review .veredicto strong { color: var(--manual); }
+.veredicto-manual_review { border-left: 4px solid var(--manual); }
+.veredicto-approve { border-left: 4px solid var(--aprobar); }
+.veredicto-not_approve { border-left: 4px solid var(--no-aprobar); }
+
+.insignia { display: inline-block; padding: 0.05rem 0.5rem; border-radius: 1rem; font-size: 0.78rem; font-weight: 600; vertical-align: middle; }
+.insignia.limite, .insignia.debil { background: #fdf1d8; color: #7a5210; border: 1px solid #ecc977; }
+.insignia.subsanable { background: #e3effd; color: #1a4f9c; border: 1px solid #a9c8f2; }
+
+.aviso { border: 1px solid #ecc977; background: #fdf8ea; border-radius: 6px; padding: 0.5rem 1rem; margin-top: 0.75rem; }
+.aviso h3 { margin-top: 0.25rem; }
+.alerta { color: var(--no-aprobar); font-weight: 600; }
+.conforme { color: var(--aprobar); font-weight: 600; }
+
+.requisitos, .notas, .no-aplican, .descartadas, .traza-secciones { padding: 0; margin: 0; list-style: none; }
+.requisito { padding: 0.6rem 0.75rem; border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 0.5rem; }
+.requisito.mas-debil { border-color: #ecc977; background: #fffaf0; }
+.requisito-cabecera { display: flex; justify-content: space-between; gap: 1rem; }
+.requisito-detalle { margin: 0.35rem 0 0; }
+.probabilidad { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.probabilidad.sin-evaluar { color: var(--manual); }
+.barra { height: 0.35rem; margin-top: 0.35rem; background: #e6e9ee; border-radius: 0.2rem; overflow: hidden; }
+.barra div { height: 100%; background: var(--enlace); }
+.no-aplican li, .descartadas li, .traza-secciones li { padding: 0.3rem 0; border-top: 1px solid var(--borde); }
+
+.notas { counter-reset: nota; }
+.nota { counter-increment: nota; padding: 0.6rem 0.75rem 0.6rem 2.25rem; position: relative; border: 1px solid var(--borde); border-radius: 6px; margin-bottom: 0.5rem; }
+.nota::before { content: counter(nota) "."; position: absolute; left: 0.75rem; color: var(--tenue); }
+.nota.subsanable { border-left: 4px solid #5b93dc; }
+.citas { display: block; margin-top: 0.25rem; }
+
+.cita { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; white-space: nowrap; }
+span.cita { color: var(--tenue); }
+
+.importes { display: grid; grid-template-columns: max-content max-content; gap: 0.15rem 1rem; }
+.importes dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.cargos { border-collapse: collapse; margin: 0.5rem 0; }
+.cargos td { padding: 0.15rem 1rem 0.15rem 0; }
+.importe { text-align: right; font-variant-numeric: tabular-nums; }
+
+.revisar { margin-top: 0.75rem; display: flex; align-items: center; gap: 0.75rem; }
+button { font: inherit; padding: 0.35rem 0.9rem; border: 1px solid var(--borde); border-radius: 6px; background: var(--tarjeta); cursor: pointer; }
+button:disabled { opacity: 0.6; cursor: progress; }
+.htmx-indicator { opacity: 0; }
+.htmx-request .htmx-indicator, .htmx-request.htmx-indicator { opacity: 1; }
+
+.traza > summary { font-weight: 600; font-size: 1.1rem; cursor: pointer; }
+.traza table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+.traza td { padding: 0.25rem 0.75rem 0.25rem 0; border-top: 1px solid var(--borde); vertical-align: top; }
+.similitud { font-variant-numeric: tabular-nums; color: var(--tenue); }
+.no-aplica, .categoria-no_aplica td:first-child, .categoria-tramite_del_sistema td:first-child { color: var(--tenue); }
+.nodo pre { overflow-x: auto; background: var(--fondo); padding: 0.75rem; border-radius: 6px; font-size: 0.8rem; white-space: pre-wrap; }
+
+/* The cited PDF, beside the case page. */
+#visor { flex: 0 0 46vw; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; background: var(--tarjeta); border-left: 1px solid var(--borde); }
+#visor[hidden] { display: none; }
+#visor header { display: flex; align-items: center; gap: 1rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--borde); }
+#visor header a { margin-left: auto; font-size: 0.85rem; }
+#visor-documento { flex: 1; }
+#visor-documento iframe { width: 100%; height: 100%; border: 0; }
+
+@media (max-width: 60rem) {
+  .pagina { flex-direction: column; }
+  #visor { flex-basis: auto; width: 100%; height: 80vh; position: static; border-left: 0; border-top: 1px solid var(--borde); }
+  .campos { grid-template-columns: 1fr; }
+}

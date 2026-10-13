@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ stored.request.applicant_name }}{% endblock %}
+{% block content %}
+<h1>Solicitud de {{ stored.request.type_name_es }} <span class="tipo">n.º {{ stored.id }}</span></h1>
+
+<section class="tarjeta">
+  <h2>Solicitud de Permiso</h2>
+  <dl class="campos">
+    {% for label, value in stored.request.fields_es().items() %}
+    <dt>{{ label }}</dt>
+    <dd>{{ value }}</dd>
+    {% endfor %}
+  </dl>
+</section>
+
+<div id="recomendacion">
+  {% include "_recommendation.html" %}
+</div>
+{% endblock %}

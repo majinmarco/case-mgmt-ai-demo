@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 
 from case_mgmt_ai_demo import main, unlimited_ocr
 from case_mgmt_ai_demo.cli import ProgressBar
@@ -598,11 +599,56 @@ def test_review_requires_a_file_argument(capsys):
     assert exc.value.code == 2
 
 
-def test_serve_reports_not_implemented(capsys):
-    exit_code = main(["serve"])
+@pytest.fixture
+def served(tmp_path, monkeypatch):
+    """What `serve` hands to uvicorn, with the data and the examples in a temporary directory."""
+    examples = tmp_path / "examples"
+    examples.mkdir()
+    (examples / "1-pcoc.json").write_text(json.dumps(GOOD_PCOC), encoding="utf-8")
+    (examples / "2-permiso-unico.json").write_text(
+        json.dumps(GOOD_PERMISO_UNICO), encoding="utf-8"
+    )
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("PRA_EXAMPLES_DIR", str(examples))
+    calls: list[dict[str, Any]] = []
+    monkeypatch.setattr("uvicorn.run", lambda app, **options: calls.append({"app": app} | options))
+    return calls
 
-    assert exit_code == 1
-    assert "'serve' is not implemented yet" in capsys.readouterr().err
+
+def test_serve_starts_the_web_app_with_the_example_permit_requests(served, capsys):
+    exit_code = main(["serve", "--port", "8123"], pipeline=FakePipeline(recommendation()))
+
+    assert exit_code == 0
+    [call] = served
+    assert (call["host"], call["port"]) == ("127.0.0.1", 8123)
+    assert "http://127.0.0.1:8123" in capsys.readouterr().err
+    client = TestClient(call["app"])
+    home = client.get("/").text
+    assert home.index("María Isabel Rivera Ortiz") < home.index("Ana Lucía Torres Rivera")
+    assert "Aún no hay una Recomendación" in client.get("/solicitudes/1").text
+    assert "Aprobar" in client.post("/solicitudes/1/recomendacion").text
+
+
+def test_serve_keeps_what_is_stored_when_started_again(served):
+    main(["serve"], pipeline=FakePipeline(recommendation()))
+    TestClient(served[0]["app"]).post("/solicitudes/2/recomendacion")
+
+    main(["serve"], pipeline=FakePipeline(recommendation()))
+
+    client = TestClient(served[1]["app"])
+    assert client.get("/").text.count('href="/solicitudes/') == 2  # the examples, loaded once
+    assert "Puntuación de aprobación" in client.get("/solicitudes/2").text
+
+
+def test_serve_skips_an_example_that_is_not_a_valid_permit_request(served, tmp_path, capsys):
+    (tmp_path / "examples" / "3-rota.json").write_text('{"request_type": "PCOC"}')
+    (tmp_path / "examples" / "4-no-json.json").write_text("{")
+
+    assert main(["serve"], pipeline=FakePipeline(recommendation())) == 0
+
+    err = capsys.readouterr().err
+    assert "3-rota.json" in err and "4-no-json.json" in err
+    assert TestClient(served[0]["app"]).get("/").text.count('href="/solicitudes/') == 2
 
 
 def test_ingest_without_index_writes_the_report_and_prints_a_summary(

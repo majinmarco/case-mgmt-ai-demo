@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %} · Asistente de Revisión de Permisos</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="pagina">
+    <main>
+      <p class="marca"><a href="/">Asistente de Revisión de Permisos</a></p>
+      {% block content %}{% endblock %}
+    </main>
+    {# The Reglamento PDF a citation opens; app.js fills it in and shows it. #}
+    <aside id="visor" hidden aria-label="Documento citado">
+      <header>
+        <strong id="visor-cita"></strong>
+        <a id="visor-pestana" href="#" target="_blank" rel="noopener">Abrir en una pestaña nueva</a>
+        <button id="visor-cerrar" type="button" aria-label="Cerrar el documento">✕</button>
+      </header>
+      <div id="visor-documento"></div>
+    </aside>
+  </div>
+</body>
+</html>

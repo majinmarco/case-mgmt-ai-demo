@@ -38,6 +38,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     reglamento_pdf: Path = Path("docs_to_use/RC-2023-E.pdf")
     cobros_pdf: Path = Path("docs_to_use/COBROS OA-2022-07.pdf")
+    # Permit Requests (JSON files) `serve` stores the first time it runs, when it has none.
+    examples_dir: Path = Path("examples")
     # What reads the text a PDF draws as outlines.
     ocr_engine: Literal["tesseract", "unlimited-ocr"] = "tesseract"
     # Where Tesseract's Spanish model (spa.traineddata) lives; unset, the system's is used.

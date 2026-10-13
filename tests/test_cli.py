@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from case_mgmt_ai_demo import main, unlimited_ocr
-from case_mgmt_ai_demo.cli import ProgressBar
+from case_mgmt_ai_demo.cli import ProgressBar, _refs
 from case_mgmt_ai_demo.fee_check import check_fee, load_fee_rules
 from case_mgmt_ai_demo.permit_request import parse_permit_request
 from case_mgmt_ai_demo.review import (
@@ -248,9 +248,12 @@ def test_review_prints_every_requirement_and_names_the_weakest(request_file, cap
     assert (
         "Requisitos:\n"
         "  0.91         El proponente acredita legitimación activa. [pcoc_legitimacion]\n"
+        "               incisos: RC-2023-E:2.1.9.5(b)\n"
         "  0.97         La obra cumple los parámetros del distrito. [pcoc_parametros]\n"
+        "               incisos: RC-2023-E:2.2.1.3(d)\n"
         "  0.86         Requisitos aplicables de la Sección 2.1.9.2 (REQUISITOS DE PRESENTACIÓN) "
         "[seccion_2_1_9_2]\n"
+        "               incisos: RC-2023-E:2.1.9.2(k)\n"
     ) in out
 
 
@@ -797,3 +800,67 @@ def test_no_subcommand_exits_with_usage_error(capsys):
         main([])
 
     assert exc.value.code == 2
+
+
+def test_review_warns_of_requirements_the_form_cannot_evidence(request_file, capsys):
+    unverifiable = ClauseSelection(
+        ref="RC-2023-E:9.5.2.2(a)",
+        category="no_verificable",
+        reason="El formulario no admite un estudio de suelos.",
+    )
+    pipeline = FakePipeline(recommendation(selection=[unverifiable]))
+
+    main(["review", "--selection", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert "Incisos evaluados: 0 de 1 (1 descartados" in out
+    assert "⚠ 1 de los descartados son requisitos que el formulario no permite acreditar (lista al final)" in out
+    assert "  no verificable       RC-2023-E:9.5.2.2(a): El formulario no admite" in out
+
+
+def test_review_names_the_clauses_each_requirement_was_assessed_on(request_file, capsys):
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation()))
+
+    out = capsys.readouterr().out
+    assert "[seccion_2_1_9_2]\n               incisos: RC-2023-E:2.1.9.2(k)\n" in out
+
+
+def test_clauses_of_one_section_are_named_under_it_once():
+    refs = ["RC-2023-E:9.5.2.2", "RC-2023-E:9.5.2.2(a)", "RC-2023-E:9.5.2.2(c)", "RC-2023-E:3.1.3(c)"]
+
+    assert _refs(refs) == "RC-2023-E:9.5.2.2(párrafo inicial, a, c); RC-2023-E:3.1.3(c)"
+
+
+def test_a_refused_requirement_shows_the_clauses_it_was_asked_about_and_why(
+    request_file, capsys
+):
+    refused = RequirementAssessment(
+        id="seccion_2_1_9_2",
+        text_es="Requisitos aplicables de la Sección 2.1.9.2",
+        clause_refs=["RC-2023-E:2.1.9.2(k)"],
+        probability=None,
+    )
+    pipeline = FakePipeline(
+        recommendation(requirements=[refused], approval_score=None, verdict="manual_review")
+    )
+
+    main(["review", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert "⚠ pregunta rechazada, sin razón dada; se preguntó por:" in out
+    assert "RC-2023-E:2.1.9.2(k): Los planos deben estar sellados y certificados." in out
+
+
+def test_requirements_the_form_cannot_evidence_are_listed_after_the_notes(request_file, capsys):
+    unverifiable = ClauseSelection(
+        ref="RC-2023-E:9.5.2.2(a)",
+        category="no_verificable",
+        reason="El formulario no admite un estudio de suelos.",
+    )
+
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(selection=[unverifiable])))
+
+    out = capsys.readouterr().out
+    listed = out.index("Requisitos que el formulario no permite acreditar (sin puntuar")
+    assert out.index("Notas:") < listed
+    assert "  RC-2023-E:9.5.2.2(a): El formulario no admite un estudio de suelos." in out[listed:]

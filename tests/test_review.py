@@ -7,7 +7,7 @@ from case_mgmt_ai_demo.chunks import Chunk, Clause, load_fixture_chunks, split_c
 from case_mgmt_ai_demo.config import Settings
 from case_mgmt_ai_demo.criteria import Criterion
 from case_mgmt_ai_demo.fee_check import load_fee_rules
-from case_mgmt_ai_demo.permit_request import PermitRequest
+from case_mgmt_ai_demo.permit_request import PermitRequest, parse_permit_request
 from case_mgmt_ai_demo.review import (
     ClauseCategory,
     ClauseSelection,
@@ -19,6 +19,7 @@ from case_mgmt_ai_demo.review import (
     Retrieved,
     ReviewPipeline,
     SectionRelevance,
+    selection_prompt,
 )
 
 GOOD_PCOC = {
@@ -1400,3 +1401,41 @@ def test_a_retrieval_error_leaves_the_pinned_sections_and_is_recorded():
     [error] = recommendation.errors
     assert (error.step, error.subject) == ("retrieve", None)
     assert "Embeddings: 500" in error.message
+
+
+def test_a_clause_the_form_cannot_evidence_is_left_out_of_its_requirement(pcoc_retriever):
+    unverifiable: dict[str, ClauseCategory] = {"RC-2023-E:2.1.9.3(c)": "no_verificable"}
+
+    recommendation = pipeline(
+        FakeDecisions(), FakeNotesLLM([]), pcoc_retriever, FakeSelector(unverifiable)
+    ).review(GOOD_PCOC)
+
+    [value] = [r for r in recommendation.requirements if r.id == "seccion_2_1_9_3"]
+    assert "RC-2023-E:2.1.9.3(c)" not in value.clause_refs
+    assert [s.ref for s in recommendation.unverifiable] == ["RC-2023-E:2.1.9.3(c)"]
+
+
+def test_a_section_the_form_cannot_evidence_at_all_does_not_burden_the_score(pcoc_retriever):
+    unverifiable: dict[str, ClauseCategory] = {
+        f"RC-2023-E:2.1.9.3({letter})": "no_verificable" for letter in "abc"
+    }
+    decisions = FakeDecisions({"seccion_2_1_9_3": 0.01})
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), pcoc_retriever, FakeSelector(unverifiable)
+    ).review(GOOD_PCOC)
+
+    assert "seccion_2_1_9_3" not in [r.id for r in recommendation.requirements]
+    assert recommendation.approval_score != 0.01
+
+
+def test_the_selection_prompt_lists_what_the_form_can_declare(pcoc_retriever):
+    request = parse_permit_request(GOOD_PCOC)
+    [section] = pcoc_retriever.fetch(["RC-2023-E:2.1.9.3"])
+    clauses = split_clauses(section)
+
+    prompt = selection_prompt(clauses, request)
+
+    assert "CAMPOS DEL FORMULARIO" in prompt
+    assert "- Documentos adjuntos: solo estos documentos: planos sellados" in prompt
+    assert '"no_verificable"' in prompt

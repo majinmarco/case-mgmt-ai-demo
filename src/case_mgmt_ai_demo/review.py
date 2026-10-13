@@ -75,10 +75,18 @@ español."""
 
 SELECTION_INSTRUCTIONS = """\
 Eres un asistente que prepara la evaluación de una Solicitud de Permiso en Puerto Rico.
-Clasifica CADA inciso del Reglamento listado abajo en una de tres categorías, para esta solicitud:
+Clasifica CADA inciso del Reglamento listado abajo en una de cuatro categorías, para esta \
+solicitud. Los CAMPOS DEL FORMULARIO son todo lo que un Solicitante puede declarar o adjuntar: \
+no existe otro medio para acreditar un requisito.
 - "aplica": un requisito que el Solicitante o su solicitud deben cumplir para este tipo de \
-solicitud. Clasifícalo como "aplica" AUNQUE la solicitud no lo cumpla o no lo mencione: \
-un requisito incumplido u omitido sigue aplicando y es una deficiencia.
+solicitud, y que algún campo del formulario permite acreditar. Clasifícalo como "aplica" \
+AUNQUE la solicitud no lo cumpla o haya dejado ese campo vacío, sin declarar o sin el \
+documento: un requisito incumplido u omitido sigue aplicando y es una deficiencia.
+- "no_verificable": un requisito que sí aplica a esta solicitud, pero que NINGÚN campo del \
+formulario permite acreditar: pide un documento, estudio, certificación, plano o dato que no \
+figura entre los campos ni entre los documentos que el formulario admite. El Solicitante no \
+puede cumplirlo por este medio, así que no se evalúa: lo verifica el Revisor. No lo uses \
+cuando el campo existe y la solicitud lo dejó vacío o incompleto: eso es "aplica".
 - "tramite_del_sistema": un paso procesal que realiza o verifica el sistema o la agencia \
 (presentación y carga de documentos en el SUI, validación, plazos de la agencia, archivo), y \
 que no se acredita con los datos de la solicitud. Los pagos de derechos y aranceles son \
@@ -89,10 +97,12 @@ solicita una, requisitos de renovación cuando la solicitud es nueva y de solici
 cuando es una renovación, obligaciones que surgen después de expedido el permiso, \
 disposiciones meramente definitorias o declarativas sin requisito).
 Devuelve una clasificación por inciso, con `ref` exactamente como aparece entre corchetes, y \
-una razón breve en español."""
+una razón breve en español; para "no_verificable", la razón nombra lo que el formulario no \
+permite declarar."""
 
 Verdict = Literal["approve", "not_approve", "manual_review"]
-ClauseCategory = Literal["aplica", "tramite_del_sistema", "no_aplica"]
+# `no_verificable`: a requirement that applies, but that no field of the form could evidence.
+ClauseCategory = Literal["aplica", "no_verificable", "tramite_del_sistema", "no_aplica"]
 # write_notes runs at most twice: once, then once more if a citation is invalid.
 NOTES_ATTEMPTS = 2
 ModelStep = Literal[
@@ -270,6 +280,11 @@ class Recommendation(BaseModel):
     @property
     def set_aside_count(self) -> int:
         return sum(1 for s in self.selection if s.set_aside)
+
+    @property
+    def unverifiable(self) -> list[ClauseSelection]:
+        """Requirements no field of the form could evidence: not scored, left to the Reviewer."""
+        return [s for s in self.selection if s.category == "no_verificable"]
 
     @property
     def criterion_requirements(self) -> list[RequirementAssessment]:
@@ -805,8 +820,10 @@ def relevance_prompt(chunks: list[Chunk], request: PermitRequest) -> str:
 def selection_prompt(clauses: list[Clause], request: PermitRequest) -> str:
     """The Spanish prompt asking a model to classify every clause for this request."""
     listing = "\n\n".join(f"[{c.ref}] {c.heading}\n{c.text}" for c in clauses)
+    form = "\n".join(f"- {label}: {declares}" for label, declares in request.form_es().items())
     return (
         f"{SELECTION_INSTRUCTIONS}\n\nINCISOS DEL REGLAMENTO\n\n{listing}\n\n"
+        f"CAMPOS DEL FORMULARIO (lo que cada uno permite declarar)\n{form}\n\n"
         f"SOLICITUD DE PERMISO\n{_fields(request)}"
     )
 

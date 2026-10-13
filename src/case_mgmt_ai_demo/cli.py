@@ -47,9 +47,15 @@ NOT_ASSESSED = "no evaluado"
 
 CATEGORIES_ES = {
     "aplica": "aplica",
+    "no_verificable": "no verificable",
     "tramite_del_sistema": "trámite del sistema",
     "no_aplica": "no aplica",
 }
+
+
+UNVERIFIABLE_HEADING = (
+    "Requisitos que el formulario no permite acreditar (sin puntuar; los verifica el Revisor):"
+)
 
 
 class RecommendationSource(Protocol):
@@ -383,7 +389,15 @@ def format_recommendation(
         f"Incisos evaluados: {considered - set_aside} de {considered} "
         f"({set_aside} descartados; --selection para ver la lista)",
     ]
+    unverifiable = recommendation.unverifiable
+    if unverifiable:
+        lines.append(
+            f"  ⚠ {len(unverifiable)} de los descartados son requisitos que el formulario no "
+            "permite acreditar (lista al final)"
+        )
     if recommendation.requirements:
+        reasons = {s.ref: s.reason for s in recommendation.selection}
+        indent = " " * (len(NOT_ASSESSED) + 4)
         lines.append("Requisitos:")
         for requirement in recommendation.requirements:
             probability = requirement.probability
@@ -391,6 +405,14 @@ def format_recommendation(
             lines.append(
                 f"  {shown:<{len(NOT_ASSESSED)}}  {requirement.text_es} [{requirement.id}]"
             )
+            if probability is not None:
+                lines.append(f"{indent}incisos: {_refs(requirement.clause_refs)}")
+                continue
+            # The Decisions API names no reason, so the Clauses asked about are spelled out.
+            lines.append(f"{indent}⚠ pregunta rechazada, sin razón dada; se preguntó por:")
+            for ref in requirement.clause_refs:
+                reason = reasons.get(ref, "sin clasificar")
+                lines.append(f"{indent}  {ref}: {reason}")
     for ref in recommendation.unclassified_clause_refs:
         lines.append(f"  ⚠ Inciso sin clasificar (se evalúa igualmente): {ref}")
     for ref in recommendation.unknown_clause_refs:
@@ -412,6 +434,9 @@ def format_recommendation(
         for dropped in recommendation.dropped_notes:
             cited = f" [{', '.join(dropped.section_ids)}]" if dropped.section_ids else ""
             lines.append(f"  ⚠ {dropped.text}{cited}: {dropped.problem_es()}")
+    if unverifiable:
+        lines += ["", UNVERIFIABLE_HEADING]
+        lines += [f"  {s.ref}: {s.reason}" for s in unverifiable]
     if show_selection and not show_trace:  # the trace gives every Section's verdict itself
         if not_applicable:
             lines += ["", "Secciones que no aplican:"]
@@ -427,6 +452,15 @@ def verdict_es(recommendation: Recommendation) -> str:
     if recommendation.verdict == "manual_review" and recommendation.errors:
         return "Revisión manual (falló una llamada a la API; ver abajo)"
     return VERDICTS_ES[recommendation.verdict]
+
+
+def _refs(refs: list[str]) -> str:
+    """Clause references with each Section named once: 'RC-2023-E:2.1.9.2(g, h); …'."""
+    by_section: dict[str, list[str]] = {}
+    for ref in refs:
+        section_id, _, rest = ref.partition("(")
+        by_section.setdefault(section_id, []).append(rest.removesuffix(")") or "párrafo inicial")
+    return "; ".join(f"{section_id}({', '.join(parts)})" for section_id, parts in by_section.items())
 
 
 def _selection_lines(recommendation: Recommendation) -> list[str]:

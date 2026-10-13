@@ -2,14 +2,15 @@
 
 Field names are English; values (and the labels shown to models and Reviewers) are Spanish.
 
-A field is here when it lets a request evidence a requirement that applies to it: a requirement
-the record cannot evidence is judged unmet (CMAWD-18).
+A field is here when it lets a request evidence a requirement that applies to it. `form_es`
+says what each field can declare, so a review can tell a requirement the request leaves unmet
+from one no field could evidence, which is not scored.
 """
 
 from collections.abc import Mapping
 from datetime import date
 from decimal import Decimal
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal, get_args
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
 
@@ -120,6 +121,25 @@ LABELS: dict[str, str] = {
     "ministerial": "uso permitido ministerialmente en el distrito",
     "variacion_aprobada": "variación en el uso previamente autorizada",
     "no_permitido": "uso no permitido en el distrito y sin variación autorizada",
+}
+
+
+def _options(literal: Any) -> str:
+    return "; ".join(LABELS[value] for value in get_args(literal))
+
+
+# What each core field of the form can declare, by the label `fields_es` shows it under.
+CORE_FORM_ES: dict[str, str] = {
+    "Solicitante": f"nombre, y tipo de solicitante ({_options(ApplicantType)})",
+    "Rol del solicitante": (
+        f"uno de: {_options(ApplicantRole)}; y si el dueño autoriza la acción propuesta"
+    ),
+    "Documento de legitimación activa": f"ninguno, o uno de: {_options(StandingDocument)}",
+    "Municipio y número de catastro": (
+        "municipio, número de catastro, y si la información catastral concuerda con el "
+        "sistema de la OGPe"
+    ),
+    "Calificación del distrito": "distrito de calificación del predio y lo que permite",
 }
 
 
@@ -285,6 +305,29 @@ class PcocPermitRequest(PermitRequestCore):
     district_parameters: DistrictParameters | None = None
     plans_certification: PlansCertification | None = None
 
+    @classmethod
+    def form_es(cls) -> dict[str, str]:
+        """Every field of the form and what it can declare, under the labels of `fields_es`."""
+        return {
+            "Tipo de solicitud": "Permiso de Construcción (PCOC), siempre una solicitud nueva",
+            **CORE_FORM_ES,
+            "Descripción de la obra": "texto libre que describe la obra",
+            "Plantas / altura / área bruta de piso": "número de plantas, altura y área bruta",
+            "Valor estimado de la obra": f"monto, y método de cálculo ({_options(WorkValueMethod)})",
+            "Parámetros del distrito": (
+                "tamaño del solar, densidad, área de ocupación, patios, espacios de "
+                "estacionamiento y de carga y descarga, cada uno junto al límite del distrito"
+            ),
+            "Documentos adjuntos": f"solo estos documentos: {_options(PcocDocument)}",
+            "Certificación de los planos": (
+                f"profesional que los sella y firma ({_options(PlansProfessional)}), su nombre "
+                "y licencia, quién los delineó, si cada hoja incluye sus certificaciones, si se "
+                "acompaña la certificación de cumplimiento del proyectista, y el formato y la "
+                "orientación al norte del archivo digital"
+            ),
+            "Derechos declarados": "monto de los derechos que el solicitante declara",
+        }
+
     def fields_es(self) -> dict[str, str]:
         """The request as labelled Spanish fields, as shown to models and Reviewers."""
         value = f"${self.estimated_work_value:,}" if self.estimated_work_value else "no declarado"
@@ -394,6 +437,31 @@ class PermisoUnicoPermitRequest(PermitRequestCore):
     @property
     def application_kind(self) -> ApplicationKind:
         return "nueva" if self.renewal is None else "renovacion"
+
+    @classmethod
+    def form_es(cls) -> dict[str, str]:
+        """Every field of the form and what it can declare, under the labels of `fields_es`."""
+        return {
+            "Tipo de solicitud": "Permiso Único, solicitud nueva o renovación",
+            **CORE_FORM_ES,
+            "Uso propuesto": f"texto libre que describe el uso, y uno de: {_options(UseAuthorization)}",
+            "Empleados / estacionamiento / horario": (
+                "número de empleados, espacios de estacionamiento provistos y requeridos por "
+                "el distrito, y horario de operación"
+            ),
+            "Licencias solicitadas": f"{_options(License)}; y años de vigencia solicitados",
+            "Croquis de la instalación": (
+                "área del local, y si muestra la distribución interna, la ubicación con "
+                "respecto a la vía de acceso, el estacionamiento y las dimensiones"
+            ),
+            "Zona inundable": "si el predio ubica o no en zona inundable",
+            "Documentos adjuntos": f"solo estos documentos: {_options(PermisoUnicoDocument)}",
+            "Derechos declarados": "monto de los derechos que el solicitante declara",
+            "Renovación": (
+                "solo en una renovación: número del permiso, fecha de expiración, fecha de "
+                "presentación, y si se acompaña la certificación de que el uso está conforme"
+            ),
+        }
 
     def fields_es(self) -> dict[str, str]:
         """The request as labelled Spanish fields, as shown to models and Reviewers."""

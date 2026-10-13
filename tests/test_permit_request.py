@@ -323,3 +323,11 @@ def test_good_permiso_unico_example_evidences_standing_parking_flood_zone_and_si
     assert "foto aérea del predio" in fields["Documentos adjuntos"]
     assert "ubicación geográfica del predio" in fields["Documentos adjuntos"]
     assert "área del local" in fields["Croquis de la instalación"]
+
+
+@pytest.mark.parametrize("raw", [GOOD_PCOC, GOOD_PERMISO_UNICO | {"renewal": RENEWAL}])
+def test_the_form_describes_every_field_a_request_shows(raw):
+    request = parse_permit_request(raw)
+
+    assert request.fields_es().keys() <= request.form_es().keys()
+    assert all(request.form_es().values())

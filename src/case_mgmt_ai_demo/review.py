@@ -16,6 +16,9 @@ the request are set aside before any Clause is selected or scored.
 
 A model adapter that fails raises ModelError; the pipeline records it in the Recommendation's
 `errors` and carries on with the safest reading (see each node) rather than aborting the review.
+
+The Recommendation carries a pipeline trace: what retrieval returned, with similarity scores, and
+what each node added to the graph state, in the order the nodes ran.
 """
 
 import operator
@@ -26,7 +29,7 @@ from typing import Annotated, Any, Literal, Protocol, TypedDict, get_args
 
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field, ValidationError, computed_field
-from pydantic_core import ErrorDetails
+from pydantic_core import ErrorDetails, to_jsonable_python
 
 from case_mgmt_ai_demo.chunks import Chunk, Clause, RequestType, split_clauses
 from case_mgmt_ai_demo.config import Settings
@@ -92,7 +95,11 @@ Verdict = Literal["approve", "not_approve", "manual_review"]
 ClauseCategory = Literal["aplica", "tramite_del_sistema", "no_aplica"]
 # write_notes runs at most twice: once, then once more if a citation is invalid.
 NOTES_ATTEMPTS = 2
-ModelStep = Literal["validate_sections", "select_requirements", "decide", "write_notes"]
+ModelStep = Literal[
+    "retrieve", "validate_sections", "select_requirements", "decide", "write_notes"
+]
+# How the graph is named in LangSmith, when tracing is on.
+RUN_NAME = "permit_review"
 
 
 class ClauseSelection(BaseModel):
@@ -148,6 +155,52 @@ class SectionRelevance(BaseModel):
     section_id: str
     applies: bool
     reason: str
+
+
+class Retrieved(BaseModel):
+    """A chunk semantic retrieval returned, with how near the request it is."""
+
+    chunk: Chunk
+    similarity: float | None = Field(
+        default=None,
+        description="Cosine similarity to the request, the best of its Section's parts; "
+        "None when the retriever does not score.",
+    )
+
+
+class RetrievedSection(BaseModel):
+    """One Section the review worked from, and how it got there."""
+
+    section_id: str
+    heading: str
+    similarity: float | None = Field(
+        description="None when only a pin brought it, or the retriever does not score."
+    )
+    pinned_by: list[str] = Field(description="IDs of the applicable Criteria that pin it.")
+    clause_refs: list[str] = Field(
+        default_factory=list,
+        description="Every Clause it holds; none is selected or scored when it does not apply.",
+    )
+
+
+class TraceStep(BaseModel):
+    """What one run of a node added to the graph state."""
+
+    node: str
+    output: dict[str, Any] = Field(
+        description="The state update as JSON; Sections, Clauses and Criteria by their IDs."
+    )
+
+
+class PipelineTrace(BaseModel):
+    retrieved: list[RetrievedSection] = Field(
+        default_factory=list, description="Semantic retrieval's Sections, nearest first, then pins."
+    )
+    steps: list[TraceStep] = Field(
+        default_factory=list,
+        description="In the order the nodes ran; write_notes and validate_citations twice "
+        "after a retry.",
+    )
 
 
 class RequirementAssessment(BaseModel):
@@ -212,6 +265,7 @@ class Recommendation(BaseModel):
     fee_check: FeeCheck | None = Field(
         default=None, description="None when the pipeline has no fee rules."
     )
+    trace: PipelineTrace = Field(default_factory=PipelineTrace)
 
     @property
     def set_aside_count(self) -> int:
@@ -260,8 +314,9 @@ class NotesLLM(Protocol):
 
 
 class SectionRetriever(Protocol):
-    def retrieve(self, request: PermitRequest) -> list[Chunk]:
-        """The Sections most relevant to the request."""
+    def retrieve(self, request: PermitRequest) -> list[Retrieved]:
+        """The Sections most relevant to the request (all their parts), nearest first, among
+        those of its Request Type."""
         ...
 
     def fetch(self, section_ids: Collection[str]) -> list[Chunk]:
@@ -291,6 +346,7 @@ class ReviewState(ReviewInput):
     request: PermitRequest
     criteria: list[Criterion]
     sections: list[Chunk]
+    retrieved: list[RetrievedSection]
     section_relevance: list[SectionRelevance]
     applicable_sections: list[Chunk]
     clauses: list[Clause]
@@ -356,7 +412,21 @@ class ReviewPipeline:
 
     def review(self, raw: Mapping[str, Any]) -> Recommendation:
         """Review a Permit Request given as raw fields; raises InvalidPermitRequest."""
-        state = ReviewState(**self._graph.invoke({"raw": raw}))
+        steps: list[TraceStep] = []
+        values: dict[str, Any] = {}
+        payload: Any  # a node's update, or the whole state, by mode
+        stream = self._graph.stream(
+            {"raw": raw}, {"run_name": RUN_NAME}, stream_mode=["updates", "values"]
+        )
+        for mode, payload in stream:
+            if mode == "values":
+                values = payload
+                continue
+            steps += [
+                TraceStep(node=node, output=_step_output(update))
+                for node, update in payload.items()
+            ]
+        state = ReviewState(**values)
         score = state["approval_score"]
         errors = state.get("errors", [])
         verdict = self._verdict(score, errors)
@@ -379,6 +449,7 @@ class ReviewPipeline:
             unknown_clause_refs=state["unknown_clause_refs"],
             errors=errors,
             fee_check=fee_check,
+            trace=PipelineTrace(retrieved=state["retrieved"], steps=steps),
         )
 
     def _verdict(self, score: float | None, errors: list[ModelFailure]) -> Verdict:
@@ -403,7 +474,14 @@ class ReviewPipeline:
         return {"fee_check": check_fee(state["request"], self._fee_rules)}
 
     def _retrieve(self, state: ReviewState) -> dict[str, Any]:
-        sections = self._retriever.retrieve(state["request"])
+        errors: list[ModelFailure] = []
+        try:
+            retrieved = self._retriever.retrieve(state["request"])
+        except ModelError as error:
+            # Pinned Sections are fetched by ID, so the Criteria are still assessed.
+            retrieved = []
+            errors.append(ModelFailure(step="retrieve", message=str(error)))
+        sections = [r.chunk for r in retrieved]
         pinned = [s for c in state["criteria"] for s in c.pinned_section_ids]
         found = {(chunk.section_id, chunk.part) for chunk in sections}
         sections += [
@@ -418,7 +496,24 @@ class ReviewPipeline:
                     f"Criterion {criterion.id} pins {', '.join(unmatched)}, "
                     "which no retrieved Section holds"
                 )
-        return {"sections": sections}
+        similarity = {r.chunk.section_id: r.similarity for r in retrieved}
+        headings: dict[str, str] = {}
+        for chunk in sections:
+            headings.setdefault(chunk.section_id, chunk.heading)
+        return {
+            "sections": sections,
+            "retrieved": [
+                RetrievedSection(
+                    section_id=section_id,
+                    heading=heading,
+                    similarity=similarity.get(section_id),
+                    pinned_by=[c.id for c in state["criteria"] if section_id in c.pinned_section_ids],
+                    clause_refs=[c.ref for c in clauses if c.section_id == section_id],
+                )
+                for section_id, heading in headings.items()
+            ],
+            "errors": errors,
+        }
 
     def _validate_sections(self, state: ReviewState) -> dict[str, Any]:
         """Ask once per Section, concurrently, whether it applies; a pinned Section always does."""
@@ -612,6 +707,23 @@ class _Question(BaseModel):
     criterion: Criterion | None = None
 
 
+def _step_output(update: Mapping[str, Any] | None) -> dict[str, Any]:
+    """A node's state update for the trace. Sections, Clauses and Criteria go by their IDs:
+    their text is in the index and the configuration."""
+    output: dict[str, Any] = {}
+    for key, value in (update or {}).items():
+        if key in ("sections", "applicable_sections"):
+            value = list(dict.fromkeys(chunk.section_id for chunk in value))
+        elif key == "clauses":
+            value = [clause.ref for clause in value]
+        elif key == "criteria":
+            value = [criterion.id for criterion in value]
+        elif key == "requirements":
+            value = [r.model_dump(exclude={"criterion"}) for r in value]
+        output[key] = to_jsonable_python(value)
+    return output
+
+
 def _retry_notes(rejected: list[DroppedNote], attempts: int) -> bool:
     """Notes with invalid citations go back to write_notes once."""
     return bool(rejected) and attempts < NOTES_ATTEMPTS
@@ -674,6 +786,11 @@ def _probability_es(probability: float | None) -> str:
 def _was_retrieved(cited: str, retrieved: set[str]) -> bool:
     """A citation may go down to a clause: 'RC-2023-E:2.1.9.2(m)' matches 'RC-2023-E:2.1.9.2'."""
     return cited in retrieved or cited.split("(", 1)[0] in retrieved
+
+
+def retrieval_query(request: PermitRequest) -> str:
+    """What semantic retrieval looks for: the request, as its labelled Spanish fields."""
+    return _fields(request)
 
 
 def relevance_prompt(chunks: list[Chunk], request: PermitRequest) -> str:

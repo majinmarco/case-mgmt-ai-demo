@@ -1,8 +1,8 @@
 """The chunk contract: one citable Section of the Reglamento as stored for retrieval.
 
-Ingestion produces these and every downstream component builds against them. Until
-retrieval reads the real index, `load_fixture_chunks()` serves ~10 hand-typed RC-2023-E
-Sections.
+Ingestion produces these and every downstream component builds against them.
+`load_fixture_chunks()` serves ~10 hand-typed RC-2023-E Sections, for tests and for the
+fixture retriever.
 """
 
 import json

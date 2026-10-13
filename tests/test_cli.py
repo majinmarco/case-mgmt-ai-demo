@@ -11,11 +11,15 @@ from case_mgmt_ai_demo.review import (
     ClauseSelection,
     DroppedNote,
     InvalidPermitRequest,
+    MissingPinnedClause,
     Note,
     ModelFailure,
+    PipelineTrace,
     Recommendation,
     RequirementAssessment,
+    RetrievedSection,
     SectionRelevance,
+    TraceStep,
 )
 from test_review import GOOD_PCOC, GOOD_PERMISO_UNICO, PCOC_PARAMETERS, PCOC_STANDING, PU_USE
 
@@ -386,6 +390,150 @@ def test_review_warns_about_clauses_the_selector_missed_or_invented(request_file
     out = capsys.readouterr().out
     assert "⚠ Inciso sin clasificar (se evalúa igualmente): RC-2023-E:2.1.9.3(b)" in out
     assert "⚠ Inciso desconocido descartado: RC-2023-E:2.1.9.2(z)" in out
+
+
+TRACE = PipelineTrace(
+    retrieved=[
+        RetrievedSection(
+            section_id="RC-2023-E:2.1.9.2",
+            heading="REQUISITOS DE PRESENTACIÓN",
+            similarity=0.5481,
+            pinned_by=[],
+        ),
+        RetrievedSection(
+            section_id="RC-2023-E:2.2.6",
+            heading="PRÓRROGA A LA VIGENCIA",
+            similarity=0.5312,
+            pinned_by=[],
+            clause_refs=["RC-2023-E:2.2.6(a)", "RC-2023-E:2.2.6(b)"],
+        ),
+        RetrievedSection(
+            section_id="RC-2023-E:2.1.9.5",
+            heading="LEGITIMACIÓN ACTIVA (STANDING)",
+            similarity=None,
+            pinned_by=["pcoc_legitimacion"],
+        ),
+    ],
+    steps=[
+        TraceStep(node="intake", output={"criteria": ["pcoc_legitimacion", "pcoc_parametros"]}),
+        TraceStep(
+            node="decide",
+            output={"approval_score": 0.86, "errors": [{"step": "decide", "message": "falló"}]},
+        ),
+    ],
+)
+
+
+def test_review_without_trace_prints_no_trace(request_file, capsys):
+    main(["review", str(request_file)], pipeline=FakePipeline(recommendation(trace=TRACE)))
+
+    out = capsys.readouterr().out
+    assert "Traza del pipeline" not in out
+    assert "Salida de cada nodo" not in out
+
+
+def test_review_with_trace_lists_each_retrieved_section_with_similarity_and_verdict(
+    request_file, capsys
+):
+    pipeline = FakePipeline(recommendation(trace=TRACE))
+
+    main(["review", "--trace", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert (
+        "Secciones recuperadas (similitud con la solicitud):\n"
+        "  0.548  RC-2023-E:2.1.9.2 REQUISITOS DE PRESENTACIÓN\n"
+        "      aplica: Aplica.\n"
+        "  0.531  RC-2023-E:2.2.6 PRÓRROGA A LA VIGENCIA\n"
+        "      no aplica: No se solicita una prórroga del permiso.\n"
+        "      incisos no evaluados: RC-2023-E:2.2.6(a), RC-2023-E:2.2.6(b)\n"
+        "    —    RC-2023-E:2.1.9.5 LEGITIMACIÓN ACTIVA (STANDING) (fijada por pcoc_legitimacion)\n"
+        "      aplica: Aplica.\n"
+    ) in out
+
+
+def test_review_with_trace_lists_every_clause_with_its_category_and_reason(request_file, capsys):
+    pipeline = FakePipeline(
+        recommendation(trace=TRACE, unclassified_clause_refs=["RC-2023-E:2.1.9.3(b)"])
+    )
+
+    main(["review", "--trace", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert (
+        "Selección de incisos:\n"
+        "  trámite del sistema  RC-2023-E:2.1.9.2(a): La presentación en el SUI la gestiona el "
+        "sistema.\n"
+        "  aplica               RC-2023-E:2.1.9.2(k): Los planos deben estar sellados y "
+        "certificados.\n"
+        "  no aplica            RC-2023-E:2.1.9.2(l): Solo para asuntos discrecionales.\n"
+        "  ⚠ sin clasificar (se evalúa igualmente)  RC-2023-E:2.1.9.3(b)\n"
+    ) in out
+    assert out.count("Selección de incisos:") == 1
+
+
+def test_review_with_trace_lists_each_requirement_with_its_clauses(request_file, capsys):
+    pipeline = FakePipeline(recommendation(trace=TRACE))
+
+    main(["review", "--trace", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert (
+        "Requisitos y sus incisos:\n"
+        "  0.91         pcoc_legitimacion: RC-2023-E:2.1.9.5(b)\n"
+        "  0.97         pcoc_parametros: RC-2023-E:2.2.1.3(d)\n"
+        "  0.86         seccion_2_1_9_2: RC-2023-E:2.1.9.2(k)\n"
+    ) in out
+
+
+def test_review_with_trace_prints_each_nodes_output(request_file, capsys):
+    pipeline = FakePipeline(recommendation(trace=TRACE))
+
+    main(["review", "--trace", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert out.endswith(
+        "Salida de cada nodo:\n"
+        "  intake\n"
+        '    criteria: ["pcoc_legitimacion", "pcoc_parametros"]\n'
+        "  decide\n"
+        "    approval_score: 0.86\n"
+        '    errors: [{"step": "decide", "message": "falló"}]\n'
+    )
+
+
+def test_review_with_trace_and_selection_lists_the_selection_once(request_file, capsys):
+    pipeline = FakePipeline(recommendation(trace=TRACE))
+
+    main(["review", "--trace", "--selection", str(request_file)], pipeline=pipeline)
+
+    out = capsys.readouterr().out
+    assert out.count("Selección de incisos:") == 1
+    assert "Secciones que no aplican:" not in out
+
+
+def test_review_reports_a_criterion_pin_the_sections_do_not_hold(request_file, capsys):
+    error = MissingPinnedClause("Criterion pcoc_planos pins RC-2023-E:2.1.9.2(k)")
+
+    assert main(["review", str(request_file)], pipeline=FakePipeline(error)) == 1
+
+    err = capsys.readouterr().err
+    assert "Criterion pcoc_planos pins RC-2023-E:2.1.9.2(k)" in err
+    assert "ingest" in err
+
+
+def test_review_against_an_index_without_rc_2023_e_says_to_ingest(
+    request_file, tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("PRA_RETRIEVER", "index")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+
+    assert main(["review", str(request_file)]) == 1
+
+    err = capsys.readouterr().err
+    assert f"El índice del Reglamento ({tmp_path / 'chroma'}) no contiene RC-2023-E" in err
+    assert "ingest" in err
 
 
 def test_review_marks_borderline_not_approve(request_file, capsys):

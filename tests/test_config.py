@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import pytest
+from langsmith import utils as langsmith_utils
 
 from case_mgmt_ai_demo.config import load_settings
 
@@ -12,9 +13,11 @@ def clean_env(monkeypatch):
         if key.startswith("PRA_"):
             monkeypatch.delenv(key)
     # setenv first so monkeypatch also removes keys load_settings exports from .env.
-    for key in ("OPENAI_API_KEY", "LANGSMITH_API_KEY"):
+    exported = ("OPENAI_API_KEY", "LANGSMITH_API_KEY", "LANGSMITH_TRACING", "LANGSMITH_TRACING_V2")
+    for key in exported:
         monkeypatch.setenv(key, "")
         monkeypatch.delenv(key)
+    monkeypatch.delenv("LANGCHAIN_TRACING_V2", raising=False)
 
 
 def test_defaults_use_design_models_and_thresholds():
@@ -31,6 +34,8 @@ def test_defaults_use_design_models_and_thresholds():
     assert settings.index_dir == Path("data/chroma")
     assert settings.db_path == Path("data/app.sqlite")
     assert settings.reglamento_pdf == Path("docs_to_use/RC-2023-E.pdf")
+    assert settings.retriever == "index"
+    assert settings.retrieval_top_k == 8
     assert settings.tessdata_dir is None
 
 
@@ -96,3 +101,45 @@ def test_rejects_borderline_band_that_excludes_cutoff(monkeypatch):
 
     with pytest.raises(ValueError, match="Borderline"):
         load_settings(env_file=None)
+
+
+def langsmith_tracing() -> bool:
+    """Whether LangSmith itself would trace a run now (it caches what it reads)."""
+    langsmith_utils.get_env_var.cache_clear()  # pyright: ignore[reportFunctionMemberAccess]
+    return langsmith_utils.tracing_is_enabled() is True
+
+
+def test_langsmith_tracing_is_on_when_its_api_key_is_set(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text("LANGSMITH_API_KEY=ls-from-file\n")
+
+    load_settings(env_file=str(env_file))
+
+    assert langsmith_tracing()
+
+
+def test_langsmith_tracing_is_off_without_its_api_key(monkeypatch):
+    monkeypatch.setenv("LANGSMITH_TRACING", "true")
+    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "true")
+
+    load_settings(env_file=None)
+
+    assert not langsmith_tracing()
+
+
+def test_langsmith_tracing_can_be_switched_off_with_its_api_key_set(monkeypatch):
+    monkeypatch.setenv("LANGSMITH_API_KEY", "ls-from-shell")
+    monkeypatch.setenv("LANGSMITH_TRACING", "false")
+
+    load_settings(env_file=None)
+
+    assert not langsmith_tracing()
+
+
+def test_the_retriever_and_its_top_k_are_configurable(monkeypatch):
+    monkeypatch.setenv("PRA_RETRIEVER", "fixture")
+    monkeypatch.setenv("PRA_RETRIEVAL_TOP_K", "12")
+
+    settings = load_settings(env_file=None)
+
+    assert (settings.retriever, settings.retrieval_top_k) == ("fixture", 12)

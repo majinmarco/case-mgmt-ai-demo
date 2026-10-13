@@ -16,6 +16,7 @@ from case_mgmt_ai_demo.review import (
     MissingPinnedClause,
     ModelError,
     Note,
+    Retrieved,
     ReviewPipeline,
     SectionRelevance,
 )
@@ -175,15 +176,28 @@ class FakeSelector:
 
 
 class FakeRetriever:
-    """Semantic retrieval returns `section_ids`; any fixture Section can be fetched by ID."""
+    """Semantic retrieval returns `section_ids`, each with the similarity `similarities` gives
+    it; any fixture Section can be fetched by ID. With `fail`, retrieval raises ModelError."""
 
-    def __init__(self, section_ids: set[str]):
+    def __init__(
+        self,
+        section_ids: set[str],
+        similarities: Mapping[str, float] | None = None,
+        fail: bool = False,
+    ):
         self.chunks = [c for c in load_fixture_chunks() if c.section_id in section_ids]
+        self.similarities = similarities or {}
+        self.fail = fail
         self.requests: list[PermitRequest] = []
 
-    def retrieve(self, request: PermitRequest) -> list[Chunk]:
+    def retrieve(self, request: PermitRequest) -> list[Retrieved]:
         self.requests.append(request)
-        return self.chunks
+        if self.fail:
+            raise ModelError("Embeddings: 500")
+        return [
+            Retrieved(chunk=chunk, similarity=self.similarities.get(chunk.section_id))
+            for chunk in self.chunks
+        ]
 
     def fetch(self, section_ids: Collection[str]) -> list[Chunk]:
         return [c for c in load_fixture_chunks() if c.section_id in section_ids]
@@ -1256,3 +1270,133 @@ def test_without_fee_rules_there_is_no_fee_check(retriever):
 
     assert recommendation.fee_check is None
     assert recommendation.notes == []
+
+
+def test_the_trace_lists_each_retrieved_section_with_its_similarity_and_its_pins():
+    retriever = FakeRetriever(
+        {"RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5"},
+        similarities={"RC-2023-E:2.1.9.3": 0.61, "RC-2023-E:2.1.9.5": 0.58},
+    )
+
+    recommendation = pipeline(
+        criterion_probabilities(), FakeNotesLLM([]), retriever, criteria=CRITERIA
+    ).review(GOOD_PCOC)
+
+    retrieved = recommendation.trace.retrieved
+    assert retrieved[0].clause_refs == [
+        "RC-2023-E:2.1.9.3(a)",
+        "RC-2023-E:2.1.9.3(b)",
+        "RC-2023-E:2.1.9.3(c)",
+    ]
+    assert [(s.section_id, s.heading, s.similarity, s.pinned_by) for s in retrieved] == [
+        ("RC-2023-E:2.1.9.3", "VALOR ESTIMADO DE LA OBRA", 0.61, []),
+        ("RC-2023-E:2.1.9.5", "LEGITIMACIÓN ACTIVA (STANDING)", 0.58, ["pcoc_legitimacion"]),
+        # Brought by its Criterion alone, so retrieval gave it no similarity.
+        (
+            "RC-2023-E:2.2.1.3",
+            "CRITERIOS DE EVALUACIÓN DE SOLICITUDES DE CARÁCTER MINISTERIAL",
+            None,
+            ["pcoc_parametros"],
+        ),
+    ]
+
+
+def test_a_split_section_is_one_retrieved_section_in_the_trace(pcoc_retriever):
+    recommendation = pipeline(FakeDecisions(), FakeNotesLLM([]), pcoc_retriever).review(GOOD_PCOC)
+
+    retrieved = [s.section_id for s in recommendation.trace.retrieved]
+    assert retrieved.count("RC-2023-E:2.1.9.2") == 1
+    assert retrieved == recommendation.retrieved_section_ids
+
+
+def test_the_trace_holds_each_nodes_output_in_the_order_the_nodes_ran(retriever):
+    validator = FakeSectionValidator({"RC-2023-E:2.1.9.3": "No hay obra que valorar."})
+
+    recommendation = pipeline(
+        FakeDecisions(default=0.86),
+        FakeNotesLLM([STANDING_NOTE]),
+        retriever,
+        validator=validator,
+        fee_rules=load_fee_rules(),
+    ).review(GOOD_PCOC)
+
+    steps = recommendation.trace.steps
+    nodes = [step.node for step in steps]
+    assert nodes[0] == "intake"
+    assert set(nodes[1:3]) == {"fee_check", "retrieve"}  # side by side
+    assert nodes[3:] == [
+        "validate_sections",
+        "select_requirements",
+        "decide",
+        "write_notes",
+        "validate_citations",
+    ]
+    output = {step.node: step.output for step in steps}
+    assert output["intake"]["request"]["applicant_name"] == GOOD_PCOC["applicant_name"]
+    assert output["fee_check"]["fee_check"]["section_ids"] == ["COBROS:AnejoA:6"]
+    # Sections and Clauses go by their IDs, not their text.
+    assert output["retrieve"]["sections"] == ["RC-2023-E:2.1.9.3", "RC-2023-E:2.1.9.5"]
+    assert output["validate_sections"]["applicable_sections"] == ["RC-2023-E:2.1.9.5"]
+    assert output["validate_sections"]["section_relevance"][0] == {
+        "section_id": "RC-2023-E:2.1.9.3",
+        "applies": False,
+        "reason": "No hay obra que valorar.",
+    }
+    assert "RC-2023-E:2.1.9.5(b)" in output["validate_sections"]["clauses"]
+    assert output["select_requirements"]["selection"][0]["category"] == "aplica"
+    assert output["decide"] == {
+        "requirements": [
+            {
+                "id": "seccion_2_1_9_5",
+                "text_es": "Requisitos aplicables de la Sección 2.1.9.5 "
+                "(LEGITIMACIÓN ACTIVA (STANDING))",
+                "clause_refs": output["validate_sections"]["clauses"],
+                "probability": 0.86,
+            }
+        ],
+        "approval_score": 0.86,
+        "errors": [],
+    }
+    assert output["write_notes"]["draft_notes"] == [STANDING_NOTE.model_dump()]
+    assert output["validate_citations"]["notes"] == [STANDING_NOTE.model_dump()]
+
+
+def test_the_trace_names_the_criteria_that_apply_by_their_ids(pcoc_retriever):
+    recommendation = pipeline(
+        criterion_probabilities(), FakeNotesLLM([]), pcoc_retriever, criteria=CRITERIA
+    ).review(GOOD_PCOC)
+
+    [intake] = [step for step in recommendation.trace.steps if step.node == "intake"]
+    assert intake.output["criteria"] == ["pcoc_legitimacion", "pcoc_parametros"]
+
+
+def test_a_notes_retry_shows_as_a_second_run_of_its_nodes_in_the_trace(retriever):
+    unretrieved = Note(
+        text="Cita lo que no se recuperó.", section_ids=["RC-2023-E:9.9"], curable=False
+    )
+    notes_llm = FakeNotesLLM([unretrieved], [STANDING_NOTE])
+
+    recommendation = pipeline(FakeDecisions(), notes_llm, retriever).review(GOOD_PCOC)
+
+    nodes = [step.node for step in recommendation.trace.steps]
+    assert nodes[-4:] == ["write_notes", "validate_citations", "write_notes", "validate_citations"]
+    first, second = [s.output for s in recommendation.trace.steps if s.node == "validate_citations"]
+    assert first["rejected_notes"][0]["unretrieved_section_ids"] == ["RC-2023-E:9.9"]
+    assert second["notes"] == [STANDING_NOTE.model_dump()]
+
+
+def test_a_retrieval_error_leaves_the_pinned_sections_and_is_recorded():
+    decisions = criterion_probabilities(pcoc_legitimacion=0.9, pcoc_parametros=0.8)
+    retriever = FakeRetriever({"RC-2023-E:2.1.9.3"}, fail=True)
+
+    recommendation = pipeline(
+        decisions, FakeNotesLLM([]), retriever, criteria=CRITERIA
+    ).review(GOOD_PCOC)
+
+    # The Criteria's Sections are fetched by ID, so they are still assessed.
+    assert recommendation.retrieved_section_ids == ["RC-2023-E:2.1.9.5", "RC-2023-E:2.2.1.3"]
+    assert recommendation.approval_score == 0.7
+    assert recommendation.verdict == "manual_review"
+    [error] = recommendation.errors
+    assert (error.step, error.subject) == ("retrieve", None)
+    assert "Embeddings: 500" in error.message

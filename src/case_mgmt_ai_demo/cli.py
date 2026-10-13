@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 from case_mgmt_ai_demo.fee_check import FeeCheck, money
-from case_mgmt_ai_demo.review import InvalidPermitRequest, Recommendation
+from case_mgmt_ai_demo.review import (
+    InvalidPermitRequest,
+    MissingPinnedClause,
+    Recommendation,
+    RetrievedSection,
+)
 
 if TYPE_CHECKING:  # imported when used: Chroma and pymupdf are slow to load
     from case_mgmt_ai_demo.index import Embedder
@@ -58,6 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
                 action="store_true",
                 help="List every clause with its category and the reason given.",
             )
+            subparser.add_argument(
+                "--trace",
+                action="store_true",
+                help="Print the pipeline trace: the retrieved Sections with their similarity, "
+                "the clause selection, each Requirement's clauses and each node's output.",
+            )
         if name == "ingest":
             subparser.add_argument(
                 "--pdf", type=Path, help="Reglamento PDF (default: PRA_REGLAMENTO_PDF)"
@@ -90,7 +101,9 @@ def main(
 ) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "review":
-        return _review(args.file, pipeline, show_selection=args.selection)
+        return _review(
+            args.file, pipeline, show_selection=args.selection, show_trace=args.trace
+        )
     if args.command == "ingest":
         pdfs = {"RC-2023-E": args.pdf, "COBROS-OA-2022-07": args.cobros_pdf}
         docs = [args.doc] if args.doc else list(INGESTION_CONFIGS)
@@ -101,7 +114,9 @@ def main(
     return 1
 
 
-def _review(path: Path, pipeline: RecommendationSource | None, show_selection: bool) -> int:
+def _review(
+    path: Path, pipeline: RecommendationSource | None, show_selection: bool, show_trace: bool
+) -> int:
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except OSError as error:
@@ -111,7 +126,17 @@ def _review(path: Path, pipeline: RecommendationSource | None, show_selection: b
         print(f"{path} no es JSON válido: {error}", file=sys.stderr)
         return 1
     if pipeline is None:
-        pipeline = _real_pipeline()
+        from case_mgmt_ai_demo.adapters import IndexNotBuilt
+
+        try:
+            pipeline = _real_pipeline()
+        except IndexNotBuilt as error:
+            print(
+                f"El índice del Reglamento ({error}) no contiene RC-2023-E: ejecute "
+                "`case-mgmt-ai-demo ingest`, o use PRA_RETRIEVER=fixture.",
+                file=sys.stderr,
+            )
+            return 1
     try:
         recommendation = pipeline.review(raw)
     except InvalidPermitRequest as error:
@@ -119,7 +144,14 @@ def _review(path: Path, pipeline: RecommendationSource | None, show_selection: b
         for message in error.errors:
             print(f"  - {message}", file=sys.stderr)
         return 1
-    print(format_recommendation(recommendation, show_selection))
+    except MissingPinnedClause as error:
+        print(
+            f"Los Criterios no concuerdan con las Secciones disponibles: {error}. "
+            "Revise los Criterios o vuelva a ejecutar `case-mgmt-ai-demo ingest`.",
+            file=sys.stderr,
+        )
+        return 1
+    print(format_recommendation(recommendation, show_selection, show_trace))
     return 0
 
 
@@ -206,7 +238,9 @@ def format_ingestion(result: "Ingestion", index_dir: Path) -> str:
     return "\n".join(lines)
 
 
-def format_recommendation(recommendation: Recommendation, show_selection: bool = False) -> str:
+def format_recommendation(
+    recommendation: Recommendation, show_selection: bool = False, show_trace: bool = False
+) -> str:
     request = recommendation.request
     score = recommendation.approval_score
     verdict = VERDICTS_ES[recommendation.verdict]
@@ -258,16 +292,73 @@ def format_recommendation(recommendation: Recommendation, show_selection: bool =
         for dropped in recommendation.dropped_notes:
             cited = f" [{', '.join(dropped.section_ids)}]" if dropped.section_ids else ""
             lines.append(f"  ⚠ {dropped.text}{cited}: {dropped.problem_es()}")
-    if show_selection:
+    if show_selection and not show_trace:  # the trace gives every Section's verdict itself
         if not_applicable:
             lines += ["", "Secciones que no aplican:"]
             lines += [f"  {r.section_id}: {r.reason}" for r in not_applicable]
-        width = max(map(len, CATEGORIES_ES.values()))
-        lines += ["", "Selección de incisos:"]
-        for selection in recommendation.selection:
-            category = CATEGORIES_ES[selection.category]
-            lines.append(f"  {category:<{width}}  {selection.ref}: {selection.reason}")
+        lines += ["", *_selection_lines(recommendation)]
+    if show_trace:
+        lines += ["", *_trace_lines(recommendation)]
     return "\n".join(lines)
+
+
+def _selection_lines(recommendation: Recommendation) -> list[str]:
+    width = max(map(len, CATEGORIES_ES.values()))
+    lines = ["Selección de incisos:"]
+    for selection in recommendation.selection:
+        category = CATEGORIES_ES[selection.category]
+        lines.append(f"  {category:<{width}}  {selection.ref}: {selection.reason}")
+    return lines
+
+
+def _trace_lines(recommendation: Recommendation) -> list[str]:
+    """The pipeline trace: what was retrieved and how near, what was set aside and why, what
+    each Requirement was assessed on, and what each node returned."""
+    trace = recommendation.trace
+    relevance = {r.section_id: r for r in recommendation.section_relevance}
+    lines = ["Traza del pipeline", "", "Secciones recuperadas (similitud con la solicitud):"]
+    for section in trace.retrieved:
+        verdict = ""
+        if found := relevance.get(section.section_id):
+            verdict = f"\n      {'aplica' if found.applies else 'no aplica'}: {found.reason}"
+            if not found.applies and section.clause_refs:
+                # Its Clauses never reach the selection below, so they are named here.
+                verdict += f"\n      incisos no evaluados: {', '.join(section.clause_refs)}"
+        lines.append(
+            f"  {_similarity(section)}  {section.section_id} {section.heading}"
+            f"{_pinned(section)}{verdict}"
+        )
+    lines += ["", *_selection_lines(recommendation)]
+    lines += [
+        f"  ⚠ sin clasificar (se evalúa igualmente)  {ref}"
+        for ref in recommendation.unclassified_clause_refs
+    ]
+    lines += ["", "Requisitos y sus incisos:"]
+    for requirement in recommendation.requirements:
+        probability = requirement.probability
+        shown = NOT_ASSESSED if probability is None else f"{probability:.2f}"
+        lines.append(
+            f"  {shown:<{len(NOT_ASSESSED)}}  {requirement.id}: "
+            f"{', '.join(requirement.clause_refs)}"
+        )
+    lines += ["", "Salida de cada nodo:"]
+    for step in trace.steps:
+        lines.append(f"  {step.node}")
+        lines += [
+            f"    {key}: {json.dumps(value, ensure_ascii=False)}"
+            for key, value in step.output.items()
+        ]
+    return lines
+
+
+def _similarity(section: RetrievedSection) -> str:
+    return "  —  " if section.similarity is None else f"{section.similarity:.3f}"
+
+
+def _pinned(section: RetrievedSection) -> str:
+    if not section.pinned_by:
+        return ""
+    return f" (fijada por {', '.join(section.pinned_by)})"
 
 
 def _fee_check_lines(fee_check: FeeCheck) -> list[str]:

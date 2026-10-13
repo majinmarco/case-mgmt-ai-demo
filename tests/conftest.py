@@ -17,6 +17,8 @@ COBROS_PDF = Path(__file__).parent.parent / "docs_to_use" / "COBROS OA-2022-07.p
 
 
 def pytest_configure(config):
+    # No test sends a run to LangSmith, even after one has loaded a .env holding its API key.
+    os.environ["LANGSMITH_TRACING"] = "false"
     config.addinivalue_line(
         "markers", "real_model: calls a real model API; runs only with RUN_REAL_MODEL_TESTS=1"
     )

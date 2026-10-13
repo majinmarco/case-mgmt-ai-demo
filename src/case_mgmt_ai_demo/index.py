@@ -13,10 +13,11 @@ from typing import Any, Protocol
 import chromadb
 from chromadb.config import Settings as ChromaSettings
 
-from case_mgmt_ai_demo.chunks import Chunk, Doc
+from case_mgmt_ai_demo.chunks import Chunk, Doc, RequestType
 
 COLLECTION = "reglamento"
 EMBEDDED_TEXT = "parents joined by ' > ', then the heading, then the text, one per line"
+SEARCHED_DOC: Doc = "RC-2023-E"
 _BATCH = 100
 
 
@@ -26,6 +27,12 @@ class Embedder(Protocol):
     model: str
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]: ...
+
+
+@dataclass(frozen=True)
+class Hit:
+    chunk: Chunk
+    similarity: float  # cosine similarity to the query: 1 for the same direction
 
 
 @dataclass(frozen=True)
@@ -89,17 +96,56 @@ class ReglamentoIndex:
 
     def section(self, section_id: str) -> list[Chunk]:
         """The chunk of a Section, or its parts in order; empty when the ID is unknown."""
+        return self.sections([section_id])
+
+    def sections(self, section_ids: Sequence[str]) -> list[Chunk]:
+        """Every chunk of the given Sections, in the order asked for, each one's parts in
+        order; unknown IDs give nothing."""
+        if not section_ids:
+            return []
         found = self._collection.get(
-            where={"section_id": section_id}, include=["metadatas", "documents"]
+            where={"section_id": {"$in": list(section_ids)}}, include=["metadatas", "documents"]
         )
         chunks = [
             _chunk(metadata, text)
             for metadata, text in zip(found["metadatas"] or [], found["documents"] or [])
         ]
-        return sorted(chunks, key=lambda chunk: chunk.part_number)
+        asked = {section_id: position for position, section_id in enumerate(section_ids)}
+        return sorted(chunks, key=lambda chunk: (asked[chunk.section_id], chunk.part_number))
+
+    def search(
+        self, embedding: Sequence[float], request_type: RequestType, top_k: int
+    ) -> list[Hit]:
+        """The `top_k` chunks nearest the query among those tagged with the Request Type,
+        nearest first. Only the body of RC-2023-E is searched: a glossary term defines a word
+        and the fee order sets charges (the Fee Check's), so neither states a requirement."""
+        found = self._collection.query(
+            query_embeddings=[list(embedding)],
+            n_results=top_k,
+            where={
+                "$and": [
+                    {"request_types": {"$contains": request_type}},
+                    {"doc": SEARCHED_DOC},
+                    {"level": {"$ne": "glossary_term"}},
+                ]
+            },
+            include=["metadatas", "documents", "distances"],
+        )
+        metadatas = (found["metadatas"] or [[]])[0]
+        documents = (found["documents"] or [[]])[0]
+        distances = (found["distances"] or [[]])[0]
+        return [
+            Hit(chunk=_chunk(metadata, text), similarity=1 - distance)
+            for metadata, text, distance in zip(metadatas, documents, distances)
+        ]
 
     def count(self) -> int:
         return self._collection.count()
+
+    def searchable(self) -> bool:
+        """Whether the document `search` covers has been ingested."""
+        found = self._collection.get(where={"doc": SEARCHED_DOC}, limit=1, include=[])
+        return bool(found["ids"])
 
 
 def _metadata(chunk: Chunk, model: str) -> dict[str, Any]:

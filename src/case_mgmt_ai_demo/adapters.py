@@ -4,6 +4,7 @@ import json
 from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from importlib.resources import files
+from typing import TYPE_CHECKING
 
 from openai import OpenAI, OpenAIError
 from pydantic import BaseModel, ValidationError
@@ -18,11 +19,18 @@ from case_mgmt_ai_demo.review import (
     FixedCategory,
     ModelError,
     Note,
+    Retrieved,
     ReviewPipeline,
     SectionRelevance,
+    SectionRetriever,
     relevance_prompt,
+    retrieval_query,
     selection_prompt,
 )
+
+
+if TYPE_CHECKING:  # imported when used: Chroma is slow to load
+    from case_mgmt_ai_demo.index import Embedder, ReglamentoIndex
 
 
 @contextmanager
@@ -135,16 +143,64 @@ class OpenAIEmbedder:
 
 
 class FixtureRetriever:
-    """Stands in for Chroma retrieval: every fixture Section tagged with the Request Type."""
+    """Stands in for Chroma retrieval: every fixture Section tagged with the Request Type,
+    without a similarity."""
 
     def __init__(self):
         self._chunks = load_fixture_chunks()
 
-    def retrieve(self, request: PermitRequest) -> list[Chunk]:
-        return [chunk for chunk in self._chunks if request.request_type in chunk.request_types]
+    def retrieve(self, request: PermitRequest) -> list[Retrieved]:
+        return [
+            Retrieved(chunk=chunk)
+            for chunk in self._chunks
+            if request.request_type in chunk.request_types
+        ]
 
     def fetch(self, section_ids: Collection[str]) -> list[Chunk]:
         return [chunk for chunk in self._chunks if chunk.section_id in section_ids]
+
+
+class IndexRetriever:
+    """Retrieval from the Reglamento index: the Sections nearest the request, among those of
+    its Request Type."""
+
+    def __init__(self, index: "ReglamentoIndex", embedder: "Embedder", top_k: int):
+        self._index = index
+        self._embedder = embedder
+        self._top_k = top_k
+
+    def retrieve(self, request: PermitRequest) -> list[Retrieved]:
+        with _model_errors(self._embedder.model):
+            [embedding] = self._embedder.embed([retrieval_query(request)])
+        # Nearest first, so the first hit of a split Section is its best part.
+        similarity: dict[str, float] = {}
+        for hit in self._index.search(embedding, request.request_type, self._top_k):
+            similarity.setdefault(hit.chunk.section_id, hit.similarity)
+        # Every part of a Section, not only the part found: its Clauses are judged together.
+        return [
+            Retrieved(chunk=chunk, similarity=similarity[chunk.section_id])
+            for chunk in self._index.sections(list(similarity))
+        ]
+
+    def fetch(self, section_ids: Collection[str]) -> list[Chunk]:
+        return self._index.sections(sorted(section_ids))
+
+
+class IndexNotBuilt(RuntimeError):
+    """`review` is set to read the Reglamento index, and RC-2023-E is not in it."""
+
+
+def build_retriever(settings: Settings, client: OpenAI) -> SectionRetriever:
+    """The retriever the configuration names (`PRA_RETRIEVER`)."""
+    if settings.retriever == "fixture":
+        return FixtureRetriever()
+    from case_mgmt_ai_demo.index import ReglamentoIndex
+
+    index = ReglamentoIndex(settings.index_dir)
+    if not index.searchable():
+        raise IndexNotBuilt(str(settings.index_dir))
+    embedder = OpenAIEmbedder(client, settings.embedding_model)
+    return IndexRetriever(index, embedder, settings.retrieval_top_k)
 
 
 def load_fixed_clause_categories() -> list[FixedCategory]:
@@ -157,7 +213,7 @@ def build_review_pipeline(settings: Settings, client: OpenAI) -> ReviewPipeline:
     return ReviewPipeline(
         OpenAIDecisions(client, settings.decisions_api_model),
         OpenAINotesLLM(client, settings.notes_model),
-        FixtureRetriever(),
+        build_retriever(settings, client),
         OpenAIRequirementSelector(client, settings.selector_model),
         OpenAISectionValidator(client, settings.section_validator_model),
         settings,

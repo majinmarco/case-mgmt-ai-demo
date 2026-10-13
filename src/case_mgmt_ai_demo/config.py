@@ -3,13 +3,16 @@
 Every value has a default and can be overridden by a `PRA_`-prefixed
 environment variable (or the same key in `.env`). Loading settings also
 exports `.env` into the process environment so the OpenAI and LangSmith
-SDKs find their API keys; variables already set in the shell win.
+SDKs find their API keys; variables already set in the shell win. LangSmith
+tracing is on only when `LANGSMITH_API_KEY` is set.
 """
 
+import os
 from pathlib import Path
+from typing import Literal
 
 from dotenv import load_dotenv
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +24,12 @@ class Settings(BaseSettings):
     selector_model: str = "gpt-6-luna"
     section_validator_model: str = "gpt-6-luna"
     embedding_model: str = "text-embedding-3-large"
+
+    # Where review gets its Sections: the Chroma index `ingest` builds, or the hand-typed
+    # fixture (no index and no embedding call needed).
+    retriever: Literal["index", "fixture"] = "index"
+    # How many chunks semantic retrieval returns, before the pinned Sections are added.
+    retrieval_top_k: int = Field(default=8, gt=0)
 
     approval_cutoff: float = 0.5
     borderline_low: float = 0.4
@@ -55,5 +64,17 @@ class Settings(BaseSettings):
 def load_settings(env_file: str | None = ".env") -> Settings:
     if env_file is not None:
         load_dotenv(env_file, override=False)
+    _set_langsmith_tracing()
     # `_env_file` is a pydantic-settings runtime kwarg that type checkers can't see.
     return Settings(_env_file=env_file)  # pyright: ignore[reportCallIssue]
+
+
+def _set_langsmith_tracing() -> None:
+    """LangGraph sends its runs to LangSmith only when the API key is set. Without one tracing
+    is switched off, whatever the environment says; with one, `LANGSMITH_TRACING=false` still
+    switches it off."""
+    if not os.environ.get("LANGSMITH_API_KEY", "").strip():
+        # Both names LangSmith reads, since the older one wins.
+        os.environ["LANGSMITH_TRACING_V2"] = os.environ["LANGSMITH_TRACING"] = "false"
+    else:
+        os.environ.setdefault("LANGSMITH_TRACING", "true")

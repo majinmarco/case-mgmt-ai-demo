@@ -472,6 +472,46 @@ def test_ingest_without_index_writes_the_report_and_prints_a_summary(
     assert not (tmp_path / "chroma").exists()
 
 
+def test_ingest_covers_the_fee_order_as_well_as_rc_2023_e(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+
+    exit_code = main(["ingest", "--no-index", "--no-ocr"])
+
+    out = capsys.readouterr().out
+    assert exit_code == 0
+    cobros = json.loads((tmp_path / "COBROS-OA-2022-07.ingestion_report.json").read_text())
+    assert cobros["chunks_by_level"] == {"seccion": 10, "anejo_item": 58}
+    assert out.index("Ingesta de RC-2023-E.pdf") < out.index("Ingesta de COBROS OA-2022-07.pdf")
+    assert "Fragmentos: 68 de 66 Secciones (2 divididas en partes)" in out
+    # The fee order draws no text as outlines, so its summary says nothing about OCR.
+    assert out.count("Texto trazado como contornos") == out.count("Sin OCR") == 1
+
+
+def test_ingest_of_one_document_leaves_the_other_alone(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+
+    exit_code = main(["ingest", "--no-index", "--doc", "COBROS-OA-2022-07"])
+
+    assert exit_code == 0
+    assert "Ingesta de COBROS OA-2022-07.pdf (COBROS-OA-2022-07)" in capsys.readouterr().out
+    assert sorted(path.name for path in tmp_path.iterdir()) == [
+        "COBROS-OA-2022-07.chunks.jsonl",
+        "COBROS-OA-2022-07.ingestion_report.json",
+    ]
+
+
+def test_ingest_reports_a_missing_fee_order_pdf_before_ingesting_anything(
+    tmp_path, monkeypatch, capsys
+):
+    monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
+
+    exit_code = main(["ingest", "--no-index", "--cobros-pdf", str(tmp_path / "nope.pdf")])
+
+    assert exit_code == 1
+    assert "No se encontró el PDF de la orden de cobros" in capsys.readouterr().err
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_ingest_reports_a_missing_pdf(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv("PRA_DATA_DIR", str(tmp_path))
 

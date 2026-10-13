@@ -26,6 +26,9 @@ VERDICTS_ES = {
     "manual_review": "Sin puntuación — revisión manual",
 }
 
+# Each document of the Reglamento with its ingestion configuration, in the order ingested.
+INGESTION_CONFIGS = {"RC-2023-E": "rc_2023_e", "COBROS-OA-2022-07": "cobros_oa_2022_07"}
+
 NOT_ASSESSED = "no evaluado"
 
 CATEGORIES_ES = {
@@ -60,6 +63,14 @@ def build_parser() -> argparse.ArgumentParser:
                 "--pdf", type=Path, help="Reglamento PDF (default: PRA_REGLAMENTO_PDF)"
             )
             subparser.add_argument(
+                "--cobros-pdf", type=Path, help="Fee order PDF (default: PRA_COBROS_PDF)"
+            )
+            subparser.add_argument(
+                "--doc",
+                choices=list(INGESTION_CONFIGS),
+                help="Ingest only this document (default: both).",
+            )
+            subparser.add_argument(
                 "--no-index",
                 action="store_true",
                 help="Chunk and write the report only: no embeddings, index untouched.",
@@ -81,7 +92,11 @@ def main(
     if args.command == "review":
         return _review(args.file, pipeline, show_selection=args.selection)
     if args.command == "ingest":
-        return _ingest(args.pdf, embedder, index=not args.no_index, ocr=not args.no_ocr)
+        pdfs = {"RC-2023-E": args.pdf, "COBROS-OA-2022-07": args.cobros_pdf}
+        docs = [args.doc] if args.doc else list(INGESTION_CONFIGS)
+        return _ingest(
+            {doc: pdfs[doc] for doc in docs}, embedder, index=not args.no_index, ocr=not args.no_ocr
+        )
     print(f"'{args.command}' is not implemented yet.", file=sys.stderr)
     return 1
 
@@ -118,17 +133,23 @@ def _real_pipeline() -> RecommendationSource:
     return build_review_pipeline(settings, OpenAI())
 
 
-def _ingest(pdf: Path | None, embedder: "Embedder | None", index: bool, ocr: bool) -> int:
+def _ingest(
+    pdfs: Mapping[str, Path | None], embedder: "Embedder | None", index: bool, ocr: bool
+) -> int:
+    """Ingests each document in `pdfs`; None stands for the configured PDF."""
     from case_mgmt_ai_demo.chunking import load_ingestion_config
     from case_mgmt_ai_demo.config import load_settings
     from case_mgmt_ai_demo.extraction import find_tessdata
     from case_mgmt_ai_demo.ingest import ingest
 
     settings = load_settings()  # exports .env, so before OpenAI()
-    pdf = pdf or settings.reglamento_pdf
-    if not pdf.is_file():
-        print(f"No se encontró el PDF del Reglamento: {pdf}", file=sys.stderr)
-        return 1
+    configured = {"RC-2023-E": settings.reglamento_pdf, "COBROS-OA-2022-07": settings.cobros_pdf}
+    sources = {doc: pdf or configured[doc] for doc, pdf in pdfs.items()}
+    for doc, pdf in sources.items():
+        if not pdf.is_file():
+            which = "del Reglamento" if doc == "RC-2023-E" else "de la orden de cobros"
+            print(f"No se encontró el PDF {which}: {pdf}", file=sys.stderr)
+            return 1
     if index and embedder is None:
         from openai import OpenAI
 
@@ -136,17 +157,20 @@ def _ingest(pdf: Path | None, embedder: "Embedder | None", index: bool, ocr: boo
 
         embedder = OpenAIEmbedder(OpenAI(), settings.embedding_model)
     tessdata = find_tessdata(settings.tessdata_dir) if ocr else None
-    if tessdata:
-        print("Extrayendo el texto (el OCR de las páginas con texto trazado tarda unos minutos)…")
-    result = ingest(
-        pdf,
-        load_ingestion_config(),
-        settings.data_dir,
-        settings.index_dir,
-        embedder if index else None,
-        tessdata,
-    )
-    print(format_ingestion(result, settings.index_dir))
+    for doc, pdf in sources.items():
+        if tessdata and doc == "RC-2023-E":
+            print(
+                "Extrayendo el texto (el OCR de las páginas con texto trazado tarda unos minutos)…"
+            )
+        result = ingest(
+            pdf,
+            load_ingestion_config(INGESTION_CONFIGS[doc]),
+            settings.data_dir,
+            settings.index_dir,
+            embedder if index else None,
+            tessdata,
+        )
+        print(format_ingestion(result, settings.index_dir))
     return 0
 
 
@@ -157,14 +181,17 @@ def format_ingestion(result: "Ingestion", index_dir: Path) -> str:
         f"Ingesta de {report.pdf} ({report.config.doc})",
         f"Fragmentos: {report.chunks} de {report.sections} Secciones "
         f"({report.split_sections} divididas en partes)",
-        f"Texto trazado como contornos: {outlined.read} tramos leídos por OCR, "
-        f"{outlined.unread} sin leer (marcados […])",
     ]
-    if not outlined.ocr:
+    if outlined.read or outlined.unread:
         lines.append(
-            "  ⚠ Sin OCR (--no-ocr, o falta el modelo de español de Tesseract, "
-            "spa.traineddata: instálelo o indique PRA_TESSDATA_DIR)."
+            f"Texto trazado como contornos: {outlined.read} tramos leídos por OCR, "
+            f"{outlined.unread} sin leer (marcados […])"
         )
+        if not outlined.ocr:
+            lines.append(
+                "  ⚠ Sin OCR (--no-ocr, o falta el modelo de español de Tesseract, "
+                "spa.traineddata: instálelo o indique PRA_TESSDATA_DIR)."
+            )
     lines.append(f"Avisos de extracción: {len(report.flags)}")
     lines += [f"  {count:>4}  {check}" for check, count in sorted(report.flags_by_check.items())]
     if result.indexed:

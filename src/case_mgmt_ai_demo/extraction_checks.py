@@ -23,13 +23,17 @@ Check = Literal[
     "clause_lettering_gap",
     "section_out_of_sequence",
     "short_chunk",
+    "unnamed_term",
 ]
 
 SHORT_CHUNK_CHARS = 40
 
 _RUNNING_HEADER = re.compile(
     r"REGLAMENTO CONJUNTO\s*\|\s*[\divxlc]+\b|\b[\divxlc]+\s*\|\s*REGLAMENTO CONJUNTO"
-    r"|^\s*REGLAMENTO CONJUNTO\s*$",
+    r"|^\s*REGLAMENTO CONJUNTO\s*$"
+    # COBROS: the title under the order's number, and the office's address at the foot.
+    r"|Para establecer el cobro por solicitudes, documentos\s+y servicios"
+    r"|Ave\. F\.D Roosevelt #385|PO Box 41179",
     re.MULTILINE,
 )
 _CLAUSE_LETTERS = "abcdefghijklmnñopqrstuvwxyz"
@@ -49,6 +53,15 @@ def check_chunks(chunks: Sequence[Chunk]) -> list[Flag]:
             Flag(section_id=chunk.section_id, part=chunk.part, check=check, detail=detail)
             for check, detail in _text_problems(chunk.text)
         ]
+        if chunk.level == "glossary_term" and not chunk.heading:
+            flags.append(
+                Flag(
+                    section_id=chunk.section_id,
+                    check="unnamed_term",
+                    detail="the term's name was not found: it is not in bold, or it is drawn "
+                    "as outlines",
+                )
+            )
     flags += _clause_lettering_gaps(chunks)
     flags += _sections_out_of_sequence(chunks)
     return flags

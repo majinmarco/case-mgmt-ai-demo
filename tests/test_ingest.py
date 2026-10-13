@@ -13,7 +13,7 @@ from case_mgmt_ai_demo.chunking import load_ingestion_config
 from case_mgmt_ai_demo.chunks import Chunk, split_clauses
 from case_mgmt_ai_demo.index import COLLECTION, ReglamentoIndex, chunk_id
 from case_mgmt_ai_demo.ingest import ingest
-from conftest import RC_PDF
+from conftest import COBROS_PDF, RC_PDF
 from test_index import FakeEmbedder
 
 
@@ -169,7 +169,8 @@ def test_every_chunk_in_the_index_has_its_document_and_pages_in_the_metadata(ing
     assert len(metadatas) == result.report.chunks
     for metadata in metadatas:
         assert metadata["doc"] == "RC-2023-E"
-        assert 54 <= metadata["page_start"] <= metadata["page_end"] <= 824
+        first, last = (829, 955) if metadata["level"] == "glossary_term" else (54, 824)
+        assert first <= metadata["page_start"] <= metadata["page_end"] <= last
 
 
 def test_every_written_chunk_validates_against_the_chunk_contract(ingested):
@@ -216,3 +217,89 @@ def test_ingesting_again_embeds_nothing_and_leaves_the_same_report_and_index(ing
     assert second.indexed.unchanged == first.report.chunks
     assert second.report_path.read_text(encoding="utf-8") == report_before
     assert ReglamentoIndex(data_dir / "chroma").count() == first.report.chunks
+
+
+def test_each_glossary_term_is_in_the_index_under_its_own_section_id(ingested):
+    data_dir, result, _ = ingested
+
+    index = ReglamentoIndex(data_dir / "chroma")
+
+    [haulage] = index.section("RC-2023-E:Glosario:A.1")
+    assert (haulage.level, haulage.heading) == ("glossary_term", "Acarreo")
+    assert (haulage.doc, haulage.page_start, haulage.page_end) == ("RC-2023-E", 829, 829)
+    [zoning] = index.section("RC-2023-E:Glosario:Z.21")
+    assert (zoning.heading, zoning.page_start) == ("Zonificación", 955)
+    assert result.report.chunks_by_level["glossary_term"] == 1431
+
+
+def test_the_glossary_is_not_duplicated_inside_section_chunks(ingested):
+    _, result, _ = ingested
+    chunks = [
+        Chunk.model_validate_json(line)
+        for line in result.chunks_path.read_text(encoding="utf-8").splitlines()
+    ]
+    haulage = "Acción de cargar y transportar de un lugar a otro los materiales"
+
+    assert [chunk.section_id for chunk in chunks if haulage in chunk.text] == [
+        "RC-2023-E:Glosario:A.1"
+    ]
+    body = [chunk for chunk in chunks if chunk.level != "glossary_term"]
+    assert max(chunk.page_end for chunk in body) < 829  # the glossary's terms start on p. 829
+    assert "Tomo XII" not in {parent for chunk in body for parent in chunk.parents}
+
+
+@pytest.fixture(scope="module")
+def with_cobros(ingested):
+    """COBROS ingested into the index that already holds RC-2023-E."""
+    data_dir, reglamento, _ = ingested
+    embedder = FakeEmbedder()
+    config = load_ingestion_config("cobros_oa_2022_07")
+    result = ingest(COBROS_PDF, config, data_dir, data_dir / "chroma", embedder)
+    return data_dir, reglamento, result, embedder
+
+
+def test_ingesting_cobros_extends_the_index_without_touching_rc_2023_e(with_cobros):
+    data_dir, reglamento, cobros, embedder = with_cobros
+
+    index = ReglamentoIndex(data_dir / "chroma")
+
+    assert cobros.indexed is not None
+    assert (cobros.indexed.embedded, cobros.indexed.removed) == (cobros.report.chunks, 0)
+    assert len(embedder.embedded) == cobros.report.chunks
+    assert index.count() == reglamento.report.chunks + cobros.report.chunks
+    assert index.section("RC-2023-E:3.7.1.1")[0].page_start == 247
+    [pcoc] = index.section("COBROS:AnejoA:6")
+    assert (pcoc.doc, pcoc.level, pcoc.page_start, pcoc.page_end) == (
+        "COBROS-OA-2022-07",
+        "anejo_item",
+        13,
+        14,
+    )
+    assert "Derechos a cobrarse: $ 0.35" in pcoc.text
+
+
+def test_every_cobros_chunk_in_the_index_has_its_document_and_pages_in_the_metadata(with_cobros):
+    data_dir, _, cobros, _ = with_cobros
+    client = chromadb.PersistentClient(
+        path=str(data_dir / "chroma"), settings=ChromaSettings(anonymized_telemetry=False)
+    )
+
+    metadatas: Any = client.get_collection(COLLECTION).get(
+        where={"doc": "COBROS-OA-2022-07"}, include=["metadatas"]
+    )["metadatas"]
+
+    assert len(metadatas) == cobros.report.chunks
+    for metadata in metadatas:
+        assert 4 <= metadata["page_start"] <= metadata["page_end"] <= 34
+
+
+def test_every_written_cobros_chunk_validates_against_the_chunk_contract(with_cobros):
+    data_dir, _, cobros, _ = with_cobros
+
+    lines = cobros.chunks_path.read_text(encoding="utf-8").splitlines()
+
+    assert cobros.chunks_path == data_dir / "COBROS-OA-2022-07.chunks.jsonl"
+    assert len(lines) == cobros.report.chunks == 68
+    assert all(Chunk.model_validate_json(line) for line in lines)
+    assert cobros.report.flags == []
+    assert cobros.report.chunks_by_level == {"seccion": 10, "anejo_item": 58}

@@ -7,9 +7,10 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from case_mgmt_ai_demo.chunking import IngestionConfig, chunk_lines
-from case_mgmt_ai_demo.extraction import extract_lines
+from case_mgmt_ai_demo.chunking import Chunking, IngestionConfig, chunk_glossary, chunk_lines
+from case_mgmt_ai_demo.extraction import Extraction, extract_lines
 from case_mgmt_ai_demo.extraction_checks import Flag, check_chunks
+from case_mgmt_ai_demo.fee_order import chunk_fee_order
 from case_mgmt_ai_demo.index import EMBEDDED_TEXT, Embedder, ReglamentoIndex, SyncResult
 
 
@@ -60,10 +61,7 @@ def ingest(
 ) -> Ingestion:
     """Without an `embedder` the chunks and the report are written but the index is left
     alone, so chunking can be reviewed without calling the embeddings API."""
-    extraction = extract_lines(
-        pdf, config.first_page, config.last_page, config.footer_top, tessdata
-    )
-    chunking = chunk_lines(extraction.lines, config)
+    extraction, chunking = _chunked(pdf, config, tessdata)
     chunks = chunking.chunks
     flags = check_chunks(chunks)
     read = [run for run in extraction.outlined_runs if run.recovered]
@@ -98,4 +96,34 @@ def ingest(
     indexed = ReglamentoIndex(index_dir).sync(config.doc, chunks, embedder) if embedder else None
     return Ingestion(
         report=report, report_path=report_path, chunks_path=chunks_path, indexed=indexed
+    )
+
+
+def _chunked(
+    pdf: Path, config: IngestionConfig, tessdata: Path | None
+) -> tuple[Extraction, Chunking]:
+    """What was extracted and the chunks made of it, by the document's layout."""
+    if config.layout == "fee_order":
+        # The fee order has no text drawn as outlines, so it is read without OCR.
+        return Extraction(lines=[], outlined_runs=[], ocr=False), chunk_fee_order(pdf, config)
+    extraction = extract_lines(
+        pdf, config.first_page, config.last_page, config.footer_top, tessdata
+    )
+    chunking = chunk_lines(extraction.lines, config)
+    if config.glossary is None:
+        return extraction, chunking
+    pages = config.glossary
+    terms = extract_lines(pdf, pages.first_page, pages.last_page, config.footer_top, tessdata)
+    glossary = chunk_glossary(terms.lines, config)
+    return (
+        Extraction(
+            lines=extraction.lines + terms.lines,
+            outlined_runs=extraction.outlined_runs + terms.outlined_runs,
+            ocr=extraction.ocr,
+        ),
+        Chunking(
+            chunks=chunking.chunks + glossary.chunks,
+            skipped=chunking.skipped + glossary.skipped,
+            repeated=chunking.repeated + glossary.repeated,
+        ),
     )

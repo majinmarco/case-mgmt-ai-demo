@@ -4,9 +4,16 @@ doc: RC-2023-E
 
 # The body: Tomos I-XI. Before it come the cover, the Governor's certification (pp. 6-10 are
 # scans) and the table of contents (pp. 11-51). After it comes Tomo XII, the glossary, which
-# has no Reglas or Secciones and is indexed one chunk per term (CMAWD-10).
+# has no Reglas or Secciones.
 first_page: 53
 last_page: 824
+
+# The terms of Tomo XII (III. Glosario de términos), indexed one chunk per term. Its
+# introduction and list of acronyms (pp. 825-828) and the analysis that follows the terms
+# (IV, from p. 957) are not indexed.
+glossary:
+  first_page: 829
+  last_page: 957
 
 # The running header ("REGLAMENTO CONJUNTO | 25") is printed in a band at the foot of the page.
 footer_top: 738

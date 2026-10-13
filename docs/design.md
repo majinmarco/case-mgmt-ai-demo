@@ -105,10 +105,10 @@ The ingestion output every downstream component builds against:
 
 | Field | Example / values |
 |---|---|
-| `section_id` | `RC-2023-E:3.7.1.2`, `COBROS:AnejoA:6` (canonical, unique per Section); `RC-2023-E:2.2.6` for a Regla, `RC-2023-E:1.2` for a Capítulo, `RC-2023-E:Tomo-II` for a Tomo |
+| `section_id` | `RC-2023-E:3.7.1.2`, `COBROS:AnejoA:6` (canonical, unique per Section); `RC-2023-E:2.2.6` for a Regla, `RC-2023-E:1.2` for a Capítulo, `RC-2023-E:Tomo-II` for a Tomo; `RC-2023-E:Glosario:A.1` for a glossary term (letter and number as printed); `COBROS:TERCERO` for an ordinal of the fee order |
 | `doc` | `RC-2023-E` \| `COBROS-OA-2022-07` |
 | `level` | `tomo` \| `capitulo` \| `regla` \| `seccion` \| `anejo_item` \| `glossary_term` |
-| `heading` | `REQUISITOS DE PRESENTACIÓN` |
+| `heading` | `REQUISITOS DE PRESENTACIÓN`; the term for a glossary term (`Acarreo`); the product for an Anejo A item |
 | `parents` | `["Tomo III", "Capítulo 3.7", "Regla 3.7.1"]` |
 | `page_start`, `page_end` | source PDF pages: physical, 1-based page index (not the printed footer number), also stored in the index metadata so a citation links to `<pdf>#page=N` |
 | `text` | full Section text, Clauses preserved |
@@ -116,7 +116,7 @@ The ingestion output every downstream component builds against:
 
 - Chunk at **Sección** level (Regla level when a Regla has no Secciones). Strip running headers/footers; skip the RC table of contents; index the Tomo XII glossary one chunk per term.
 - A Regla, Capítulo or Tomo is also a chunk for the text it holds directly (a Capítulo without Reglas, or a Regla's text before its first Sección), at its own `level`.
-- `request_types` come from Section number prefixes in the ingestion configuration (`fixtures/ingestion/rc_2023_e.yaml`); a Section no prefix covers is tagged with both.
+- `request_types` come from Section number prefixes in the ingestion configuration (`fixtures/ingestion/rc_2023_e.yaml`, `cobros_oa_2022_07.yaml`); a Section no prefix covers is tagged with both.
 
 ### Ingestion of RC-2023-E (CMAWD-8)
 
@@ -135,6 +135,29 @@ Findings about the PDF:
 Extraction checks (warnings in the report, never a failure): text left unread (`[…]`); a line ending on a bare word followed by a line starting in lower case; running-header remnants; Clause letters out of order within a Section; Secciones out of sequence within a Regla; chunks under 40 characters. Wrapped lines are joined into paragraphs before the checks run, so text dropped in the middle of a paragraph shows up as `[…]`, not as a truncated line. The run with OCR on RC-2023-E raises 52 flags: 5 chunks with unread text, 15 truncated lines (multi-column tables), 24 lettering flags and 8 sequence flags. The lettering and sequence flags looked at so far are the Reglamento's own numbering (e.g. Regla 2.1.4 letters `a.`, `a.`, `b.`); the rest have not been checked against the PDF.
 - Citations may go down to a Clause (`RC-2023-E:2.1.9.2(m)`); validation matches on Section prefix.
 - Implemented as a Pydantic model, with a ~10-chunk hand-typed fixture so the graph and UI can be built before real ingestion.
+
+### Ingestion of COBROS OA-2022-07 and the glossary (CMAWD-10)
+
+`ingest` covers both documents, each with its own configuration, report and chunks file, and syncs the index one document at a time: ingesting COBROS adds its chunks and leaves RC-2023-E's alone, and RC-2023-E's body chunks are unchanged by the glossary being added, so nothing already indexed is embedded again.
+
+**COBROS** (pp. 4–34; 68 chunks, no extraction flags):
+
+- **One chunk per ordinal** of the order, PRIMERO to NOVENO (`COBROS:TERCERO`, level `seccion`, parent `Orden Administrativa OGPe 2022-07`), and **one per numbered item of Anejo A**, 1 to 57 (`COBROS:AnejoA:6`, level `anejo_item`, parents `Anejo A` and the division the item is under, e.g. `EDIFICABILIDAD`, or `DIVISION DE USOS`, `Usos` where the Anejo names a division over two rows). The recitals (POR CUANTO) before PRIMERO and the signature after NOVENO are not indexed.
+- **Tables are read from their rules.** Anejo A and the exemption table of TERCERO.3 are ruled grids whose cells wrap over many lines, so text extraction interleaves the columns (and the reader CMAWD-8 wrote for RC-2023-E, which takes columns from gutters, does not see these cells). A row is the text between two horizontal rules; its cells are bounded by the vertical rules drawn beside that row, so a heading that spans the table is one cell. Each row is one line of chunk text, cells in column order and named after the table's header row: `a. Radicación (Cargo por servicio | Derechos a cobrarse: $ 0.35 | Concepto: Por cada $1,000 del valor de la obra o fracción. Pago mínimo de $100.00 Lo que resulte mayor`. The row's label (and the `#` column) are not named; empty cells are left out.
+- **A lettered row is a Clause** of its item (`COBROS:AnejoA:6(a)`); a row without a letter (a further charge, a fee band) stays in the Clause above it. An item of a single row (46–48, 56) is that row.
+- **Rows cut by a page break are put back together.** The first row on a page continues the row above when it has no rule over it (TERCERO) or when it has neither a label nor anything in the first fee column (Anejo A rules off the top of every page, so the rule tells nothing there). The second test is a judgement: a cut row whose fee cell also wraps onto the next page would be read as a new row. None does in this order.
+- **Page range.** `page_start` is the page of the ordinal or of the item's heading row, `page_end` the page of its last row, so item 6 (heading and row (a) at the foot of p. 13, the rest on p. 14) is `13–14`.
+- **Header and footer** are dropped by position: the order's number, title and page number above y=70, the office's address at or below y=938. The extraction checks also flag either if it turns up in a chunk.
+- **Footnotes** (below a short rule at the foot of pp. 5, 30 and 34) are placed after the row or paragraph that carries their superscript number, not left at the page break where they would split a row.
+- Text is kept as printed, including the order's own slips (`Radicación (Cargo por servicio` has no closing parenthesis; `Construccion`).
+
+**Glossary** (Tomo XII, III. Glosario de términos, pp. 829–955; 1,431 chunks):
+
+- **One chunk per term**, level `glossary_term`: the heading is the term and the text its definition (`RC-2023-E:Glosario:A.1`, heading `Acarreo`, parents `Tomo XII`, `Glosario de términos`). Terms are numbered from 1 under each letter, so the Section ID is the letter and the number as printed. Numbers the glossary uses twice under a letter (D.2, S.2, S.3, Z.1) get a `-bis` suffix, as in the body.
+- **The term is the bold text the entry opens with**; extraction now records each line's runs of bold text. A name too long for its line continues on the next, and a dash or colon between term and definition belongs to neither. A term's number is not always at the margin (D.30 is printed further in), so a term is any numbered line left of the definitions' hanging indent.
+- **Not indexed:** the introduction (I) and the list of acronyms (II, pp. 825–828), and the analysis that follows the terms (IV, from p. 957), which is not regulation.
+- **Six terms have no name found** and are flagged `unnamed_term`, with the name left at the start of the text: C.31, E.25, E.102, S.92 and T.1 open with text drawn as outlines (read by OCR, or `[…]`), and I.3 is not set in bold.
+- 66 runs of outlined text in these pages; OCR read all of them in the run made for this ticket. Without OCR 43 terms hold a `[…]`. About two dozen definitions are under 40 characters and flagged `short_chunk` (`Ver No Conforme.`); they are as printed.
 
 ### Retrieval evaluation (part of ingestion)
 

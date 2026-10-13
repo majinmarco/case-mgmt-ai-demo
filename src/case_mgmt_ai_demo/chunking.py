@@ -11,8 +11,9 @@ import re
 import unicodedata
 from collections import Counter
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from importlib.resources import files
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -21,13 +22,27 @@ from case_mgmt_ai_demo.chunks import SECTION_ID_PREFIX, Chunk, Doc, Level, Reque
 from case_mgmt_ai_demo.extraction import Line
 
 
+class GlossaryPages(BaseModel):
+    """Where the glossary's terms are (physical pages, 1-based, inclusive)."""
+
+    first_page: int = Field(ge=1)
+    last_page: int = Field(ge=1)
+
+
 class IngestionConfig(BaseModel):
     """How one Reglamento PDF is extracted and chunked; recorded with every ingestion."""
 
     doc: Doc
+    layout: Literal["sections", "fee_order"] = "sections"
     first_page: int = Field(ge=1, description="First page of the body (physical, 1-based).")
     last_page: int = Field(ge=1, description="Last page of the body, inclusive.")
-    footer_top: float = Field(description="Lines at or below this y are the running header.")
+    header_bottom: float = Field(
+        default=0.0, description="Fee order only: text above this y is the running header."
+    )
+    footer_top: float = Field(description="Lines at or below this y are dropped.")
+    glossary: GlossaryPages | None = Field(
+        default=None, description="The glossary, chunked one term at a time."
+    )
     max_chunk_chars: int = Field(gt=0, description="A longer Section is split into parts.")
     request_types: dict[str, list[RequestType]] = Field(
         description="Request Types by Section number prefix ('3.7' covers 3.7.1.2); the "
@@ -81,7 +96,7 @@ _SHORT_LINE_X1 = 480.0  # a line ending left of this did not wrap
 
 
 @dataclass
-class _Paragraph:
+class Paragraph:
     text: str
     x0: float
     page_start: int
@@ -109,27 +124,51 @@ def chunk_lines(lines: Iterable[Line], config: IngestionConfig) -> Chunking:
         section_id = f"{SECTION_ID_PREFIX[config.doc]}{number}{section.suffix}"
         if section.suffix:
             repeated.append(section_id)
-        paragraphs = _paragraphs(section.lines)
-        if not paragraphs:
+        text = paragraphs(section.lines)
+        if not text:
             skipped.append(SkippedHeading(section_id, section.level, section.heading, section.page))
             continue
-        parts = _split(paragraphs, config.max_chunk_chars)
-        for index, part in enumerate(parts, start=1):
-            chunks.append(
-                Chunk(
-                    section_id=section_id,
-                    doc=config.doc,
-                    level=section.level,
-                    heading=section.heading,
-                    parents=section.parents,
-                    page_start=section.page if index == 1 else part[0].page_start,
-                    page_end=part[-1].page_end,
-                    text="\n".join(paragraph.text for paragraph in part),
-                    part=f"{index}-of-{len(parts)}" if len(parts) > 1 else None,
-                    request_types=request_types_for(section.number, config.request_types),
-                )
-            )
+        chunks += section_chunks(
+            section_id,
+            section.level,
+            section.heading,
+            section.parents,
+            section.page,
+            text,
+            section.number,
+            config,
+        )
     return Chunking(chunks=chunks, skipped=skipped, repeated=repeated)
+
+
+def section_chunks(
+    section_id: str,
+    level: Level,
+    heading: str,
+    parents: list[str],
+    page: int,
+    text: list[Paragraph],
+    number: str,
+    config: IngestionConfig,
+) -> list[Chunk]:
+    """The chunk of a Section that starts on `page`, or its parts when it is too long;
+    `number` is what the configuration's Request Type rules are matched against."""
+    parts = _split(text, config.max_chunk_chars)
+    return [
+        Chunk(
+            section_id=section_id,
+            doc=config.doc,
+            level=level,
+            heading=heading,
+            parents=parents,
+            page_start=page if index == 1 else part[0].page_start,
+            page_end=max(paragraph.page_end for paragraph in part),
+            text="\n".join(paragraph.text for paragraph in part),
+            part=f"{index}-of-{len(parts)}" if len(parts) > 1 else None,
+            request_types=request_types_for(number, config.request_types),
+        )
+        for index, part in enumerate(parts, start=1)
+    ]
 
 
 def request_types_for(number: str, rules: Mapping[str, list[RequestType]]) -> list[RequestType]:
@@ -179,6 +218,85 @@ def _sections(lines: Iterable[Line]) -> Iterator[_Section]:
         yield current
 
 
+GLOSSARY_PARENTS = ["Tomo XII", "Glosario de términos"]
+_GLOSSARY_LETTER = re.compile(r"^([A-ZÑ])\.$")
+_GLOSSARY_TERM = re.compile(r"^(\d{1,3})\.\s*(.*)$")
+_GLOSSARY_END = re.compile(r"^[IVX]+\.\s")  # the part of Tomo XII that follows the terms
+_TERM_MAX_X = 78.0  # a term's number is left of this (x 54 to 72); its definition hangs at 81
+_CLOSING = ')”"'
+_TERM_SEPARATORS = " -–—:"  # between a term and its definition, when there is anything
+
+
+def chunk_glossary(lines: Iterable[Line], config: IngestionConfig) -> Chunking:
+    """One chunk per term of the glossary: the term is the heading and its definition the
+    text. Terms are numbered under each letter ("A." 1, 2, …), so a term's Section ID is
+    `Glosario:<letter>.<number>`; as in the body, a number used twice gets a `-bis` suffix."""
+    chunks: list[Chunk] = []
+    skipped: list[SkippedHeading] = []
+    repeated: list[str] = []
+    seen: Counter[str] = Counter()
+    letter = ""
+    term: tuple[str, str, int] | None = None  # number, name, page
+    naming = False  # the term's name runs on from the line above
+    definition: list[Line] = []
+
+    def close() -> None:
+        if not term:
+            return
+        number, name, page = term
+        seen[number] += 1
+        suffix = _repeat_suffix(seen[number])
+        section_id = f"{SECTION_ID_PREFIX[config.doc]}{number}{suffix}"
+        if suffix:
+            repeated.append(section_id)
+        text = paragraphs(definition)
+        if text:
+            chunks.extend(
+                section_chunks(
+                    section_id, "glossary_term", name, GLOSSARY_PARENTS, page, text, number, config
+                )
+            )
+        else:
+            skipped.append(SkippedHeading(section_id, "glossary_term", name, page))
+
+    for line in lines:
+        text = _clean(line.text)
+        at_margin = line.x0 < _TERM_MAX_X
+        if at_margin and line.bold and (heading := _GLOSSARY_LETTER.match(text)):
+            close()
+            letter, term, definition = heading[1], None, []
+        elif at_margin and line.bold and letter and _GLOSSARY_END.match(text):
+            break
+        elif at_margin and letter and (numbered := _GLOSSARY_TERM.match(text)):
+            close()
+            name, rest = _term_and_rest(numbered[2], line)
+            term = (f"Glosario:{letter}.{numbered[1]}", name, line.page)
+            definition = [replace(line, text=rest)] if rest else []
+            naming = bool(name) and not rest
+        elif term:
+            if naming:
+                more, text = _term_and_rest(text, line)
+                term = (term[0], f"{term[1]} {more}".strip(), term[2])
+                naming = bool(more) and not text
+            if text:
+                definition.append(replace(line, text=text))
+    close()
+    return Chunking(chunks=chunks, skipped=skipped, repeated=repeated)
+
+
+def _term_and_rest(text: str, line: Line) -> tuple[str, str]:
+    """The bold text `text` opens with (a term, or more of one) and what follows it."""
+    opening = _clean(line.bold_spans[0]) if line.bold_spans else ""
+    # Bold that stops mid-word is the PDF switching to outlines, not the end of a term.
+    if not opening or not text.startswith(opening) or text[len(opening) :][:1].isalnum():
+        return "", text
+    rest = text[len(opening) :]
+    closing = rest[: len(rest) - len(rest.lstrip(_CLOSING))]  # "(CRMR" + ")" set in regular type
+    return (opening + closing).strip(_TERM_SEPARATORS), rest[len(closing) :].lstrip(
+        _TERM_SEPARATORS
+    )
+
+
 def _repeat_suffix(use: int) -> str:
     """Nothing for the first use of a number, then -bis, -bis2, -bis3…"""
     return "" if use == 1 else "-bis" if use == 2 else f"-bis{use - 1}"
@@ -188,9 +306,9 @@ def _clean(text: str) -> str:
     return re.sub(r"\s+", " ", unicodedata.normalize("NFC", text)).strip()
 
 
-def _paragraphs(lines: Sequence[Line]) -> list[_Paragraph]:
+def paragraphs(lines: Sequence[Line]) -> list[Paragraph]:
     """Wrapped lines joined back into paragraphs; every list item is its own paragraph."""
-    paragraphs: list[_Paragraph] = []
+    joined: list[Paragraph] = []
     previous: Line | None = None
     for line in lines:
         text = _clean(line.text)
@@ -206,16 +324,16 @@ def _paragraphs(lines: Sequence[Line]) -> list[_Paragraph]:
         )
         if starts:
             in_table = line.cell is not None
-            paragraphs.append(_Paragraph(text, line.x0, line.page, line.page, in_table))
+            joined.append(Paragraph(text, line.x0, line.page, line.page, in_table))
         else:
-            paragraphs[-1].text += f" {text}"
-            paragraphs[-1].page_end = line.page
+            joined[-1].text += f" {text}"
+            joined[-1].page_end = line.page
         previous = line
-    _indent_nested_letters(paragraphs)
-    return paragraphs
+    _indent_nested_letters(joined)
+    return joined
 
 
-def _indent_nested_letters(paragraphs: Sequence[_Paragraph]) -> None:
+def _indent_nested_letters(paragraphs: Sequence[Paragraph]) -> None:
     """A lettered item under another list item ("e. … / a. … / b. …") or in a table cell is
     not a Clause of the Section, so it is indented: only a letter at the start of a line
     starts a Clause."""
@@ -231,13 +349,13 @@ def _indent_nested_letters(paragraphs: Sequence[_Paragraph]) -> None:
         open_items.append(paragraph.x0)
 
 
-def _split(paragraphs: list[_Paragraph], max_chars: int) -> list[list[_Paragraph]]:
+def _split(paragraphs: list[Paragraph], max_chars: int) -> list[list[Paragraph]]:
     """Parts of at most `max_chars`, of similar length, cut where a Clause starts; a Clause
     too long on its own is cut between its paragraphs, and a paragraph between sentences."""
     total = _length(paragraphs)
     if total <= max_chars:
         return [paragraphs]
-    units: list[list[_Paragraph]] = []
+    units: list[list[Paragraph]] = []
     for clause in _clauses(paragraphs):
         if _length(clause) <= max_chars:
             units.append(clause)
@@ -250,10 +368,10 @@ def _split(paragraphs: list[_Paragraph], max_chars: int) -> list[list[_Paragraph
     raise AssertionError("unreachable: every unit fits in a part of its own")
 
 
-def _even_parts(units: Sequence[list[_Paragraph]], count: int) -> list[list[_Paragraph]]:
+def _even_parts(units: Sequence[list[Paragraph]], count: int) -> list[list[Paragraph]]:
     """`count` runs of consecutive units, each cut as near as the units allow to an even share."""
     total = sum(_length(unit) + 1 for unit in units)
-    parts: list[list[_Paragraph]] = [[]]
+    parts: list[list[Paragraph]] = [[]]
     done = 0
     for index, unit in enumerate(units):
         size = _length(unit) + 1
@@ -267,12 +385,12 @@ def _even_parts(units: Sequence[list[_Paragraph]], count: int) -> list[list[_Par
     return parts
 
 
-def _length(paragraphs: Sequence[_Paragraph]) -> int:
+def _length(paragraphs: Sequence[Paragraph]) -> int:
     return sum(len(p.text) for p in paragraphs) + max(len(paragraphs) - 1, 0)
 
 
-def _clauses(paragraphs: Sequence[_Paragraph]) -> list[list[_Paragraph]]:
-    clauses: list[list[_Paragraph]] = []
+def _clauses(paragraphs: Sequence[Paragraph]) -> list[list[Paragraph]]:
+    clauses: list[list[Paragraph]] = []
     for paragraph in paragraphs:
         if not clauses or _CLAUSE_MARKER.match(paragraph.text):
             clauses.append([])
@@ -280,7 +398,7 @@ def _clauses(paragraphs: Sequence[_Paragraph]) -> list[list[_Paragraph]]:
     return clauses
 
 
-def _sentences(paragraph: _Paragraph, max_chars: int) -> list[_Paragraph]:
+def _sentences(paragraph: Paragraph, max_chars: int) -> list[Paragraph]:
     if len(paragraph.text) <= max_chars:
         return [paragraph]
     pieces = [""]
@@ -295,7 +413,7 @@ def _sentences(paragraph: _Paragraph, max_chars: int) -> list[_Paragraph]:
             pieces.append("")
         pieces[-1] = f"{pieces[-1]} {sentence}".strip()
     return [
-        _Paragraph(piece, paragraph.x0, paragraph.page_start, paragraph.page_end)
+        Paragraph(piece, paragraph.x0, paragraph.page_start, paragraph.page_end)
         for piece in pieces
         if piece
     ]

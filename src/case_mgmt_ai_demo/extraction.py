@@ -41,6 +41,7 @@ class Line:
     text: str
     bold: bool = False
     cell: int | None = None  # the table cell it is in, numbered in reading order on its page
+    bold_spans: tuple[str, ...] = ()  # each run of bold text in the line, left to right
 
 
 @dataclass(frozen=True)
@@ -73,6 +74,7 @@ class _Fragment:
     text: str
     bold: bool = False
     outlined: bool = False
+    spans: Sequence[tuple[str, bool]] = ()  # (text, bold) as the PDF sets it
 
 
 def find_tessdata(tessdata_dir: Path | None = None) -> Path | None:
@@ -126,6 +128,7 @@ def extract_lines(
                             text=text,
                             bold=bool(printed) and all(f.bold for f in printed),
                             cell=cell,
+                            bold_spans=_bold_runs(row),
                         )
                     )
     return Extraction(lines=lines, outlined_runs=runs, ocr=tessdata is not None)
@@ -141,7 +144,29 @@ def _text_fragments(page: pymupdf.Page) -> Iterator[_Fragment]:
                     *line["bbox"],
                     text="".join(span["text"] for span in line["spans"]),
                     bold=all(span["flags"] & _BOLD for span in spans),
+                    spans=[(span["text"], bool(span["flags"] & _BOLD)) for span in line["spans"]],
                 )
+
+
+def _bold_runs(row: Sequence[_Fragment]) -> tuple[str, ...]:
+    """Blank spans neither start nor end a run; text drawn as outlines ends one."""
+    runs: list[str] = []
+    in_run = False
+    for fragment in row:
+        if fragment.outlined:
+            in_run = False
+        for text, bold in fragment.spans:
+            if not text.strip() or (bold and in_run):
+                if in_run:
+                    runs[-1] += text
+            elif bold:
+                runs.append(text)
+                in_run = True
+            else:
+                in_run = False
+        if in_run:
+            runs[-1] += " "
+    return tuple(re.sub(r"\s+", " ", run).strip() for run in runs)
 
 
 @dataclass(frozen=True)

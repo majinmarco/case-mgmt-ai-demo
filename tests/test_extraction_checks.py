@@ -135,3 +135,28 @@ def test_secciones_directly_under_a_capitulo_are_not_checked_for_sequence():
     loose = seccion("2.3.5", CLEAN).model_copy(update={"parents": ["Tomo II", "Capítulo 2.3"]})
 
     assert check_chunks([loose]) == []
+
+
+def test_the_fee_orders_running_header_and_address_are_flagged():
+    item = seccion("2.1.9.2", CLEAN).model_copy(
+        update={"section_id": "COBROS:AnejoA:6", "doc": "COBROS-OA-2022-07", "level": "anejo_item"}
+    )
+    with_address = item.model_copy(
+        update={"text": f"{CLEAN}\nAve. F.D Roosevelt #385, Edificio Fomento Industrial"}
+    )
+
+    assert check_chunks([item]) == []
+    assert [flag.check for flag in check_chunks([with_address])] == ["running_header"]
+
+
+def test_a_glossary_term_whose_name_was_not_found_is_flagged():
+    named = seccion(
+        "Glosario:C.30", "Cabida de un solar expresada en metros cuadrados."
+    ).model_copy(update={"level": "glossary_term", "heading": "Cabida", "parents": ["Tomo XII"]})
+    unnamed = named.model_copy(update={"section_id": "RC-2023-E:Glosario:C.31", "heading": ""})
+
+    flags = check_chunks([named, unnamed])
+
+    assert [(flag.section_id, flag.check) for flag in flags] == [
+        ("RC-2023-E:Glosario:C.31", "unnamed_term")
+    ]

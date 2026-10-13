@@ -1,0 +1,26 @@
+# How "COBROS OA-2022-07.pdf" is read and chunked. Pages are physical PDF pages (1-based),
+# not the number printed in the running header.
+doc: COBROS-OA-2022-07
+layout: fee_order
+
+# The order (PRIMERO-NOVENO, pp. 4-8) and Anejo A (pp. 9-34). The POR CUANTO recitals before
+# PRIMERO are skipped wherever they fall in this range.
+first_page: 4
+last_page: 34
+
+# The running header ("Orden Administrativa OGPe 2022-07", the title and the page number) is
+# printed above `header_bottom`; the office's address is printed at or below `footer_top`.
+header_bottom: 70
+footer_top: 938
+
+# An Anejo A item longer than this is split into parts where a lettered row starts.
+max_chunk_chars: 6000
+
+# Request Types an item is relevant to, by Section ID without the "COBROS:" prefix. Only the
+# items the Fee Check charges for one Request Type are narrowed.
+request_types:
+  default: [PCOC, PERMISO_UNICO]
+  "AnejoA:6": [PCOC]             # Permiso de Construcción
+  "AnejoA:28": [PERMISO_UNICO]   # Certificación de Prevención de Incendios
+  "AnejoA:30": [PERMISO_UNICO]   # Licencia Sanitaria
+  "AnejoA:41": [PERMISO_UNICO]   # Uso para estructura o local

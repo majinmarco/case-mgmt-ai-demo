@@ -25,13 +25,14 @@ Prints the Recommendation in Spanish: Approval Score (the weakest requirement's 
 ## Ingest the Reglamento
 
 ```sh
-uv run case-mgmt-ai-demo ingest              # extract, chunk, embed and index RC-2023-E
-uv run case-mgmt-ai-demo ingest --no-index   # chunks and report only: no API calls
+uv run case-mgmt-ai-demo ingest              # extract, chunk, embed and index both documents
+uv run case-mgmt-ai-demo ingest --no-index   # chunks and reports only: no API calls
+uv run case-mgmt-ai-demo ingest --doc COBROS-OA-2022-07   # one document only
 ```
 
-Builds the Chroma index in `data/chroma` and writes, next to it, `data/RC-2023-E.ingestion_report.json` (the configuration used, counts, and every chunk flagged by the extraction checks) and `data/RC-2023-E.chunks.jsonl` (every chunk, to read or diff). Running it again embeds only chunks that changed. The page range, the split length and the Request Type tags are in `src/case_mgmt_ai_demo/fixtures/ingestion/rc_2023_e.yaml`.
+Ingests RC-2023-E (Tomos I–XI by Section, and the Tomo XII glossary one chunk per term) and the fee order COBROS OA-2022-07 (one chunk per ordinal of the order and per item of Anejo A). Builds the Chroma index in `data/chroma` and writes, next to it, for each document, `data/<doc>.ingestion_report.json` (the configuration used, counts, and every chunk flagged by the extraction checks) and `data/<doc>.chunks.jsonl` (every chunk, to read or diff). The index is synced one document at a time and only chunks that changed are embedded, so running it again, or ingesting one document, leaves the rest of the index as it was. Page ranges, the split length and the Request Type tags are in `src/case_mgmt_ai_demo/fixtures/ingestion/` (`rc_2023_e.yaml`, `cobros_oa_2022_07.yaml`).
 
-The PDF draws some text as outlines instead of text (mostly lines with typographic quotes, on about 160 pages), which plain extraction skips. With Tesseract's Spanish model installed (`spa.traineddata`, e.g. the `tesseract-data-spa` package; `PRA_TESSDATA_DIR` if it is not in the system tessdata directory) ingestion reads those runs with OCR, which takes about five minutes; without it, or with `--no-ocr`, each run is left as `[…]` and its chunk is flagged. The report lists every OCR reading so it can be checked against the PDF.
+The RC-2023-E PDF draws some text as outlines instead of text (mostly lines with typographic quotes, on about 160 pages), which plain extraction skips. With Tesseract's Spanish model installed (`spa.traineddata`, e.g. the `tesseract-data-spa` package; `PRA_TESSDATA_DIR` if it is not in the system tessdata directory) ingestion reads those runs with OCR, which takes about five minutes; without it, or with `--no-ocr`, each run is left as `[…]` and its chunk is flagged. The report lists every OCR reading so it can be checked against the PDF.
 
 `review` does not read this index yet (CMAWD-11).
 

@@ -1,0 +1,59 @@
+{
+  "expected": {
+    "verdict": null,
+    "borderline": true,
+    "fee_matches": true
+  },
+  "rationale": "An owner opens a cafetín that sells alcohol, an allowed use, with the memorial, sketch, photos and every certification of 4.1.4.1(b) attached. It declares 3 parking spaces where the district requires 4. The Reglamento asks the memorial and the sketch to state the parking to be provided (3.7.1.2(b)) without making the district's number a filing requirement, so the request is complete but its compliance is in doubt and the score sits near the cutoff. A Cure Request or a closer look at the district's parking rule is the natural Determination.",
+  "request": {
+    "request_type": "PERMISO_UNICO",
+    "applicant_name": "Colmado y Cafetín Don Pepe",
+    "applicant_type": "privado",
+    "applicant_role": "dueno",
+    "standing_document": "escritura_publica",
+    "municipio": "Guayama",
+    "catastro": "402-027-190-05",
+    "catastro_matches_ogpe": true,
+    "calificacion": "C-L (Comercial Liviano); cafetín permitido ministerialmente",
+    "attached_documents": [
+      "foto_aerea",
+      "ubicacion_geografica",
+      "memorial_explicativo",
+      "croquis",
+      "fotos_instalacion",
+      "exclusion_categorica",
+      "antecedentes_penales",
+      "no_deuda_asume",
+      "no_deuda_crim",
+      "planillas_ingresos",
+      "planillas_ivu",
+      "certificacion_deuda_dh",
+      "numero_patronal",
+      "registro_comerciantes",
+      "proyeccion_ventas",
+      "patente_municipal"
+    ],
+    "proposed_use": "Cafetín con venta de comestibles y de bebidas alcohólicas selladas para consumo fuera del local",
+    "use_authorization": "ministerial",
+    "employees": 3,
+    "parking_spaces": 3,
+    "required_parking_spaces": 4,
+    "operating_hours": "todos los días, de 7:00 a. m. a 10:00 p. m.",
+    "licenses_requested": [
+      "sanitaria",
+      "prevencion_incendios",
+      "bebidas_alcoholicas"
+    ],
+    "validity_years": 3,
+    "declared_fee": 580,
+    "establishment_type": "cafetin",
+    "site_sketch": {
+      "floor_area_m2": 70,
+      "shows_internal_layout": true,
+      "shows_access_road": true,
+      "shows_parking": true,
+      "shows_dimensions": true
+    },
+    "in_flood_zone": false
+  }
+}

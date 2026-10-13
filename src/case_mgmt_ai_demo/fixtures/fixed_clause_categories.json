@@ -46,5 +46,170 @@
     "ref": "RC-2023-E:2.2.1.3(b)",
     "category": "tramite_del_sistema",
     "reason": "Fijado por configuración: limita el juicio de los funcionarios al evaluar, no es un requisito del Solicitante."
+  },
+  {
+    "ref": "RC-2023-E:2.1.9.3(c)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: el pago de la diferencia surge si el costo final de la obra supera el estimado, después de expedido el permiso."
+  },
+  {
+    "ref": "RC-2023-E:3.1.3(c)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: remite a los requisitos generales de la Regla 2.1.9 y a los particulares de cada servicio, que se evalúan por sus propios incisos."
+  },
+  {
+    "ref": "RC-2023-E:3.1.3(d)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: inciso general de completitud; la completitud se juzga por los requisitos específicos que aplican."
+  },
+  {
+    "ref": "RC-2023-E:3.1.3(e)",
+    "category": "tramite_del_sistema",
+    "reason": "Fijado por configuración: pago de derechos; se verifica aparte."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(a)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(b)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(c)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(d)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(e)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(f)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(g)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(h)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.2.3.2(i)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(a)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(b)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(c)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(d)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(e)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(f)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(g)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:9.5.2.2(h)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(a)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(b)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(c)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(d)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(e)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(f)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(g)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(h)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+    "ref": "RC-2023-E:10.2.11.7(i)",
+    "category": "no_aplica",
+    "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
   }
 ]

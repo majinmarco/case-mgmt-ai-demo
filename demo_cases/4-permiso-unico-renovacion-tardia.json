@@ -1,0 +1,66 @@
+{
+  "expected": {
+    "verdict": "not_approve",
+    "borderline": false,
+    "fee_matches": true
+  },
+  "rationale": "Renewal of a restaurant's Permiso Único filed 949 days (2.6 years) after expiry. Past two years a renewal is no longer available and a new Permiso Único must be requested (3.7.1.4(g)). Everything else is in order; the deadline sets the score, and once it is missed the models score the other renewal Requirements low as well.",
+  "request": {
+    "request_type": "PERMISO_UNICO",
+    "applicant_name": "Restaurante El Fogón Criollo, LLC",
+    "applicant_type": "privado",
+    "applicant_role": "arrendatario",
+    "standing_document": "contrato_arrendamiento",
+    "owner_authorization": true,
+    "municipio": "Humacao",
+    "catastro": "281-015-077-32",
+    "catastro_matches_ogpe": true,
+    "calificacion": "C-I (Comercial Intermedio); restaurante permitido ministerialmente",
+    "attached_documents": [
+      "foto_aerea",
+      "ubicacion_geografica",
+      "memorial_explicativo",
+      "croquis",
+      "fotos_instalacion",
+      "exclusion_categorica",
+      "antecedentes_penales",
+      "no_deuda_asume",
+      "no_deuda_crim",
+      "planillas_ingresos",
+      "planillas_ivu",
+      "certificacion_deuda_dh",
+      "numero_patronal",
+      "registro_comerciantes",
+      "proyeccion_ventas",
+      "certificado_incorporacion",
+      "patente_municipal"
+    ],
+    "proposed_use": "Restaurante de comida criolla con servicio de mesas, sin venta de bebidas alcohólicas",
+    "use_authorization": "ministerial",
+    "employees": 12,
+    "parking_spaces": 14,
+    "required_parking_spaces": 12,
+    "operating_hours": "martes a domingo, de 11:00 a. m. a 9:00 p. m.",
+    "licenses_requested": [
+      "sanitaria",
+      "prevencion_incendios"
+    ],
+    "validity_years": 3,
+    "declared_fee": 610,
+    "establishment_type": "restaurante",
+    "site_sketch": {
+      "floor_area_m2": 200,
+      "shows_internal_layout": true,
+      "shows_access_road": true,
+      "shows_parking": true,
+      "shows_dimensions": true
+    },
+    "in_flood_zone": false,
+    "renewal": {
+      "permit_number": "2021-377810-PU-000452",
+      "expiry_date": "2024-02-29",
+      "filing_date": "2026-10-05",
+      "use_conforms_certification": true
+    }
+  }
+}

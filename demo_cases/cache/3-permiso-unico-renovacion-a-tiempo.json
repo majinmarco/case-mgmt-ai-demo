@@ -1,0 +1,1135 @@
+{
+ "request": {
+  "applicant_name": "Farmacia del Pueblo, Inc.",
+  "applicant_type": "privado",
+  "applicant_role": "dueno",
+  "standing_document": "escritura_publica",
+  "owner_authorization": null,
+  "municipio": "Arecibo",
+  "catastro": "054-061-302-18",
+  "catastro_matches_ogpe": true,
+  "calificacion": "C-L (Comercial Liviano); farmacia permitida ministerialmente",
+  "request_type": "PERMISO_UNICO",
+  "attached_documents": [
+   "foto_aerea",
+   "ubicacion_geografica",
+   "memorial_explicativo",
+   "croquis",
+   "fotos_instalacion",
+   "exclusion_categorica",
+   "antecedentes_penales",
+   "no_deuda_asume",
+   "no_deuda_crim",
+   "planillas_ingresos",
+   "planillas_ivu",
+   "certificacion_deuda_dh",
+   "numero_patronal",
+   "registro_comerciantes",
+   "proyeccion_ventas",
+   "certificado_incorporacion",
+   "patente_municipal"
+  ],
+  "proposed_use": "Farmacia de comunidad con venta de artículos de primera necesidad",
+  "use_authorization": "ministerial",
+  "employees": 5,
+  "parking_spaces": 6,
+  "required_parking_spaces": 5,
+  "operating_hours": "lunes a sábado, de 8:00 a. m. a 7:00 p. m.",
+  "licenses_requested": [
+   "sanitaria",
+   "prevencion_incendios"
+  ],
+  "validity_years": 3,
+  "declared_fee": "355",
+  "establishment_type": "no_alimentos",
+  "site_sketch": {
+   "floor_area_m2": "85",
+   "shows_internal_layout": true,
+   "shows_access_road": true,
+   "shows_parking": true,
+   "shows_dimensions": true
+  },
+  "in_flood_zone": false,
+  "renewal": {
+   "permit_number": "2023-512044-PU-001203",
+   "expiry_date": "2026-11-30",
+   "filing_date": "2026-10-16",
+   "use_conforms_certification": true
+  }
+ },
+ "approval_score": 0.84,
+ "verdict": "approve",
+ "borderline": false,
+ "requirements": [
+  {
+   "id": "pu_certificaciones",
+   "text_es": "Se acompañan las certificaciones y documentos de la Sección 4.1.4.1(b) que exigen las licencias solicitadas.",
+   "clause_refs": [
+    "RC-2023-E:4.1.4.1(b)"
+   ],
+   "probability": 0.98,
+   "criterion": {
+    "id": "pu_certificaciones",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "Se acompañan las certificaciones y documentos de la Sección 4.1.4.1(b) que exigen las licencias solicitadas.",
+    "text_en": "The certifications and documents of Sección 4.1.4.1(b) that the requested licences call for are attached.",
+    "pinned": [
+     "RC-2023-E:4.1.4.1(b)"
+    ],
+    "instructions": "¿Acompaña la solicitud las certificaciones y documentos que exige la Sección 4.1.4.1(b) para las licencias solicitadas? Esa Sección no los exige para la Licencia Sanitaria ni para el Certificado de Prevención de Incendios.",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "pu_renovacion_plazo",
+   "text_es": "La renovación se presentó antes de la expiración, o sin que hayan transcurrido más de dos años desde ella.",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.4(f)",
+    "RC-2023-E:3.7.1.4(g)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pu_renovacion_plazo",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "La renovación se presentó antes de la expiración, o sin que hayan transcurrido más de dos años desde ella.",
+    "text_en": "The renewal was filed before expiry, or no more than two years after it.",
+    "pinned": [
+     "RC-2023-E:3.7.1.4(f)",
+     "RC-2023-E:3.7.1.4(g)"
+    ],
+    "instructions": "¿Se presentó la renovación antes de la expiración del Permiso Único o, si fue después, sin que hayan transcurrido más de dos (2) años desde la expiración, como exigen los incisos (f) y (g) de la Sección 3.7.1.4?",
+    "application_kinds": [
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "pu_renovacion_requisitos",
+   "text_es": "La renovación incluye la certificación del dueño u operador de que el uso está conforme al Permiso Único.",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.4(k)"
+   ],
+   "probability": 0.99,
+   "criterion": {
+    "id": "pu_renovacion_requisitos",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "La renovación incluye la certificación del dueño u operador de que el uso está conforme al Permiso Único.",
+    "text_en": "The renewal includes the owner's or operator's certification that the use conforms to the Permiso Único.",
+    "pinned": [
+     "RC-2023-E:3.7.1.4(k)"
+    ],
+    "instructions": "¿Cumple la renovación los requisitos de la Sección 3.7.1.4(k), en particular la certificación del dueño u operador de que el uso está conforme al Permiso Único?",
+    "application_kinds": [
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "seccion_3_7_1_2",
+   "text_es": "Requisitos aplicables de la Sección 3.7.1.2 (REQUISITOS PRESENTACIÓN PERMISO ÚNICO)",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.2(a)"
+   ],
+   "probability": 0.84,
+   "criterion": null
+  },
+  {
+   "id": "seccion_4_1_4_1",
+   "text_es": "Requisitos aplicables de la Sección 4.1.4.1 (SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES)",
+   "clause_refs": [
+    "RC-2023-E:4.1.4.1(a)"
+   ],
+   "probability": 0.92,
+   "criterion": null
+  },
+  {
+   "id": "seccion_3_7_1_4",
+   "text_es": "Requisitos aplicables de la Sección 3.7.1.4 (RENOVACIÓN DEL PERMISO ÚNICO)",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.4(a)",
+    "RC-2023-E:3.7.1.4(c)"
+   ],
+   "probability": 0.99,
+   "criterion": null
+  }
+ ],
+ "notes": [
+  {
+   "text": "La renovación se presentó el 16 de octubre de 2026, exactamente 45 días antes de la expiración indicada del Permiso Único, cumpliendo el plazo establecido. También se acompaña la certificación del dueño u operador de que el uso está conforme al permiso.",
+   "section_ids": [
+    "RC-2023-E:3.7.1.4(c)",
+    "RC-2023-E:3.7.1.4(k)(2)"
+   ],
+   "curable": false
+  },
+  {
+   "text": "La solicitud incluye varias de las certificaciones y evidencias enumeradas para solicitudes de licencias, entre ellas las de antecedentes penales, ASUME, CRIM, planillas, Hacienda y Registro de Comerciantes, además de evidencia de identificación patronal y documentos corporativos y municipales.",
+   "section_ids": [
+    "RC-2023-E:4.1.4.1(b)(1)",
+    "RC-2023-E:4.1.4.1(b)(2)",
+    "RC-2023-E:4.1.4.1(b)(3)",
+    "RC-2023-E:4.1.4.1(b)(4)",
+    "RC-2023-E:4.1.4.1(b)(5)"
+   ],
+   "curable": false
+  },
+  {
+   "text": "Entre los documentos adjuntos constan el memorial explicativo, el croquis con área, distribución, acceso, estacionamiento y dimensiones, y fotos digitales del interior y exterior de la instalación.",
+   "section_ids": [
+    "RC-2023-E:3.7.1.2(b)(1)",
+    "RC-2023-E:3.7.1.2(b)(3)",
+    "RC-2023-E:3.7.1.2(b)(4)"
+   ],
+   "curable": false
+  }
+ ],
+ "notes_retried": false,
+ "dropped_notes": [],
+ "retrieved_section_ids": [
+  "RC-2023-E:3.7.1.9",
+  "RC-2023-E:3.7.1.2",
+  "RC-2023-E:3.7.1.6",
+  "RC-2023-E:4.1.4.1",
+  "RC-2023-E:3.5.9.8",
+  "RC-2023-E:3.4.4.13",
+  "RC-2023-E:9.12.4.3",
+  "RC-2023-E:2.7.4.3",
+  "RC-2023-E:3.7.1.4"
+ ],
+ "section_relevance": [
+  {
+   "section_id": "RC-2023-E:3.7.1.9",
+   "applies": false,
+   "reason": "La sección regula permisos únicos automáticos y sus renovaciones. La solicitud es una renovación de Permiso Único, pero no indica que el permiso vigente sea automático; por tanto, no se establece aquí un requisito aplicable a esta solicitud."
+  },
+  {
+   "section_id": "RC-2023-E:3.7.1.2",
+   "applies": true,
+   "reason": "Aplica porque el inciso (a) exige a toda persona que solicite un Permiso Único completar la solicitud y cumplir con los requisitos de la Regla 2.1.9, también en una renovación. Los requisitos adicionales del inciso (b) son solo para solicitudes nuevas."
+  },
+  {
+   "section_id": "RC-2023-E:3.7.1.6",
+   "applies": false,
+   "reason": "La sección regula específicamente los Permisos Únicos PYMES y la renovación de uno de esos permisos. La solicitud identifica una renovación de Permiso Único ordinario, sin indicar que el permiso vigente sea PYMES."
+  },
+  {
+   "section_id": "RC-2023-E:4.1.4.1",
+   "applies": true,
+   "reason": "Fijada por el Criterio pu_certificaciones: siempre aplica."
+  },
+  {
+   "section_id": "RC-2023-E:3.5.9.8",
+   "applies": false,
+   "reason": "La sección establece requisitos para renovar un Permiso Formal, mientras que la solicitud es para renovar un Permiso Único."
+  },
+  {
+   "section_id": "RC-2023-E:3.4.4.13",
+   "applies": false,
+   "reason": "La sección regula renovaciones de un Permiso Único Incidental Operacional. La solicitud identifica una renovación de Permiso Único, pero no indica que sea de esa modalidad incidental operacional."
+  },
+  {
+   "section_id": "RC-2023-E:9.12.4.3",
+   "applies": false,
+   "reason": "La sección regula la evaluación y recomendación del NPPR para solicitudes sujetas a ese trámite, incluida la inspección y el análisis de ubicación. No establece un requisito aplicable a la renovación de un Permiso Único para una farmacia."
+  },
+  {
+   "section_id": "RC-2023-E:2.7.4.3",
+   "applies": false,
+   "reason": "La sección regula la expedición de un Permiso Único, mientras que esta solicitud es una renovación de un permiso vigente; no establece aquí requisitos propios de renovación."
+  },
+  {
+   "section_id": "RC-2023-E:3.7.1.4",
+   "applies": true,
+   "reason": "Fijada por el Criterio pu_renovacion_plazo, pu_renovacion_requisitos: siempre aplica."
+  }
+ ],
+ "selection": [
+  {
+   "ref": "RC-2023-E:3.7.1.2(a)",
+   "category": "aplica",
+   "reason": "La solicitud de Permiso Único debe completarse y cumplir los requisitos aplicables; el formulario permite declarar el uso, empleados, estacionamiento, horario y adjuntar documentos."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.2(b)",
+   "category": "no_aplica",
+   "reason": "Estos requisitos adicionales son para solicitudes nuevas y esta es una renovación."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(a)",
+   "category": "aplica",
+   "reason": "En una renovación deben solicitarse las licencias y certificaciones necesarias; el formulario permite declarar las licencias solicitadas."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(b)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_certificaciones: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(c)",
+   "category": "no_verificable",
+   "reason": "La prohibición de trasladar licencias es pertinente, pero el formulario no permite declarar ni acreditar cuál era la ubicación autorizada previamente para comparar si hubo traslado."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(d)",
+   "category": "no_aplica",
+   "reason": "La solicitud se presentó antes del vencimiento y no se indica demora en renovar o pagar derechos que active multas o penalidades."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(a)",
+   "category": "aplica",
+   "reason": "La renovación del Permiso Único comprende las licencias y certificaciones solicitadas; el uso y la determinación ambiental quedan fuera de la renovación salvo que se añadan usos."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(b)",
+   "category": "no_aplica",
+   "reason": "El recordatorio de vencimiento es discrecional para OGPe y no es un requisito de esta solicitud."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(c)",
+   "category": "aplica",
+   "reason": "La renovación debe presentarse al menos 45 días antes del vencimiento; el formulario permite declarar ambas fechas y aquí indica presentación exactamente 45 días antes."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(d)",
+   "category": "no_aplica",
+   "reason": "El pago adicional puede requerirse cuando se presenta con menos de 45 días; esta solicitud se presentó 45 días antes del vencimiento."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(e)",
+   "category": "no_aplica",
+   "reason": "Establece el efecto sobre la vigencia del permiso mientras se resuelve la renovación, pero no impone un requisito adicional a esta solicitud."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(f)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_renovacion_plazo: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(g)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_renovacion_plazo: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(h)",
+   "category": "tramite_del_sistema",
+   "reason": "La renovación debe presentarse en el SUI usando el mismo número de caso; es un paso de presentación y tramitación del sistema."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(i)",
+   "category": "no_aplica",
+   "reason": "Dispone que no se reevaluará el uso ya autorizado en una renovación; no establece un requisito que deba cumplir esta solicitud."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(j)",
+   "category": "tramite_del_sistema",
+   "reason": "La inspección para verificar las licencias y certificaciones corresponde a la entidad gubernamental concernida."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(k)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_renovacion_requisitos: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(l)",
+   "category": "no_aplica",
+   "reason": "Sus obligaciones surgen si una inspección identifica usos no autorizados; la solicitud acompaña certificación de que el uso está conforme y no declara una enmienda."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(m)",
+   "category": "no_aplica",
+   "reason": "Regula la revisión o apelación de la determinación de renovación, no un requisito de la solicitud."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.4(n)",
+   "category": "no_aplica",
+   "reason": "Solo aplica a enmiendas al uso y esta solicitud no solicita una enmienda."
+  }
+ ],
+ "unclassified_clause_refs": [],
+ "unknown_clause_refs": [],
+ "errors": [],
+ "fee_check": {
+  "declared_fee": "355",
+  "expected_fee": "355.00",
+  "charges": [
+   {
+    "ref": "28(a)",
+    "section_id": "COBROS:AnejoA:28",
+    "concept_es": "Certificación de Prevención de Incendios",
+    "base": "180.00",
+    "percent": 100,
+    "amount": "180.00"
+   },
+   {
+    "ref": "30(a)",
+    "section_id": "COBROS:AnejoA:30",
+    "concept_es": "Licencia Sanitaria: otros establecimientos no de alimentos y oficinas profesionales",
+    "base": "75.00",
+    "percent": 100,
+    "amount": "75.00"
+   },
+   {
+    "ref": "41(a)",
+    "section_id": "COBROS:AnejoA:41",
+    "concept_es": "Uso comercial",
+    "base": "100.00",
+    "percent": 100,
+    "amount": "100.00"
+   }
+  ],
+  "exemption_es": null,
+  "section_ids": [
+   "COBROS:AnejoA:28",
+   "COBROS:AnejoA:30",
+   "COBROS:AnejoA:41"
+  ],
+  "unverifiable_es": null,
+  "matches": true
+ },
+ "trace": {
+  "retrieved": [
+   {
+    "section_id": "RC-2023-E:3.7.1.9",
+    "heading": "PERMISO ÚNICO AUTOMÁTICO",
+    "similarity": 0.5868204832077026,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.9(a)",
+     "RC-2023-E:3.7.1.9(b)",
+     "RC-2023-E:3.7.1.9(c)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.7.1.2",
+    "heading": "REQUISITOS PRESENTACIÓN PERMISO ÚNICO",
+    "similarity": 0.5661889910697937,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.2(a)",
+     "RC-2023-E:3.7.1.2(b)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.7.1.6",
+    "heading": "PERMISO ÚNICO PYMES",
+    "similarity": 0.5620898008346558,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.6",
+     "RC-2023-E:3.7.1.6(a)",
+     "RC-2023-E:3.7.1.6(b)",
+     "RC-2023-E:3.7.1.6(c)",
+     "RC-2023-E:3.7.1.6(d)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:4.1.4.1",
+    "heading": "SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES",
+    "similarity": 0.5608664155006409,
+    "pinned_by": [
+     "pu_certificaciones"
+    ],
+    "clause_refs": [
+     "RC-2023-E:4.1.4.1(a)",
+     "RC-2023-E:4.1.4.1(b)",
+     "RC-2023-E:4.1.4.1(c)",
+     "RC-2023-E:4.1.4.1(d)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.5.9.8",
+    "heading": "REQUISITOS DE RENOVACIÓN",
+    "similarity": 0.5516369938850403,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.5.9.8",
+     "RC-2023-E:3.5.9.8(a)",
+     "RC-2023-E:3.5.9.8(b)",
+     "RC-2023-E:3.5.9.8(c)",
+     "RC-2023-E:3.5.9.8(d)",
+     "RC-2023-E:3.5.9.8(e)",
+     "RC-2023-E:3.5.9.8(f)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.4.4.13",
+    "heading": "REQUISITOS DE RENOVACIÓN DE UN PERMISO ÚNICO INCIDENTAL OPERACIONAL",
+    "similarity": 0.5484694242477417,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.4.4.13(a)",
+     "RC-2023-E:3.4.4.13(b)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:9.12.4.3",
+    "heading": "PROCESO DE EVALUACIÓN Y RECOMENDACIÓN",
+    "similarity": 0.5355324745178223,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:9.12.4.3"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:2.7.4.3",
+    "heading": "EXPEDICIÓN DE PERMISO ÚNICO",
+    "similarity": 0.5305102467536926,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:2.7.4.3(a)",
+     "RC-2023-E:2.7.4.3(b)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.7.1.4",
+    "heading": "RENOVACIÓN DEL PERMISO ÚNICO",
+    "similarity": null,
+    "pinned_by": [
+     "pu_renovacion_plazo",
+     "pu_renovacion_requisitos"
+    ],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.4(a)",
+     "RC-2023-E:3.7.1.4(b)",
+     "RC-2023-E:3.7.1.4(c)",
+     "RC-2023-E:3.7.1.4(d)",
+     "RC-2023-E:3.7.1.4(e)",
+     "RC-2023-E:3.7.1.4(f)",
+     "RC-2023-E:3.7.1.4(g)",
+     "RC-2023-E:3.7.1.4(h)",
+     "RC-2023-E:3.7.1.4(i)",
+     "RC-2023-E:3.7.1.4(j)",
+     "RC-2023-E:3.7.1.4(k)",
+     "RC-2023-E:3.7.1.4(l)",
+     "RC-2023-E:3.7.1.4(m)",
+     "RC-2023-E:3.7.1.4(n)"
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "node": "intake",
+    "output": {
+     "request": {
+      "applicant_name": "Farmacia del Pueblo, Inc.",
+      "applicant_type": "privado",
+      "applicant_role": "dueno",
+      "standing_document": "escritura_publica",
+      "owner_authorization": null,
+      "municipio": "Arecibo",
+      "catastro": "054-061-302-18",
+      "catastro_matches_ogpe": true,
+      "calificacion": "C-L (Comercial Liviano); farmacia permitida ministerialmente",
+      "request_type": "PERMISO_UNICO",
+      "attached_documents": [
+       "foto_aerea",
+       "ubicacion_geografica",
+       "memorial_explicativo",
+       "croquis",
+       "fotos_instalacion",
+       "exclusion_categorica",
+       "antecedentes_penales",
+       "no_deuda_asume",
+       "no_deuda_crim",
+       "planillas_ingresos",
+       "planillas_ivu",
+       "certificacion_deuda_dh",
+       "numero_patronal",
+       "registro_comerciantes",
+       "proyeccion_ventas",
+       "certificado_incorporacion",
+       "patente_municipal"
+      ],
+      "proposed_use": "Farmacia de comunidad con venta de artículos de primera necesidad",
+      "use_authorization": "ministerial",
+      "employees": 5,
+      "parking_spaces": 6,
+      "required_parking_spaces": 5,
+      "operating_hours": "lunes a sábado, de 8:00 a. m. a 7:00 p. m.",
+      "licenses_requested": [
+       "sanitaria",
+       "prevencion_incendios"
+      ],
+      "validity_years": 3,
+      "declared_fee": "355",
+      "establishment_type": "no_alimentos",
+      "site_sketch": {
+       "floor_area_m2": "85",
+       "shows_internal_layout": true,
+       "shows_access_road": true,
+       "shows_parking": true,
+       "shows_dimensions": true
+      },
+      "in_flood_zone": false,
+      "renewal": {
+       "permit_number": "2023-512044-PU-001203",
+       "expiry_date": "2026-11-30",
+       "filing_date": "2026-10-16",
+       "use_conforms_certification": true
+      }
+     },
+     "criteria": [
+      "pu_certificaciones",
+      "pu_renovacion_plazo",
+      "pu_renovacion_requisitos"
+     ]
+    }
+   },
+   {
+    "node": "fee_check",
+    "output": {
+     "fee_check": {
+      "declared_fee": "355",
+      "expected_fee": "355.00",
+      "charges": [
+       {
+        "ref": "28(a)",
+        "section_id": "COBROS:AnejoA:28",
+        "concept_es": "Certificación de Prevención de Incendios",
+        "base": "180.00",
+        "percent": 100,
+        "amount": "180.00"
+       },
+       {
+        "ref": "30(a)",
+        "section_id": "COBROS:AnejoA:30",
+        "concept_es": "Licencia Sanitaria: otros establecimientos no de alimentos y oficinas profesionales",
+        "base": "75.00",
+        "percent": 100,
+        "amount": "75.00"
+       },
+       {
+        "ref": "41(a)",
+        "section_id": "COBROS:AnejoA:41",
+        "concept_es": "Uso comercial",
+        "base": "100.00",
+        "percent": 100,
+        "amount": "100.00"
+       }
+      ],
+      "exemption_es": null,
+      "section_ids": [
+       "COBROS:AnejoA:28",
+       "COBROS:AnejoA:30",
+       "COBROS:AnejoA:41"
+      ],
+      "unverifiable_es": null,
+      "matches": true
+     }
+    }
+   },
+   {
+    "node": "retrieve",
+    "output": {
+     "sections": [
+      "RC-2023-E:3.7.1.9",
+      "RC-2023-E:3.7.1.2",
+      "RC-2023-E:3.7.1.6",
+      "RC-2023-E:4.1.4.1",
+      "RC-2023-E:3.5.9.8",
+      "RC-2023-E:3.4.4.13",
+      "RC-2023-E:9.12.4.3",
+      "RC-2023-E:2.7.4.3",
+      "RC-2023-E:3.7.1.4"
+     ],
+     "section_clauses": [
+      "RC-2023-E:3.7.1.9(a)",
+      "RC-2023-E:3.7.1.9(b)",
+      "RC-2023-E:3.7.1.9(c)",
+      "RC-2023-E:3.7.1.2(a)",
+      "RC-2023-E:3.7.1.2(b)",
+      "RC-2023-E:3.7.1.6",
+      "RC-2023-E:3.7.1.6(a)",
+      "RC-2023-E:3.7.1.6(b)",
+      "RC-2023-E:3.7.1.6(c)",
+      "RC-2023-E:3.7.1.6(d)",
+      "RC-2023-E:4.1.4.1(a)",
+      "RC-2023-E:4.1.4.1(b)",
+      "RC-2023-E:4.1.4.1(c)",
+      "RC-2023-E:4.1.4.1(d)",
+      "RC-2023-E:3.5.9.8",
+      "RC-2023-E:3.5.9.8(a)",
+      "RC-2023-E:3.5.9.8(b)",
+      "RC-2023-E:3.5.9.8(c)",
+      "RC-2023-E:3.5.9.8(d)",
+      "RC-2023-E:3.5.9.8(e)",
+      "RC-2023-E:3.5.9.8(f)",
+      "RC-2023-E:3.4.4.13(a)",
+      "RC-2023-E:3.4.4.13(b)",
+      "RC-2023-E:9.12.4.3",
+      "RC-2023-E:2.7.4.3(a)",
+      "RC-2023-E:2.7.4.3(b)",
+      "RC-2023-E:3.7.1.4(a)",
+      "RC-2023-E:3.7.1.4(b)",
+      "RC-2023-E:3.7.1.4(c)",
+      "RC-2023-E:3.7.1.4(d)",
+      "RC-2023-E:3.7.1.4(e)",
+      "RC-2023-E:3.7.1.4(f)",
+      "RC-2023-E:3.7.1.4(g)",
+      "RC-2023-E:3.7.1.4(h)",
+      "RC-2023-E:3.7.1.4(i)",
+      "RC-2023-E:3.7.1.4(j)",
+      "RC-2023-E:3.7.1.4(k)",
+      "RC-2023-E:3.7.1.4(l)",
+      "RC-2023-E:3.7.1.4(m)",
+      "RC-2023-E:3.7.1.4(n)"
+     ],
+     "retrieved": [
+      {
+       "section_id": "RC-2023-E:3.7.1.9",
+       "heading": "PERMISO ÚNICO AUTOMÁTICO",
+       "similarity": 0.5868204832077026,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.9(a)",
+        "RC-2023-E:3.7.1.9(b)",
+        "RC-2023-E:3.7.1.9(c)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.2",
+       "heading": "REQUISITOS PRESENTACIÓN PERMISO ÚNICO",
+       "similarity": 0.5661889910697937,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.2(a)",
+        "RC-2023-E:3.7.1.2(b)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.6",
+       "heading": "PERMISO ÚNICO PYMES",
+       "similarity": 0.5620898008346558,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.6",
+        "RC-2023-E:3.7.1.6(a)",
+        "RC-2023-E:3.7.1.6(b)",
+        "RC-2023-E:3.7.1.6(c)",
+        "RC-2023-E:3.7.1.6(d)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:4.1.4.1",
+       "heading": "SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES",
+       "similarity": 0.5608664155006409,
+       "pinned_by": [
+        "pu_certificaciones"
+       ],
+       "clause_refs": [
+        "RC-2023-E:4.1.4.1(a)",
+        "RC-2023-E:4.1.4.1(b)",
+        "RC-2023-E:4.1.4.1(c)",
+        "RC-2023-E:4.1.4.1(d)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.5.9.8",
+       "heading": "REQUISITOS DE RENOVACIÓN",
+       "similarity": 0.5516369938850403,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.5.9.8",
+        "RC-2023-E:3.5.9.8(a)",
+        "RC-2023-E:3.5.9.8(b)",
+        "RC-2023-E:3.5.9.8(c)",
+        "RC-2023-E:3.5.9.8(d)",
+        "RC-2023-E:3.5.9.8(e)",
+        "RC-2023-E:3.5.9.8(f)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.4.4.13",
+       "heading": "REQUISITOS DE RENOVACIÓN DE UN PERMISO ÚNICO INCIDENTAL OPERACIONAL",
+       "similarity": 0.5484694242477417,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.4.4.13(a)",
+        "RC-2023-E:3.4.4.13(b)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:9.12.4.3",
+       "heading": "PROCESO DE EVALUACIÓN Y RECOMENDACIÓN",
+       "similarity": 0.5355324745178223,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:9.12.4.3"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:2.7.4.3",
+       "heading": "EXPEDICIÓN DE PERMISO ÚNICO",
+       "similarity": 0.5305102467536926,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:2.7.4.3(a)",
+        "RC-2023-E:2.7.4.3(b)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.4",
+       "heading": "RENOVACIÓN DEL PERMISO ÚNICO",
+       "similarity": null,
+       "pinned_by": [
+        "pu_renovacion_plazo",
+        "pu_renovacion_requisitos"
+       ],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.4(a)",
+        "RC-2023-E:3.7.1.4(b)",
+        "RC-2023-E:3.7.1.4(c)",
+        "RC-2023-E:3.7.1.4(d)",
+        "RC-2023-E:3.7.1.4(e)",
+        "RC-2023-E:3.7.1.4(f)",
+        "RC-2023-E:3.7.1.4(g)",
+        "RC-2023-E:3.7.1.4(h)",
+        "RC-2023-E:3.7.1.4(i)",
+        "RC-2023-E:3.7.1.4(j)",
+        "RC-2023-E:3.7.1.4(k)",
+        "RC-2023-E:3.7.1.4(l)",
+        "RC-2023-E:3.7.1.4(m)",
+        "RC-2023-E:3.7.1.4(n)"
+       ]
+      }
+     ],
+     "errors": []
+    }
+   },
+   {
+    "node": "validate_sections",
+    "output": {
+     "section_relevance": [
+      {
+       "section_id": "RC-2023-E:3.7.1.9",
+       "applies": false,
+       "reason": "La sección regula permisos únicos automáticos y sus renovaciones. La solicitud es una renovación de Permiso Único, pero no indica que el permiso vigente sea automático; por tanto, no se establece aquí un requisito aplicable a esta solicitud."
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.2",
+       "applies": true,
+       "reason": "Aplica porque el inciso (a) exige a toda persona que solicite un Permiso Único completar la solicitud y cumplir con los requisitos de la Regla 2.1.9, también en una renovación. Los requisitos adicionales del inciso (b) son solo para solicitudes nuevas."
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.6",
+       "applies": false,
+       "reason": "La sección regula específicamente los Permisos Únicos PYMES y la renovación de uno de esos permisos. La solicitud identifica una renovación de Permiso Único ordinario, sin indicar que el permiso vigente sea PYMES."
+      },
+      {
+       "section_id": "RC-2023-E:4.1.4.1",
+       "applies": true,
+       "reason": "Fijada por el Criterio pu_certificaciones: siempre aplica."
+      },
+      {
+       "section_id": "RC-2023-E:3.5.9.8",
+       "applies": false,
+       "reason": "La sección establece requisitos para renovar un Permiso Formal, mientras que la solicitud es para renovar un Permiso Único."
+      },
+      {
+       "section_id": "RC-2023-E:3.4.4.13",
+       "applies": false,
+       "reason": "La sección regula renovaciones de un Permiso Único Incidental Operacional. La solicitud identifica una renovación de Permiso Único, pero no indica que sea de esa modalidad incidental operacional."
+      },
+      {
+       "section_id": "RC-2023-E:9.12.4.3",
+       "applies": false,
+       "reason": "La sección regula la evaluación y recomendación del NPPR para solicitudes sujetas a ese trámite, incluida la inspección y el análisis de ubicación. No establece un requisito aplicable a la renovación de un Permiso Único para una farmacia."
+      },
+      {
+       "section_id": "RC-2023-E:2.7.4.3",
+       "applies": false,
+       "reason": "La sección regula la expedición de un Permiso Único, mientras que esta solicitud es una renovación de un permiso vigente; no establece aquí requisitos propios de renovación."
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.4",
+       "applies": true,
+       "reason": "Fijada por el Criterio pu_renovacion_plazo, pu_renovacion_requisitos: siempre aplica."
+      }
+     ],
+     "applicable_sections": [
+      "RC-2023-E:3.7.1.2",
+      "RC-2023-E:4.1.4.1",
+      "RC-2023-E:3.7.1.4"
+     ],
+     "clauses": [
+      "RC-2023-E:3.7.1.2(a)",
+      "RC-2023-E:3.7.1.2(b)",
+      "RC-2023-E:4.1.4.1(a)",
+      "RC-2023-E:4.1.4.1(b)",
+      "RC-2023-E:4.1.4.1(c)",
+      "RC-2023-E:4.1.4.1(d)",
+      "RC-2023-E:3.7.1.4(a)",
+      "RC-2023-E:3.7.1.4(b)",
+      "RC-2023-E:3.7.1.4(c)",
+      "RC-2023-E:3.7.1.4(d)",
+      "RC-2023-E:3.7.1.4(e)",
+      "RC-2023-E:3.7.1.4(f)",
+      "RC-2023-E:3.7.1.4(g)",
+      "RC-2023-E:3.7.1.4(h)",
+      "RC-2023-E:3.7.1.4(i)",
+      "RC-2023-E:3.7.1.4(j)",
+      "RC-2023-E:3.7.1.4(k)",
+      "RC-2023-E:3.7.1.4(l)",
+      "RC-2023-E:3.7.1.4(m)",
+      "RC-2023-E:3.7.1.4(n)"
+     ],
+     "errors": []
+    }
+   },
+   {
+    "node": "select_requirements",
+    "output": {
+     "selection": [
+      {
+       "ref": "RC-2023-E:3.7.1.2(a)",
+       "category": "aplica",
+       "reason": "La solicitud de Permiso Único debe completarse y cumplir los requisitos aplicables; el formulario permite declarar el uso, empleados, estacionamiento, horario y adjuntar documentos."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.2(b)",
+       "category": "no_aplica",
+       "reason": "Estos requisitos adicionales son para solicitudes nuevas y esta es una renovación."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(a)",
+       "category": "aplica",
+       "reason": "En una renovación deben solicitarse las licencias y certificaciones necesarias; el formulario permite declarar las licencias solicitadas."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(b)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_certificaciones: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(c)",
+       "category": "no_verificable",
+       "reason": "La prohibición de trasladar licencias es pertinente, pero el formulario no permite declarar ni acreditar cuál era la ubicación autorizada previamente para comparar si hubo traslado."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(d)",
+       "category": "no_aplica",
+       "reason": "La solicitud se presentó antes del vencimiento y no se indica demora en renovar o pagar derechos que active multas o penalidades."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(a)",
+       "category": "aplica",
+       "reason": "La renovación del Permiso Único comprende las licencias y certificaciones solicitadas; el uso y la determinación ambiental quedan fuera de la renovación salvo que se añadan usos."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(b)",
+       "category": "no_aplica",
+       "reason": "El recordatorio de vencimiento es discrecional para OGPe y no es un requisito de esta solicitud."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(c)",
+       "category": "aplica",
+       "reason": "La renovación debe presentarse al menos 45 días antes del vencimiento; el formulario permite declarar ambas fechas y aquí indica presentación exactamente 45 días antes."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(d)",
+       "category": "no_aplica",
+       "reason": "El pago adicional puede requerirse cuando se presenta con menos de 45 días; esta solicitud se presentó 45 días antes del vencimiento."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(e)",
+       "category": "no_aplica",
+       "reason": "Establece el efecto sobre la vigencia del permiso mientras se resuelve la renovación, pero no impone un requisito adicional a esta solicitud."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(f)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_renovacion_plazo: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(g)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_renovacion_plazo: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(h)",
+       "category": "tramite_del_sistema",
+       "reason": "La renovación debe presentarse en el SUI usando el mismo número de caso; es un paso de presentación y tramitación del sistema."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(i)",
+       "category": "no_aplica",
+       "reason": "Dispone que no se reevaluará el uso ya autorizado en una renovación; no establece un requisito que deba cumplir esta solicitud."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(j)",
+       "category": "tramite_del_sistema",
+       "reason": "La inspección para verificar las licencias y certificaciones corresponde a la entidad gubernamental concernida."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(k)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_renovacion_requisitos: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(l)",
+       "category": "no_aplica",
+       "reason": "Sus obligaciones surgen si una inspección identifica usos no autorizados; la solicitud acompaña certificación de que el uso está conforme y no declara una enmienda."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(m)",
+       "category": "no_aplica",
+       "reason": "Regula la revisión o apelación de la determinación de renovación, no un requisito de la solicitud."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.4(n)",
+       "category": "no_aplica",
+       "reason": "Solo aplica a enmiendas al uso y esta solicitud no solicita una enmienda."
+      }
+     ],
+     "unclassified_clause_refs": [],
+     "unknown_clause_refs": [],
+     "errors": []
+    }
+   },
+   {
+    "node": "decide",
+    "output": {
+     "requirements": [
+      {
+       "id": "pu_certificaciones",
+       "text_es": "Se acompañan las certificaciones y documentos de la Sección 4.1.4.1(b) que exigen las licencias solicitadas.",
+       "clause_refs": [
+        "RC-2023-E:4.1.4.1(b)"
+       ],
+       "probability": 0.98
+      },
+      {
+       "id": "pu_renovacion_plazo",
+       "text_es": "La renovación se presentó antes de la expiración, o sin que hayan transcurrido más de dos años desde ella.",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.4(f)",
+        "RC-2023-E:3.7.1.4(g)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pu_renovacion_requisitos",
+       "text_es": "La renovación incluye la certificación del dueño u operador de que el uso está conforme al Permiso Único.",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.4(k)"
+       ],
+       "probability": 0.99
+      },
+      {
+       "id": "seccion_3_7_1_2",
+       "text_es": "Requisitos aplicables de la Sección 3.7.1.2 (REQUISITOS PRESENTACIÓN PERMISO ÚNICO)",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.2(a)"
+       ],
+       "probability": 0.84
+      },
+      {
+       "id": "seccion_4_1_4_1",
+       "text_es": "Requisitos aplicables de la Sección 4.1.4.1 (SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES)",
+       "clause_refs": [
+        "RC-2023-E:4.1.4.1(a)"
+       ],
+       "probability": 0.92
+      },
+      {
+       "id": "seccion_3_7_1_4",
+       "text_es": "Requisitos aplicables de la Sección 3.7.1.4 (RENOVACIÓN DEL PERMISO ÚNICO)",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.4(a)",
+        "RC-2023-E:3.7.1.4(c)"
+       ],
+       "probability": 0.99
+      }
+     ],
+     "approval_score": 0.84,
+     "errors": []
+    }
+   },
+   {
+    "node": "write_notes",
+    "output": {
+     "notes_attempts": 1,
+     "draft_notes": [
+      {
+       "text": "La renovación se presentó el 16 de octubre de 2026, exactamente 45 días antes de la expiración indicada del Permiso Único, cumpliendo el plazo establecido. También se acompaña la certificación del dueño u operador de que el uso está conforme al permiso.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.4(c)",
+        "RC-2023-E:3.7.1.4(k)(2)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La solicitud incluye varias de las certificaciones y evidencias enumeradas para solicitudes de licencias, entre ellas las de antecedentes penales, ASUME, CRIM, planillas, Hacienda y Registro de Comerciantes, además de evidencia de identificación patronal y documentos corporativos y municipales.",
+       "section_ids": [
+        "RC-2023-E:4.1.4.1(b)(1)",
+        "RC-2023-E:4.1.4.1(b)(2)",
+        "RC-2023-E:4.1.4.1(b)(3)",
+        "RC-2023-E:4.1.4.1(b)(4)",
+        "RC-2023-E:4.1.4.1(b)(5)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "Entre los documentos adjuntos constan el memorial explicativo, el croquis con área, distribución, acceso, estacionamiento y dimensiones, y fotos digitales del interior y exterior de la instalación.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.2(b)(1)",
+        "RC-2023-E:3.7.1.2(b)(3)",
+        "RC-2023-E:3.7.1.2(b)(4)"
+       ],
+       "curable": false
+      }
+     ]
+    }
+   },
+   {
+    "node": "validate_citations",
+    "output": {
+     "rejected_notes": [],
+     "notes": [
+      {
+       "text": "La renovación se presentó el 16 de octubre de 2026, exactamente 45 días antes de la expiración indicada del Permiso Único, cumpliendo el plazo establecido. También se acompaña la certificación del dueño u operador de que el uso está conforme al permiso.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.4(c)",
+        "RC-2023-E:3.7.1.4(k)(2)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La solicitud incluye varias de las certificaciones y evidencias enumeradas para solicitudes de licencias, entre ellas las de antecedentes penales, ASUME, CRIM, planillas, Hacienda y Registro de Comerciantes, además de evidencia de identificación patronal y documentos corporativos y municipales.",
+       "section_ids": [
+        "RC-2023-E:4.1.4.1(b)(1)",
+        "RC-2023-E:4.1.4.1(b)(2)",
+        "RC-2023-E:4.1.4.1(b)(3)",
+        "RC-2023-E:4.1.4.1(b)(4)",
+        "RC-2023-E:4.1.4.1(b)(5)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "Entre los documentos adjuntos constan el memorial explicativo, el croquis con área, distribución, acceso, estacionamiento y dimensiones, y fotos digitales del interior y exterior de la instalación.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.2(b)(1)",
+        "RC-2023-E:3.7.1.2(b)(3)",
+        "RC-2023-E:3.7.1.2(b)(4)"
+       ],
+       "curable": false
+      }
+     ],
+     "dropped_notes": []
+    }
+   }
+  ]
+ },
+ "weakest_requirement": {
+  "id": "seccion_3_7_1_2",
+  "text_es": "Requisitos aplicables de la Sección 3.7.1.2 (REQUISITOS PRESENTACIÓN PERMISO ÚNICO)",
+  "clause_refs": [
+   "RC-2023-E:3.7.1.2(a)"
+  ],
+  "probability": 0.84,
+  "criterion": null
+ }
+}

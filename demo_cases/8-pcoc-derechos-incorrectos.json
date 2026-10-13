@@ -1,0 +1,65 @@
+{
+  "expected": {
+    "verdict": "approve",
+    "borderline": false,
+    "fee_matches": false
+  },
+  "rationale": "A compliant request for a two-storey medical office building where the district allows it. The declared fee, $1,524, is $6.35 per $1,000 of the $240,000 work value, but the filing charge of Anejo A, 6(a) has a $100 minimum ($84 by rate), so the fee owed is $1,540. The Fee Check adds a curable Note and does not change the Approval Score.",
+  "request": {
+    "request_type": "PCOC",
+    "applicant_name": "Dr. Héctor Manuel Rosario Delgado",
+    "applicant_type": "privado",
+    "applicant_role": "dueno",
+    "standing_document": "escritura_publica",
+    "municipio": "Carolina",
+    "catastro": "087-052-611-24",
+    "catastro_matches_ogpe": true,
+    "calificacion": "C-L (Comercial Liviano); oficinas profesionales y consultorios médicos permitidos ministerialmente; altura máxima 2 plantas y 9 m; área bruta de piso máxima 700 m²",
+    "attached_documents": [
+      "planos_sellados",
+      "certificacion_valor_obra",
+      "determinacion_cumplimiento_ambiental",
+      "ubicacion_geografica",
+      "foto_aerea"
+    ],
+    "work_description": "Construcción de edificio de 2 plantas para consultorios médicos y oficinas profesionales",
+    "estimated_work_value": 240000,
+    "work_value_method": "guias_ogpe",
+    "floors": 2,
+    "height_m": 8,
+    "gross_floor_area_m2": 320,
+    "declared_fee": 1524,
+    "district_parameters": {
+      "lot_area_m2": 700,
+      "min_lot_area_m2": 400,
+      "dwelling_units": 0,
+      "max_dwelling_units": 0,
+      "occupation_pct": 40,
+      "max_occupation_pct": 75,
+      "yards_m": {
+        "front": 5,
+        "side": 2,
+        "rear": 3
+      },
+      "min_yards_m": {
+        "front": 4,
+        "side": 1.5,
+        "rear": 3
+      },
+      "parking_spaces": 10,
+      "required_parking_spaces": 9,
+      "loading_spaces": 1,
+      "required_loading_spaces": 1
+    },
+    "plans_certification": {
+      "professional": "arquitecto",
+      "professional_name": "Arq. Marisol Figueroa Lugo",
+      "license_number": "15932",
+      "drafted_by": null,
+      "sheets_certified": true,
+      "compliance_certification": true,
+      "file_format": "DXF",
+      "north_oriented": true
+    }
+  }
+}

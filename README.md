@@ -10,7 +10,7 @@ Requires [uv](https://docs.astral.sh/uv/) (Python 3.13 is installed automaticall
 uv sync
 cp .env.example .env   # then set OPENAI_API_KEY
 uv run pytest          # real-model tests skipped; RUN_REAL_MODEL_TESTS=1 to include them
-uv run case-mgmt-ai-demo --help   # subcommands: review, ingest, serve
+uv run case-mgmt-ai-demo --help   # subcommands: review, ingest, serve, seed, refresh, regress
 ```
 
 ## Review a Permit Request
@@ -43,6 +43,24 @@ Permit Requests, Recommendations and Determinations are kept in SQLite (`data/ap
 The start page is the queue: every Permit Request with its Request Type, Applicant, verdict, Approval Score, Borderline flag and Determination. On the case page the Reviewer records the Determination, once: accept the Recommendation, override it (a reason is required), or issue a Cure Request, whose list of deficiencies starts from the curable Notes. A request with a Determination is not reviewed again.
 
 "Nueva Solicitud de Permiso" on the start page opens a form that creates a Permit Request: choosing the Request Type swaps in that type's fields and its documents checklist. Submitting validates it as `review` does (each error is shown under its field), stores it, reviews it (real model calls) and opens its case page.
+
+## Demo cases
+
+```sh
+uv run case-mgmt-ai-demo seed            # the 8 demo cases into the queue, with their Recommendations
+uv run case-mgmt-ai-demo seed --reset    # empty the queue first (Determinations included)
+uv run case-mgmt-ai-demo refresh         # review them with the real models and cache the Recommendations
+uv run case-mgmt-ai-demo refresh --case 6-pcoc-arrendatario-sin-autorizacion-declarada
+uv run case-mgmt-ai-demo regress         # review them again and report what changed
+```
+
+`demo_cases/` holds the demo script: eight curated Permit Requests across both Request Types, each a JSON file with the request, the outcome it is expected to get (`expected`: the verdict, whether it is Borderline, whether the Fee Check passes) and why (`rationale`). Three are clear approvals, two clear denials (a renewal filed more than two years after expiry; a use the district does not allow), two Borderline, and one declares the wrong fee. Each case's Recommendation, as the real models last gave it, is cached in `demo_cases/cache/`.
+
+`seed` stores the cases with their cached Recommendations, reading only those files: no API key, no network and no index. Run it before `serve` and the demo cannot fail on a model error (`serve` stores `examples/` only when the queue is empty). A case already in the queue is not added again: it is given the cached Recommendation, unless it has its Determination. `--reset` empties the queue first, to rehearse again after recording Determinations. A case whose cached Recommendation is missing, or was made for other fields, is stored unreviewed and reported.
+
+`refresh` reviews the cases with the real models (it needs the index, as `review` does) and replaces a case's cached Recommendation only when the new one is the expected one, with no failed model call; otherwise it says how it differs and keeps the old one, so a bad run cannot break the demo. Run it after changing a case, the Criteria, the prompts or the index, and review the diff of `demo_cases/cache/`.
+
+`regress` is the opt-in regression suite (real model calls, as many as eight reviews). It reviews every case and fails when a Recommendation is not the expected one: a verdict that flipped, a Borderline flag or Fee Check that changed. Against the cached Recommendation, which is the baseline, it also reports, without failing: the Approval Score and every Requirement probability that moved by more than `PRA_REGRESSION_DRIFT_THRESHOLD` (0.15), Requirements that appeared or went, retrieved Sections whose relevance changed, and Clauses whose category changed or that a Section gained or lost (marked when the change alters what is scored). A verdict can stay put while its score drifts, so these prompt a look at extraction, chunking and selection changes. `refresh` then records the new baseline.
 
 ## Ingest the Reglamento
 

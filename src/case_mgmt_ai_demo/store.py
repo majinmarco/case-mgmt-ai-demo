@@ -83,6 +83,12 @@ class PermitRequestStore:
         assert cursor.lastrowid is not None
         return cursor.lastrowid
 
+    def clear(self) -> None:
+        """Remove every Permit Request, with its Recommendation and its Determination."""
+        with self._connection() as connection:
+            for table in ("determinations", "recommendations", "permit_requests"):
+                connection.execute(f"DELETE FROM {table}")
+
     def all(self) -> list[StoredPermitRequest]:
         """Every Permit Request, in the order stored."""
         with self._connection() as connection:

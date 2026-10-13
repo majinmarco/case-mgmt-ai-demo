@@ -1,0 +1,65 @@
+{
+  "expected": {
+    "verdict": null,
+    "borderline": true,
+    "fee_matches": true
+  },
+  "rationale": "A bakery extends the premises it leases. Documents, plans, work value and district parameters are in order, but the lessee files only the lease: the request does not say whether the owner authorises the works, which 2.1.9.5(b) asks of a lessee. Standing is neither shown nor ruled out, so the score sits near the cutoff, set by the standing Criterion. A Cure Request for the owner's authorisation is the natural Determination.",
+  "request": {
+    "request_type": "PCOC",
+    "applicant_name": "Panadería La Espiga Dorada, Inc.",
+    "applicant_type": "privado",
+    "applicant_role": "arrendatario",
+    "standing_document": "contrato_arrendamiento",
+    "municipio": "Mayagüez",
+    "catastro": "182-033-507-11",
+    "catastro_matches_ogpe": true,
+    "calificacion": "C-L (Comercial Liviano); panadería y repostería permitidas ministerialmente; altura máxima 2 plantas y 9 m; área bruta de piso máxima 600 m²",
+    "attached_documents": [
+      "planos_sellados",
+      "certificacion_valor_obra",
+      "determinacion_cumplimiento_ambiental",
+      "ubicacion_geografica",
+      "foto_aerea"
+    ],
+    "work_description": "Ampliación de un local comercial existente para área de horneado y almacén de una panadería, de 1 planta",
+    "estimated_work_value": 96000,
+    "work_value_method": "guias_ogpe",
+    "floors": 1,
+    "height_m": 4.5,
+    "gross_floor_area_m2": 140,
+    "declared_fee": 676,
+    "district_parameters": {
+      "lot_area_m2": 600,
+      "min_lot_area_m2": 400,
+      "dwelling_units": 0,
+      "max_dwelling_units": 0,
+      "occupation_pct": 55,
+      "max_occupation_pct": 75,
+      "yards_m": {
+        "front": 5,
+        "side": 2,
+        "rear": 3
+      },
+      "min_yards_m": {
+        "front": 4,
+        "side": 1.5,
+        "rear": 3
+      },
+      "parking_spaces": 5,
+      "required_parking_spaces": 5,
+      "loading_spaces": 1,
+      "required_loading_spaces": 1
+    },
+    "plans_certification": {
+      "professional": "ingeniero",
+      "professional_name": "Ing. Rafael Soto Quiñones",
+      "license_number": "18077",
+      "drafted_by": null,
+      "sheets_certified": true,
+      "compliance_certification": true,
+      "file_format": "DXF",
+      "north_oriented": true
+    }
+  }
+}

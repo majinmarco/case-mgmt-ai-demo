@@ -1,0 +1,1455 @@
+{
+ "request": {
+  "applicant_name": "Colmado y Cafetín Don Pepe",
+  "applicant_type": "privado",
+  "applicant_role": "dueno",
+  "standing_document": "escritura_publica",
+  "owner_authorization": null,
+  "municipio": "Guayama",
+  "catastro": "402-027-190-05",
+  "catastro_matches_ogpe": true,
+  "calificacion": "C-L (Comercial Liviano); cafetín permitido ministerialmente",
+  "request_type": "PERMISO_UNICO",
+  "attached_documents": [
+   "foto_aerea",
+   "ubicacion_geografica",
+   "memorial_explicativo",
+   "croquis",
+   "fotos_instalacion",
+   "exclusion_categorica",
+   "antecedentes_penales",
+   "no_deuda_asume",
+   "no_deuda_crim",
+   "planillas_ingresos",
+   "planillas_ivu",
+   "certificacion_deuda_dh",
+   "numero_patronal",
+   "registro_comerciantes",
+   "proyeccion_ventas",
+   "patente_municipal"
+  ],
+  "proposed_use": "Cafetín con venta de comestibles y de bebidas alcohólicas selladas para consumo fuera del local",
+  "use_authorization": "ministerial",
+  "employees": 3,
+  "parking_spaces": 3,
+  "required_parking_spaces": 4,
+  "operating_hours": "todos los días, de 7:00 a. m. a 10:00 p. m.",
+  "licenses_requested": [
+   "sanitaria",
+   "prevencion_incendios",
+   "bebidas_alcoholicas"
+  ],
+  "validity_years": 3,
+  "declared_fee": "580",
+  "establishment_type": "cafetin",
+  "site_sketch": {
+   "floor_area_m2": "70",
+   "shows_internal_layout": true,
+   "shows_access_road": true,
+   "shows_parking": true,
+   "shows_dimensions": true
+  },
+  "in_flood_zone": false,
+  "renewal": null
+ },
+ "approval_score": 0.51,
+ "verdict": "approve",
+ "borderline": true,
+ "requirements": [
+  {
+   "id": "pu_uso",
+   "text_es": "El uso propuesto está permitido ministerialmente en el distrito, o cuenta con una variación en el uso previamente autorizada.",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.1(f)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pu_uso",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "El uso propuesto está permitido ministerialmente en el distrito, o cuenta con una variación en el uso previamente autorizada.",
+    "text_en": "The proposed use is allowed in the district as of right (ministerial), or has a previously approved use variation.",
+    "pinned": [
+     "RC-2023-E:3.7.1.1(f)"
+    ],
+    "instructions": "¿Es el uso propuesto un uso permitido ministerialmente en el distrito, o cuenta con una variación en el uso previamente autorizada, como exige la Sección 3.7.1.1(f)?",
+    "application_kinds": [
+     "nueva"
+    ]
+   }
+  },
+  {
+   "id": "pu_legitimacion",
+   "text_es": "El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado) con alguno de los documentos de la Sección 2.1.9.5(b).",
+   "clause_refs": [
+    "RC-2023-E:2.1.9.5(a)",
+    "RC-2023-E:2.1.9.5(b)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pu_legitimacion",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado) con alguno de los documentos de la Sección 2.1.9.5(b).",
+    "text_en": "The Applicant shows standing (owner, option-holder or authorised lessee) with one of the documents listed in Sección 2.1.9.5(b).",
+    "pinned": [
+     "RC-2023-E:2.1.9.5(a)",
+     "RC-2023-E:2.1.9.5(b)"
+    ],
+    "instructions": "¿Acredita la solicitud que el proponente es dueño, optante o arrendatario autorizado de la propiedad, con al menos uno de los documentos que enumera la Sección 2.1.9.5(b)?",
+    "application_kinds": [
+     "nueva"
+    ]
+   }
+  },
+  {
+   "id": "pu_componentes",
+   "text_es": "La solicitud reúne los componentes del Permiso Único: documento ambiental, certificado de prevención de incendios, licencia sanitaria y demás licencias que requiera el negocio.",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.1(b)"
+   ],
+   "probability": 0.99,
+   "criterion": {
+    "id": "pu_componentes",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "La solicitud reúne los componentes del Permiso Único: documento ambiental, certificado de prevención de incendios, licencia sanitaria y demás licencias que requiera el negocio.",
+    "text_en": "The request covers the components of a Permiso Único: environmental document, fire prevention certificate, health licence and any other licence the business needs.",
+    "pinned": [
+     "RC-2023-E:3.7.1.1(b)"
+    ],
+    "instructions": "¿Incluye la solicitud los componentes del Permiso Único que enumera la Sección 3.7.1.1(b): la certificación de exclusión categórica o documento ambiental aplicable, la certificación para la prevención de incendios, la licencia sanitaria y cualquier otra licencia que requiera la operación del negocio?",
+    "application_kinds": [
+     "nueva"
+    ]
+   }
+  },
+  {
+   "id": "pu_memorial_croquis",
+   "text_es": "Se presentan el memorial explicativo, el croquis de la instalación con sus cinco elementos y fotos del interior y exterior.",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.2(b)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pu_memorial_croquis",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "Se presentan el memorial explicativo, el croquis de la instalación con sus cinco elementos y fotos del interior y exterior.",
+    "text_en": "The explanatory memorandum, a site sketch with its five elements, and interior and exterior photos are filed.",
+    "pinned": [
+     "RC-2023-E:3.7.1.2(b)"
+    ],
+    "instructions": "¿Cumple la solicitud los requisitos adicionales de la Sección 3.7.1.2(b): memorial explicativo (uso, empleados, estacionamiento y horario), las licencias que requiera el uso, croquis de la instalación (área, distribución interna, ubicación respecto a la vía de acceso, estacionamiento y dimensiones) y fotos digitales del interior y exterior?",
+    "application_kinds": [
+     "nueva"
+    ]
+   }
+  },
+  {
+   "id": "pu_certificaciones",
+   "text_es": "Se acompañan las certificaciones y documentos de la Sección 4.1.4.1(b) que exigen las licencias solicitadas.",
+   "clause_refs": [
+    "RC-2023-E:4.1.4.1(b)"
+   ],
+   "probability": 0.83,
+   "criterion": {
+    "id": "pu_certificaciones",
+    "request_type": "PERMISO_UNICO",
+    "text_es": "Se acompañan las certificaciones y documentos de la Sección 4.1.4.1(b) que exigen las licencias solicitadas.",
+    "text_en": "The certifications and documents of Sección 4.1.4.1(b) that the requested licences call for are attached.",
+    "pinned": [
+     "RC-2023-E:4.1.4.1(b)"
+    ],
+    "instructions": "¿Acompaña la solicitud las certificaciones y documentos que exige la Sección 4.1.4.1(b) para las licencias solicitadas? Esa Sección no los exige para la Licencia Sanitaria ni para el Certificado de Prevención de Incendios.",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "seccion_3_7_1_2",
+   "text_es": "Requisitos aplicables de la Sección 3.7.1.2 (REQUISITOS PRESENTACIÓN PERMISO ÚNICO)",
+   "clause_refs": [
+    "RC-2023-E:3.7.1.2(a)"
+   ],
+   "probability": 0.51,
+   "criterion": null
+  },
+  {
+   "id": "seccion_4_1_4_1",
+   "text_es": "Requisitos aplicables de la Sección 4.1.4.1 (SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES)",
+   "clause_refs": [
+    "RC-2023-E:4.1.4.1(a)"
+   ],
+   "probability": 0.76,
+   "criterion": null
+  }
+ ],
+ "notes": [
+  {
+   "text": "La solicitud declara 3 espacios de estacionamiento, aunque indica que el distrito requiere 4; por ello, debe aclararse o corregirse cómo se cumplirá el estacionamiento requerido antes de considerar satisfechos los requisitos aplicables. El memorial debe indicar el estacionamiento a proveer y la solicitud debe cumplir con los requisitos correspondientes.",
+   "section_ids": [
+    "RC-2023-E:3.7.1.2(b)(1)",
+    "RC-2023-E:3.7.1.1(f)(1)"
+   ],
+   "curable": true
+  },
+  {
+   "text": "El uso propuesto —cafetín con venta de comestibles y bebidas alcohólicas selladas para consumo fuera del local— se identifica como permitido ministerialmente en el distrito, y la Sección permite emitir el Permiso Único cuando el uso sea ministerial, sujeto al cumplimiento de los requisitos y documentos aplicables.",
+   "section_ids": [
+    "RC-2023-E:3.7.1.1(f)"
+   ],
+   "curable": false
+  },
+  {
+   "text": "La escritura pública presentada respalda la legitimación activa del solicitante como dueño de la propiedad, conforme a los documentos de evidencia admitidos por el Reglamento.",
+   "section_ids": [
+    "RC-2023-E:2.1.9.5(a)",
+    "RC-2023-E:2.1.9.5(b)(1)"
+   ],
+   "curable": false
+  },
+  {
+   "text": "La solicitud incluye el memorial explicativo, el croquis con los cinco elementos requeridos y fotos digitales del interior y exterior; además, identifica la certificación ambiental y las licencias solicitadas que forman parte del Permiso Único.",
+   "section_ids": [
+    "RC-2023-E:3.7.1.2(b)(1)",
+    "RC-2023-E:3.7.1.2(b)(3)",
+    "RC-2023-E:3.7.1.2(b)(4)",
+    "RC-2023-E:3.7.1.1(b)"
+   ],
+   "curable": false
+  }
+ ],
+ "notes_retried": false,
+ "dropped_notes": [],
+ "retrieved_section_ids": [
+  "RC-2023-E:3.7.1.2",
+  "RC-2023-E:9.12.4.3",
+  "RC-2023-E:4.4.2.2",
+  "RC-2023-E:4.1.4.1",
+  "RC-2023-E:3.7.1.9",
+  "RC-2023-E:2.2.3.6",
+  "RC-2023-E:3.7.1.6",
+  "RC-2023-E:3.1.3",
+  "RC-2023-E:2.1.9.5",
+  "RC-2023-E:3.7.1.1"
+ ],
+ "section_relevance": [
+  {
+   "section_id": "RC-2023-E:3.7.1.2",
+   "applies": true,
+   "reason": "Fijada por el Criterio pu_memorial_croquis: siempre aplica."
+  },
+  {
+   "section_id": "RC-2023-E:9.12.4.3",
+   "applies": true,
+   "reason": "La sección contempla la evaluación del lugar y establece que el dueño del negocio deberá comparecer ante los foros que atiendan apelaciones u otros asuntos relacionados con las recomendaciones del NPPR. Ese deber aplica al solicitante, que es dueño, aunque la solicitud sea nueva."
+  },
+  {
+   "section_id": "RC-2023-E:4.4.2.2",
+   "applies": false,
+   "reason": "La sección establece requisitos para licencias de bebidas alcohólicas por tiempo limitado y actividades temporeras. Esta solicitud es para un Permiso Único nuevo de un cafetín, con licencia de bebidas alcohólicas solicitada por tres años, no una licencia temporera."
+  },
+  {
+   "section_id": "RC-2023-E:4.1.4.1",
+   "applies": true,
+   "reason": "Fijada por el Criterio pu_certificaciones: siempre aplica."
+  },
+  {
+   "section_id": "RC-2023-E:3.7.1.9",
+   "applies": false,
+   "reason": "La solicitud es para un Permiso Único nuevo, no se indica que solicite la modalidad automática. Esta sección regula esa modalidad; sus requisitos y exclusiones no aplican a una solicitud ordinaria."
+  },
+  {
+   "section_id": "RC-2023-E:2.2.3.6",
+   "applies": false,
+   "reason": "La sección establece requisitos para consultas de ubicación de proyectos comerciales. La solicitud es un Permiso Único nuevo para un cafetín, no una consulta de ubicación."
+  },
+  {
+   "section_id": "RC-2023-E:3.7.1.6",
+   "applies": false,
+   "reason": "La solicitud es para un Permiso Único nuevo, pero no se identifica como un Permiso Único PYMES ni se indica que solicite acogerse al Programa PYMES. Esta sección regula ese tipo especial de permiso."
+  },
+  {
+   "section_id": "RC-2023-E:3.1.3",
+   "applies": true,
+   "reason": "Aplica a una solicitud nueva de Permiso Único: establece requisitos generales para presentar solicitudes de permisos, como radicarlas electrónicamente por el SUI, cumplir los requisitos aplicables, presentar una solicitud completa y pagar los derechos correspondientes."
+  },
+  {
+   "section_id": "RC-2023-E:2.1.9.5",
+   "applies": true,
+   "reason": "Fijada por el Criterio pu_legitimacion: siempre aplica."
+  },
+  {
+   "section_id": "RC-2023-E:3.7.1.1",
+   "applies": true,
+   "reason": "Fijada por el Criterio pu_uso, pu_componentes: siempre aplica."
+  }
+ ],
+ "selection": [
+  {
+   "ref": "RC-2023-E:3.7.1.2(a)",
+   "category": "aplica",
+   "reason": "La solicitud de Permiso Único debe completarse y cumplir los requisitos aplicables de la Regla 2.1.9; el formulario permite acreditar varios de ellos."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.2(b)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_memorial_croquis: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:9.12.4.3",
+   "category": "tramite_del_sistema",
+   "reason": "La evaluación, referido al NPPR e inspección visual corresponden a las agencias; la comparecencia del dueño solo surgiría ante una apelación u otro foro."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(a)",
+   "category": "aplica",
+   "reason": "La solicitud nueva debe incluir las licencias y certificaciones necesarias; el formulario permite declarar las licencias solicitadas."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(b)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_certificaciones: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(c)",
+   "category": "no_aplica",
+   "reason": "La solicitud es nueva y no propone trasladar licencias a otro local."
+  },
+  {
+   "ref": "RC-2023-E:4.1.4.1(d)",
+   "category": "no_aplica",
+   "reason": "Se trata de una solicitud nueva, no de una renovación tardía de licencia."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(a)",
+   "category": "tramite_del_sistema",
+   "reason": "La presentación electrónica por el SUI y la asignación del número único son pasos del sistema."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(b)",
+   "category": "tramite_del_sistema",
+   "reason": "La evaluación de la solicitud corresponde a la OGPe, al PA o al municipio, según su jurisdicción."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(c)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: remite a los requisitos generales de la Regla 2.1.9 y a los particulares de cada servicio, que se evalúan por sus propios incisos."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(d)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: inciso general de completitud; la completitud se juzga por los requisitos específicos que aplican."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(e)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: pago de derechos; se verifica aparte."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(f)",
+   "category": "tramite_del_sistema",
+   "reason": "Elevar el expediente dentro del término establecido es una gestión municipal, si la facultad corresponde a una agencia central."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(g)",
+   "category": "no_aplica",
+   "reason": "La solicitud es de Permiso Único y no se indica que se presente al amparo de la Ley Núm. 135."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(h)",
+   "category": "tramite_del_sistema",
+   "reason": "Solicitar aclaraciones o información adicional es una facultad de la agencia durante la evaluación."
+  },
+  {
+   "ref": "RC-2023-E:3.1.3(i)",
+   "category": "tramite_del_sistema",
+   "reason": "La disposición regula los términos de evaluación de la agencia cuando solicita información."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(a)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_legitimacion: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(b)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_legitimacion: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(c)",
+   "category": "no_aplica",
+   "reason": "No se indica que haya más de un propietario; la solicitud identifica al solicitante como dueño."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(d)",
+   "category": "no_aplica",
+   "reason": "El predio no se identifica como propiedad o terreno público."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(e)",
+   "category": "no_aplica",
+   "reason": "La solicitud no trata de mejoras públicas en un terreno privado."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(f)",
+   "category": "no_aplica",
+   "reason": "La solicitud la presenta el dueño, no un profesional licenciado que solicite el servicio."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(a)",
+   "category": "no_aplica",
+   "reason": "Describe el propósito del Permiso Único, pero no establece un requisito particular para esta solicitud."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(b)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_componentes: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(c)",
+   "category": "tramite_del_sistema",
+   "reason": "La expedición del Permiso Único y sus licencias corresponde a las entidades autorizadas."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(d)",
+   "category": "no_aplica",
+   "reason": "Se refiere a inspecciones posteriores a la expedición del Permiso Único."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(e)",
+   "category": "no_aplica",
+   "reason": "No se indica que el Permiso Único vaya a ser expedido por un PA."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(f)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pu_uso: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(g)",
+   "category": "no_aplica",
+   "reason": "Regula inspecciones y requerimientos de información posteriores a la expedición de las licencias o certificaciones."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(h)",
+   "category": "no_aplica",
+   "reason": "Establece facultades de fiscalización y revocación de las entidades para permisos ya emitidos."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(i)",
+   "category": "no_aplica",
+   "reason": "La solicitud es nueva y no se identifica un permiso de uso vigente que se enmiende o cuyo vencimiento active esta regla."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(j)",
+   "category": "no_aplica",
+   "reason": "No se indica que el solicitante sea violador en contumacia o rebeldía a órdenes finales."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(k)",
+   "category": "no_aplica",
+   "reason": "El formulario indica que el predio no ubica en zona inundable."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(l)",
+   "category": "no_aplica",
+   "reason": "No se identifica que el predio esté en Suelo Rústico Especialmente Protegido ni en un área especial con riesgo a inundación."
+  },
+  {
+   "ref": "RC-2023-E:3.7.1.1(m)",
+   "category": "no_aplica",
+   "reason": "La disposición trata los efectos de usos autorizados y renovaciones de permisos existentes; esta es una solicitud nueva."
+  }
+ ],
+ "unclassified_clause_refs": [],
+ "unknown_clause_refs": [],
+ "errors": [],
+ "fee_check": {
+  "declared_fee": "580",
+  "expected_fee": "580.00",
+  "charges": [
+   {
+    "ref": "28(a)",
+    "section_id": "COBROS:AnejoA:28",
+    "concept_es": "Certificación de Prevención de Incendios",
+    "base": "180.00",
+    "percent": 100,
+    "amount": "180.00"
+   },
+   {
+    "ref": "30(b)",
+    "section_id": "COBROS:AnejoA:30",
+    "concept_es": "Licencia Sanitaria: cafetín",
+    "base": "150.00",
+    "percent": 100,
+    "amount": "150.00"
+   },
+   {
+    "ref": "41(a)",
+    "section_id": "COBROS:AnejoA:41",
+    "concept_es": "Uso comercial",
+    "base": "100.00",
+    "percent": 100,
+    "amount": "100.00"
+   },
+   {
+    "ref": "41(b)",
+    "section_id": "COBROS:AnejoA:41",
+    "concept_es": "Uso comercial, venta de bebidas alcohólicas",
+    "base": "150.00",
+    "percent": 100,
+    "amount": "150.00"
+   }
+  ],
+  "exemption_es": null,
+  "section_ids": [
+   "COBROS:AnejoA:28",
+   "COBROS:AnejoA:30",
+   "COBROS:AnejoA:41"
+  ],
+  "unverifiable_es": null,
+  "matches": true
+ },
+ "trace": {
+  "retrieved": [
+   {
+    "section_id": "RC-2023-E:3.7.1.2",
+    "heading": "REQUISITOS PRESENTACIÓN PERMISO ÚNICO",
+    "similarity": 0.626294732093811,
+    "pinned_by": [
+     "pu_memorial_croquis"
+    ],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.2(a)",
+     "RC-2023-E:3.7.1.2(b)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:9.12.4.3",
+    "heading": "PROCESO DE EVALUACIÓN Y RECOMENDACIÓN",
+    "similarity": 0.611620306968689,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:9.12.4.3"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:4.4.2.2",
+    "heading": "REQUISITOS LICENCIA DE TRAFICANTE AL DETALLE DE BEBIDAS ALCOHÓLICAS POR TIEMPO LIMITADO Y TRAFICANTES AL DETALLE EN CIGARRILLOS Y BEBIDAS ALCOHÓLICAS POR TIEMPO LIMITADO",
+    "similarity": 0.5958633422851562,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:4.4.2.2",
+     "RC-2023-E:4.4.2.2(a)",
+     "RC-2023-E:4.4.2.2(b)",
+     "RC-2023-E:4.4.2.2(c)",
+     "RC-2023-E:4.4.2.2(d)",
+     "RC-2023-E:4.4.2.2(e)",
+     "RC-2023-E:4.4.2.2(f)",
+     "RC-2023-E:4.4.2.2(g)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:4.1.4.1",
+    "heading": "SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES",
+    "similarity": 0.5949692726135254,
+    "pinned_by": [
+     "pu_certificaciones"
+    ],
+    "clause_refs": [
+     "RC-2023-E:4.1.4.1(a)",
+     "RC-2023-E:4.1.4.1(b)",
+     "RC-2023-E:4.1.4.1(c)",
+     "RC-2023-E:4.1.4.1(d)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.7.1.9",
+    "heading": "PERMISO ÚNICO AUTOMÁTICO",
+    "similarity": 0.5848777294158936,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.9(a)",
+     "RC-2023-E:3.7.1.9(b)",
+     "RC-2023-E:3.7.1.9(c)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:2.2.3.6",
+    "heading": "CONSULTAS PARA INSTALACIONES COMERCIALES",
+    "similarity": 0.5846688747406006,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:2.2.3.6",
+     "RC-2023-E:2.2.3.6(a)",
+     "RC-2023-E:2.2.3.6(b)",
+     "RC-2023-E:2.2.3.6(c)",
+     "RC-2023-E:2.2.3.6(d)",
+     "RC-2023-E:2.2.3.6(e)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.7.1.6",
+    "heading": "PERMISO ÚNICO PYMES",
+    "similarity": 0.5820934772491455,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.6",
+     "RC-2023-E:3.7.1.6(a)",
+     "RC-2023-E:3.7.1.6(b)",
+     "RC-2023-E:3.7.1.6(c)",
+     "RC-2023-E:3.7.1.6(d)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.1.3",
+    "heading": "PRESENTACIÓN Y EVALUACIÓN DE SOLICITUDES DE PERMISOS, LICENCIAS Y CERTIFICACIONES",
+    "similarity": 0.580560564994812,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.1.3(a)",
+     "RC-2023-E:3.1.3(b)",
+     "RC-2023-E:3.1.3(c)",
+     "RC-2023-E:3.1.3(d)",
+     "RC-2023-E:3.1.3(e)",
+     "RC-2023-E:3.1.3(f)",
+     "RC-2023-E:3.1.3(g)",
+     "RC-2023-E:3.1.3(h)",
+     "RC-2023-E:3.1.3(i)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:2.1.9.5",
+    "heading": "LEGITIMACIÓN ACTIVA (STANDING)",
+    "similarity": null,
+    "pinned_by": [
+     "pu_legitimacion"
+    ],
+    "clause_refs": [
+     "RC-2023-E:2.1.9.5(a)",
+     "RC-2023-E:2.1.9.5(b)",
+     "RC-2023-E:2.1.9.5(c)",
+     "RC-2023-E:2.1.9.5(d)",
+     "RC-2023-E:2.1.9.5(e)",
+     "RC-2023-E:2.1.9.5(f)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.7.1.1",
+    "heading": "DISPOSICIONES GENERALES",
+    "similarity": null,
+    "pinned_by": [
+     "pu_uso",
+     "pu_componentes"
+    ],
+    "clause_refs": [
+     "RC-2023-E:3.7.1.1(a)",
+     "RC-2023-E:3.7.1.1(b)",
+     "RC-2023-E:3.7.1.1(c)",
+     "RC-2023-E:3.7.1.1(d)",
+     "RC-2023-E:3.7.1.1(e)",
+     "RC-2023-E:3.7.1.1(f)",
+     "RC-2023-E:3.7.1.1(g)",
+     "RC-2023-E:3.7.1.1(h)",
+     "RC-2023-E:3.7.1.1(i)",
+     "RC-2023-E:3.7.1.1(j)",
+     "RC-2023-E:3.7.1.1(k)",
+     "RC-2023-E:3.7.1.1(l)",
+     "RC-2023-E:3.7.1.1(m)"
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "node": "intake",
+    "output": {
+     "request": {
+      "applicant_name": "Colmado y Cafetín Don Pepe",
+      "applicant_type": "privado",
+      "applicant_role": "dueno",
+      "standing_document": "escritura_publica",
+      "owner_authorization": null,
+      "municipio": "Guayama",
+      "catastro": "402-027-190-05",
+      "catastro_matches_ogpe": true,
+      "calificacion": "C-L (Comercial Liviano); cafetín permitido ministerialmente",
+      "request_type": "PERMISO_UNICO",
+      "attached_documents": [
+       "foto_aerea",
+       "ubicacion_geografica",
+       "memorial_explicativo",
+       "croquis",
+       "fotos_instalacion",
+       "exclusion_categorica",
+       "antecedentes_penales",
+       "no_deuda_asume",
+       "no_deuda_crim",
+       "planillas_ingresos",
+       "planillas_ivu",
+       "certificacion_deuda_dh",
+       "numero_patronal",
+       "registro_comerciantes",
+       "proyeccion_ventas",
+       "patente_municipal"
+      ],
+      "proposed_use": "Cafetín con venta de comestibles y de bebidas alcohólicas selladas para consumo fuera del local",
+      "use_authorization": "ministerial",
+      "employees": 3,
+      "parking_spaces": 3,
+      "required_parking_spaces": 4,
+      "operating_hours": "todos los días, de 7:00 a. m. a 10:00 p. m.",
+      "licenses_requested": [
+       "sanitaria",
+       "prevencion_incendios",
+       "bebidas_alcoholicas"
+      ],
+      "validity_years": 3,
+      "declared_fee": "580",
+      "establishment_type": "cafetin",
+      "site_sketch": {
+       "floor_area_m2": "70",
+       "shows_internal_layout": true,
+       "shows_access_road": true,
+       "shows_parking": true,
+       "shows_dimensions": true
+      },
+      "in_flood_zone": false,
+      "renewal": null
+     },
+     "criteria": [
+      "pu_uso",
+      "pu_legitimacion",
+      "pu_componentes",
+      "pu_memorial_croquis",
+      "pu_certificaciones"
+     ]
+    }
+   },
+   {
+    "node": "fee_check",
+    "output": {
+     "fee_check": {
+      "declared_fee": "580",
+      "expected_fee": "580.00",
+      "charges": [
+       {
+        "ref": "28(a)",
+        "section_id": "COBROS:AnejoA:28",
+        "concept_es": "Certificación de Prevención de Incendios",
+        "base": "180.00",
+        "percent": 100,
+        "amount": "180.00"
+       },
+       {
+        "ref": "30(b)",
+        "section_id": "COBROS:AnejoA:30",
+        "concept_es": "Licencia Sanitaria: cafetín",
+        "base": "150.00",
+        "percent": 100,
+        "amount": "150.00"
+       },
+       {
+        "ref": "41(a)",
+        "section_id": "COBROS:AnejoA:41",
+        "concept_es": "Uso comercial",
+        "base": "100.00",
+        "percent": 100,
+        "amount": "100.00"
+       },
+       {
+        "ref": "41(b)",
+        "section_id": "COBROS:AnejoA:41",
+        "concept_es": "Uso comercial, venta de bebidas alcohólicas",
+        "base": "150.00",
+        "percent": 100,
+        "amount": "150.00"
+       }
+      ],
+      "exemption_es": null,
+      "section_ids": [
+       "COBROS:AnejoA:28",
+       "COBROS:AnejoA:30",
+       "COBROS:AnejoA:41"
+      ],
+      "unverifiable_es": null,
+      "matches": true
+     }
+    }
+   },
+   {
+    "node": "retrieve",
+    "output": {
+     "sections": [
+      "RC-2023-E:3.7.1.2",
+      "RC-2023-E:9.12.4.3",
+      "RC-2023-E:4.4.2.2",
+      "RC-2023-E:4.1.4.1",
+      "RC-2023-E:3.7.1.9",
+      "RC-2023-E:2.2.3.6",
+      "RC-2023-E:3.7.1.6",
+      "RC-2023-E:3.1.3",
+      "RC-2023-E:2.1.9.5",
+      "RC-2023-E:3.7.1.1"
+     ],
+     "section_clauses": [
+      "RC-2023-E:3.7.1.2(a)",
+      "RC-2023-E:3.7.1.2(b)",
+      "RC-2023-E:9.12.4.3",
+      "RC-2023-E:4.4.2.2",
+      "RC-2023-E:4.4.2.2(a)",
+      "RC-2023-E:4.4.2.2(b)",
+      "RC-2023-E:4.4.2.2(c)",
+      "RC-2023-E:4.4.2.2(d)",
+      "RC-2023-E:4.4.2.2(e)",
+      "RC-2023-E:4.4.2.2(f)",
+      "RC-2023-E:4.4.2.2(g)",
+      "RC-2023-E:4.1.4.1(a)",
+      "RC-2023-E:4.1.4.1(b)",
+      "RC-2023-E:4.1.4.1(c)",
+      "RC-2023-E:4.1.4.1(d)",
+      "RC-2023-E:3.7.1.9(a)",
+      "RC-2023-E:3.7.1.9(b)",
+      "RC-2023-E:3.7.1.9(c)",
+      "RC-2023-E:2.2.3.6",
+      "RC-2023-E:2.2.3.6(a)",
+      "RC-2023-E:2.2.3.6(b)",
+      "RC-2023-E:2.2.3.6(c)",
+      "RC-2023-E:2.2.3.6(d)",
+      "RC-2023-E:2.2.3.6(e)",
+      "RC-2023-E:3.7.1.6",
+      "RC-2023-E:3.7.1.6(a)",
+      "RC-2023-E:3.7.1.6(b)",
+      "RC-2023-E:3.7.1.6(c)",
+      "RC-2023-E:3.7.1.6(d)",
+      "RC-2023-E:3.1.3(a)",
+      "RC-2023-E:3.1.3(b)",
+      "RC-2023-E:3.1.3(c)",
+      "RC-2023-E:3.1.3(d)",
+      "RC-2023-E:3.1.3(e)",
+      "RC-2023-E:3.1.3(f)",
+      "RC-2023-E:3.1.3(g)",
+      "RC-2023-E:3.1.3(h)",
+      "RC-2023-E:3.1.3(i)",
+      "RC-2023-E:2.1.9.5(a)",
+      "RC-2023-E:2.1.9.5(b)",
+      "RC-2023-E:2.1.9.5(c)",
+      "RC-2023-E:2.1.9.5(d)",
+      "RC-2023-E:2.1.9.5(e)",
+      "RC-2023-E:2.1.9.5(f)",
+      "RC-2023-E:3.7.1.1(a)",
+      "RC-2023-E:3.7.1.1(b)",
+      "RC-2023-E:3.7.1.1(c)",
+      "RC-2023-E:3.7.1.1(d)",
+      "RC-2023-E:3.7.1.1(e)",
+      "RC-2023-E:3.7.1.1(f)",
+      "RC-2023-E:3.7.1.1(g)",
+      "RC-2023-E:3.7.1.1(h)",
+      "RC-2023-E:3.7.1.1(i)",
+      "RC-2023-E:3.7.1.1(j)",
+      "RC-2023-E:3.7.1.1(k)",
+      "RC-2023-E:3.7.1.1(l)",
+      "RC-2023-E:3.7.1.1(m)"
+     ],
+     "retrieved": [
+      {
+       "section_id": "RC-2023-E:3.7.1.2",
+       "heading": "REQUISITOS PRESENTACIÓN PERMISO ÚNICO",
+       "similarity": 0.626294732093811,
+       "pinned_by": [
+        "pu_memorial_croquis"
+       ],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.2(a)",
+        "RC-2023-E:3.7.1.2(b)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:9.12.4.3",
+       "heading": "PROCESO DE EVALUACIÓN Y RECOMENDACIÓN",
+       "similarity": 0.611620306968689,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:9.12.4.3"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:4.4.2.2",
+       "heading": "REQUISITOS LICENCIA DE TRAFICANTE AL DETALLE DE BEBIDAS ALCOHÓLICAS POR TIEMPO LIMITADO Y TRAFICANTES AL DETALLE EN CIGARRILLOS Y BEBIDAS ALCOHÓLICAS POR TIEMPO LIMITADO",
+       "similarity": 0.5958633422851562,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:4.4.2.2",
+        "RC-2023-E:4.4.2.2(a)",
+        "RC-2023-E:4.4.2.2(b)",
+        "RC-2023-E:4.4.2.2(c)",
+        "RC-2023-E:4.4.2.2(d)",
+        "RC-2023-E:4.4.2.2(e)",
+        "RC-2023-E:4.4.2.2(f)",
+        "RC-2023-E:4.4.2.2(g)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:4.1.4.1",
+       "heading": "SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES",
+       "similarity": 0.5949692726135254,
+       "pinned_by": [
+        "pu_certificaciones"
+       ],
+       "clause_refs": [
+        "RC-2023-E:4.1.4.1(a)",
+        "RC-2023-E:4.1.4.1(b)",
+        "RC-2023-E:4.1.4.1(c)",
+        "RC-2023-E:4.1.4.1(d)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.9",
+       "heading": "PERMISO ÚNICO AUTOMÁTICO",
+       "similarity": 0.5848777294158936,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.9(a)",
+        "RC-2023-E:3.7.1.9(b)",
+        "RC-2023-E:3.7.1.9(c)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:2.2.3.6",
+       "heading": "CONSULTAS PARA INSTALACIONES COMERCIALES",
+       "similarity": 0.5846688747406006,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:2.2.3.6",
+        "RC-2023-E:2.2.3.6(a)",
+        "RC-2023-E:2.2.3.6(b)",
+        "RC-2023-E:2.2.3.6(c)",
+        "RC-2023-E:2.2.3.6(d)",
+        "RC-2023-E:2.2.3.6(e)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.6",
+       "heading": "PERMISO ÚNICO PYMES",
+       "similarity": 0.5820934772491455,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.6",
+        "RC-2023-E:3.7.1.6(a)",
+        "RC-2023-E:3.7.1.6(b)",
+        "RC-2023-E:3.7.1.6(c)",
+        "RC-2023-E:3.7.1.6(d)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.1.3",
+       "heading": "PRESENTACIÓN Y EVALUACIÓN DE SOLICITUDES DE PERMISOS, LICENCIAS Y CERTIFICACIONES",
+       "similarity": 0.580560564994812,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.1.3(a)",
+        "RC-2023-E:3.1.3(b)",
+        "RC-2023-E:3.1.3(c)",
+        "RC-2023-E:3.1.3(d)",
+        "RC-2023-E:3.1.3(e)",
+        "RC-2023-E:3.1.3(f)",
+        "RC-2023-E:3.1.3(g)",
+        "RC-2023-E:3.1.3(h)",
+        "RC-2023-E:3.1.3(i)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.5",
+       "heading": "LEGITIMACIÓN ACTIVA (STANDING)",
+       "similarity": null,
+       "pinned_by": [
+        "pu_legitimacion"
+       ],
+       "clause_refs": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)",
+        "RC-2023-E:2.1.9.5(c)",
+        "RC-2023-E:2.1.9.5(d)",
+        "RC-2023-E:2.1.9.5(e)",
+        "RC-2023-E:2.1.9.5(f)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.1",
+       "heading": "DISPOSICIONES GENERALES",
+       "similarity": null,
+       "pinned_by": [
+        "pu_uso",
+        "pu_componentes"
+       ],
+       "clause_refs": [
+        "RC-2023-E:3.7.1.1(a)",
+        "RC-2023-E:3.7.1.1(b)",
+        "RC-2023-E:3.7.1.1(c)",
+        "RC-2023-E:3.7.1.1(d)",
+        "RC-2023-E:3.7.1.1(e)",
+        "RC-2023-E:3.7.1.1(f)",
+        "RC-2023-E:3.7.1.1(g)",
+        "RC-2023-E:3.7.1.1(h)",
+        "RC-2023-E:3.7.1.1(i)",
+        "RC-2023-E:3.7.1.1(j)",
+        "RC-2023-E:3.7.1.1(k)",
+        "RC-2023-E:3.7.1.1(l)",
+        "RC-2023-E:3.7.1.1(m)"
+       ]
+      }
+     ],
+     "errors": []
+    }
+   },
+   {
+    "node": "validate_sections",
+    "output": {
+     "section_relevance": [
+      {
+       "section_id": "RC-2023-E:3.7.1.2",
+       "applies": true,
+       "reason": "Fijada por el Criterio pu_memorial_croquis: siempre aplica."
+      },
+      {
+       "section_id": "RC-2023-E:9.12.4.3",
+       "applies": true,
+       "reason": "La sección contempla la evaluación del lugar y establece que el dueño del negocio deberá comparecer ante los foros que atiendan apelaciones u otros asuntos relacionados con las recomendaciones del NPPR. Ese deber aplica al solicitante, que es dueño, aunque la solicitud sea nueva."
+      },
+      {
+       "section_id": "RC-2023-E:4.4.2.2",
+       "applies": false,
+       "reason": "La sección establece requisitos para licencias de bebidas alcohólicas por tiempo limitado y actividades temporeras. Esta solicitud es para un Permiso Único nuevo de un cafetín, con licencia de bebidas alcohólicas solicitada por tres años, no una licencia temporera."
+      },
+      {
+       "section_id": "RC-2023-E:4.1.4.1",
+       "applies": true,
+       "reason": "Fijada por el Criterio pu_certificaciones: siempre aplica."
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.9",
+       "applies": false,
+       "reason": "La solicitud es para un Permiso Único nuevo, no se indica que solicite la modalidad automática. Esta sección regula esa modalidad; sus requisitos y exclusiones no aplican a una solicitud ordinaria."
+      },
+      {
+       "section_id": "RC-2023-E:2.2.3.6",
+       "applies": false,
+       "reason": "La sección establece requisitos para consultas de ubicación de proyectos comerciales. La solicitud es un Permiso Único nuevo para un cafetín, no una consulta de ubicación."
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.6",
+       "applies": false,
+       "reason": "La solicitud es para un Permiso Único nuevo, pero no se identifica como un Permiso Único PYMES ni se indica que solicite acogerse al Programa PYMES. Esta sección regula ese tipo especial de permiso."
+      },
+      {
+       "section_id": "RC-2023-E:3.1.3",
+       "applies": true,
+       "reason": "Aplica a una solicitud nueva de Permiso Único: establece requisitos generales para presentar solicitudes de permisos, como radicarlas electrónicamente por el SUI, cumplir los requisitos aplicables, presentar una solicitud completa y pagar los derechos correspondientes."
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.5",
+       "applies": true,
+       "reason": "Fijada por el Criterio pu_legitimacion: siempre aplica."
+      },
+      {
+       "section_id": "RC-2023-E:3.7.1.1",
+       "applies": true,
+       "reason": "Fijada por el Criterio pu_uso, pu_componentes: siempre aplica."
+      }
+     ],
+     "applicable_sections": [
+      "RC-2023-E:3.7.1.2",
+      "RC-2023-E:9.12.4.3",
+      "RC-2023-E:4.1.4.1",
+      "RC-2023-E:3.1.3",
+      "RC-2023-E:2.1.9.5",
+      "RC-2023-E:3.7.1.1"
+     ],
+     "clauses": [
+      "RC-2023-E:3.7.1.2(a)",
+      "RC-2023-E:3.7.1.2(b)",
+      "RC-2023-E:9.12.4.3",
+      "RC-2023-E:4.1.4.1(a)",
+      "RC-2023-E:4.1.4.1(b)",
+      "RC-2023-E:4.1.4.1(c)",
+      "RC-2023-E:4.1.4.1(d)",
+      "RC-2023-E:3.1.3(a)",
+      "RC-2023-E:3.1.3(b)",
+      "RC-2023-E:3.1.3(c)",
+      "RC-2023-E:3.1.3(d)",
+      "RC-2023-E:3.1.3(e)",
+      "RC-2023-E:3.1.3(f)",
+      "RC-2023-E:3.1.3(g)",
+      "RC-2023-E:3.1.3(h)",
+      "RC-2023-E:3.1.3(i)",
+      "RC-2023-E:2.1.9.5(a)",
+      "RC-2023-E:2.1.9.5(b)",
+      "RC-2023-E:2.1.9.5(c)",
+      "RC-2023-E:2.1.9.5(d)",
+      "RC-2023-E:2.1.9.5(e)",
+      "RC-2023-E:2.1.9.5(f)",
+      "RC-2023-E:3.7.1.1(a)",
+      "RC-2023-E:3.7.1.1(b)",
+      "RC-2023-E:3.7.1.1(c)",
+      "RC-2023-E:3.7.1.1(d)",
+      "RC-2023-E:3.7.1.1(e)",
+      "RC-2023-E:3.7.1.1(f)",
+      "RC-2023-E:3.7.1.1(g)",
+      "RC-2023-E:3.7.1.1(h)",
+      "RC-2023-E:3.7.1.1(i)",
+      "RC-2023-E:3.7.1.1(j)",
+      "RC-2023-E:3.7.1.1(k)",
+      "RC-2023-E:3.7.1.1(l)",
+      "RC-2023-E:3.7.1.1(m)"
+     ],
+     "errors": []
+    }
+   },
+   {
+    "node": "select_requirements",
+    "output": {
+     "selection": [
+      {
+       "ref": "RC-2023-E:3.7.1.2(a)",
+       "category": "aplica",
+       "reason": "La solicitud de Permiso Único debe completarse y cumplir los requisitos aplicables de la Regla 2.1.9; el formulario permite acreditar varios de ellos."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.2(b)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_memorial_croquis: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:9.12.4.3",
+       "category": "tramite_del_sistema",
+       "reason": "La evaluación, referido al NPPR e inspección visual corresponden a las agencias; la comparecencia del dueño solo surgiría ante una apelación u otro foro."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(a)",
+       "category": "aplica",
+       "reason": "La solicitud nueva debe incluir las licencias y certificaciones necesarias; el formulario permite declarar las licencias solicitadas."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(b)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_certificaciones: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(c)",
+       "category": "no_aplica",
+       "reason": "La solicitud es nueva y no propone trasladar licencias a otro local."
+      },
+      {
+       "ref": "RC-2023-E:4.1.4.1(d)",
+       "category": "no_aplica",
+       "reason": "Se trata de una solicitud nueva, no de una renovación tardía de licencia."
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(a)",
+       "category": "tramite_del_sistema",
+       "reason": "La presentación electrónica por el SUI y la asignación del número único son pasos del sistema."
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(b)",
+       "category": "tramite_del_sistema",
+       "reason": "La evaluación de la solicitud corresponde a la OGPe, al PA o al municipio, según su jurisdicción."
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(c)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: remite a los requisitos generales de la Regla 2.1.9 y a los particulares de cada servicio, que se evalúan por sus propios incisos.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(d)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: inciso general de completitud; la completitud se juzga por los requisitos específicos que aplican.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(e)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: pago de derechos; se verifica aparte.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(f)",
+       "category": "tramite_del_sistema",
+       "reason": "Elevar el expediente dentro del término establecido es una gestión municipal, si la facultad corresponde a una agencia central."
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(g)",
+       "category": "no_aplica",
+       "reason": "La solicitud es de Permiso Único y no se indica que se presente al amparo de la Ley Núm. 135."
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(h)",
+       "category": "tramite_del_sistema",
+       "reason": "Solicitar aclaraciones o información adicional es una facultad de la agencia durante la evaluación."
+      },
+      {
+       "ref": "RC-2023-E:3.1.3(i)",
+       "category": "tramite_del_sistema",
+       "reason": "La disposición regula los términos de evaluación de la agencia cuando solicita información."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(a)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_legitimacion: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(b)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_legitimacion: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(c)",
+       "category": "no_aplica",
+       "reason": "No se indica que haya más de un propietario; la solicitud identifica al solicitante como dueño."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(d)",
+       "category": "no_aplica",
+       "reason": "El predio no se identifica como propiedad o terreno público."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(e)",
+       "category": "no_aplica",
+       "reason": "La solicitud no trata de mejoras públicas en un terreno privado."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(f)",
+       "category": "no_aplica",
+       "reason": "La solicitud la presenta el dueño, no un profesional licenciado que solicite el servicio."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(a)",
+       "category": "no_aplica",
+       "reason": "Describe el propósito del Permiso Único, pero no establece un requisito particular para esta solicitud."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(b)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_componentes: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(c)",
+       "category": "tramite_del_sistema",
+       "reason": "La expedición del Permiso Único y sus licencias corresponde a las entidades autorizadas."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(d)",
+       "category": "no_aplica",
+       "reason": "Se refiere a inspecciones posteriores a la expedición del Permiso Único."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(e)",
+       "category": "no_aplica",
+       "reason": "No se indica que el Permiso Único vaya a ser expedido por un PA."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(f)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pu_uso: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(g)",
+       "category": "no_aplica",
+       "reason": "Regula inspecciones y requerimientos de información posteriores a la expedición de las licencias o certificaciones."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(h)",
+       "category": "no_aplica",
+       "reason": "Establece facultades de fiscalización y revocación de las entidades para permisos ya emitidos."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(i)",
+       "category": "no_aplica",
+       "reason": "La solicitud es nueva y no se identifica un permiso de uso vigente que se enmiende o cuyo vencimiento active esta regla."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(j)",
+       "category": "no_aplica",
+       "reason": "No se indica que el solicitante sea violador en contumacia o rebeldía a órdenes finales."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(k)",
+       "category": "no_aplica",
+       "reason": "El formulario indica que el predio no ubica en zona inundable."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(l)",
+       "category": "no_aplica",
+       "reason": "No se identifica que el predio esté en Suelo Rústico Especialmente Protegido ni en un área especial con riesgo a inundación."
+      },
+      {
+       "ref": "RC-2023-E:3.7.1.1(m)",
+       "category": "no_aplica",
+       "reason": "La disposición trata los efectos de usos autorizados y renovaciones de permisos existentes; esta es una solicitud nueva."
+      }
+     ],
+     "unclassified_clause_refs": [],
+     "unknown_clause_refs": [],
+     "errors": []
+    }
+   },
+   {
+    "node": "decide",
+    "output": {
+     "requirements": [
+      {
+       "id": "pu_uso",
+       "text_es": "El uso propuesto está permitido ministerialmente en el distrito, o cuenta con una variación en el uso previamente autorizada.",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.1(f)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pu_legitimacion",
+       "text_es": "El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado) con alguno de los documentos de la Sección 2.1.9.5(b).",
+       "clause_refs": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pu_componentes",
+       "text_es": "La solicitud reúne los componentes del Permiso Único: documento ambiental, certificado de prevención de incendios, licencia sanitaria y demás licencias que requiera el negocio.",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.1(b)"
+       ],
+       "probability": 0.99
+      },
+      {
+       "id": "pu_memorial_croquis",
+       "text_es": "Se presentan el memorial explicativo, el croquis de la instalación con sus cinco elementos y fotos del interior y exterior.",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.2(b)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pu_certificaciones",
+       "text_es": "Se acompañan las certificaciones y documentos de la Sección 4.1.4.1(b) que exigen las licencias solicitadas.",
+       "clause_refs": [
+        "RC-2023-E:4.1.4.1(b)"
+       ],
+       "probability": 0.83
+      },
+      {
+       "id": "seccion_3_7_1_2",
+       "text_es": "Requisitos aplicables de la Sección 3.7.1.2 (REQUISITOS PRESENTACIÓN PERMISO ÚNICO)",
+       "clause_refs": [
+        "RC-2023-E:3.7.1.2(a)"
+       ],
+       "probability": 0.51
+      },
+      {
+       "id": "seccion_4_1_4_1",
+       "text_es": "Requisitos aplicables de la Sección 4.1.4.1 (SOLICITUDES NUEVAS Y RENOVACIÓN DE LICENCIAS Y CERTIFICACIONES)",
+       "clause_refs": [
+        "RC-2023-E:4.1.4.1(a)"
+       ],
+       "probability": 0.76
+      }
+     ],
+     "approval_score": 0.51,
+     "errors": []
+    }
+   },
+   {
+    "node": "write_notes",
+    "output": {
+     "notes_attempts": 1,
+     "draft_notes": [
+      {
+       "text": "La solicitud declara 3 espacios de estacionamiento, aunque indica que el distrito requiere 4; por ello, debe aclararse o corregirse cómo se cumplirá el estacionamiento requerido antes de considerar satisfechos los requisitos aplicables. El memorial debe indicar el estacionamiento a proveer y la solicitud debe cumplir con los requisitos correspondientes.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.2(b)(1)",
+        "RC-2023-E:3.7.1.1(f)(1)"
+       ],
+       "curable": true
+      },
+      {
+       "text": "El uso propuesto —cafetín con venta de comestibles y bebidas alcohólicas selladas para consumo fuera del local— se identifica como permitido ministerialmente en el distrito, y la Sección permite emitir el Permiso Único cuando el uso sea ministerial, sujeto al cumplimiento de los requisitos y documentos aplicables.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.1(f)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La escritura pública presentada respalda la legitimación activa del solicitante como dueño de la propiedad, conforme a los documentos de evidencia admitidos por el Reglamento.",
+       "section_ids": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)(1)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La solicitud incluye el memorial explicativo, el croquis con los cinco elementos requeridos y fotos digitales del interior y exterior; además, identifica la certificación ambiental y las licencias solicitadas que forman parte del Permiso Único.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.2(b)(1)",
+        "RC-2023-E:3.7.1.2(b)(3)",
+        "RC-2023-E:3.7.1.2(b)(4)",
+        "RC-2023-E:3.7.1.1(b)"
+       ],
+       "curable": false
+      }
+     ]
+    }
+   },
+   {
+    "node": "validate_citations",
+    "output": {
+     "rejected_notes": [],
+     "notes": [
+      {
+       "text": "La solicitud declara 3 espacios de estacionamiento, aunque indica que el distrito requiere 4; por ello, debe aclararse o corregirse cómo se cumplirá el estacionamiento requerido antes de considerar satisfechos los requisitos aplicables. El memorial debe indicar el estacionamiento a proveer y la solicitud debe cumplir con los requisitos correspondientes.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.2(b)(1)",
+        "RC-2023-E:3.7.1.1(f)(1)"
+       ],
+       "curable": true
+      },
+      {
+       "text": "El uso propuesto —cafetín con venta de comestibles y bebidas alcohólicas selladas para consumo fuera del local— se identifica como permitido ministerialmente en el distrito, y la Sección permite emitir el Permiso Único cuando el uso sea ministerial, sujeto al cumplimiento de los requisitos y documentos aplicables.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.1(f)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La escritura pública presentada respalda la legitimación activa del solicitante como dueño de la propiedad, conforme a los documentos de evidencia admitidos por el Reglamento.",
+       "section_ids": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)(1)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La solicitud incluye el memorial explicativo, el croquis con los cinco elementos requeridos y fotos digitales del interior y exterior; además, identifica la certificación ambiental y las licencias solicitadas que forman parte del Permiso Único.",
+       "section_ids": [
+        "RC-2023-E:3.7.1.2(b)(1)",
+        "RC-2023-E:3.7.1.2(b)(3)",
+        "RC-2023-E:3.7.1.2(b)(4)",
+        "RC-2023-E:3.7.1.1(b)"
+       ],
+       "curable": false
+      }
+     ],
+     "dropped_notes": []
+    }
+   }
+  ]
+ },
+ "weakest_requirement": {
+  "id": "seccion_3_7_1_2",
+  "text_es": "Requisitos aplicables de la Sección 3.7.1.2 (REQUISITOS PRESENTACIÓN PERMISO ÚNICO)",
+  "clause_refs": [
+   "RC-2023-E:3.7.1.2(a)"
+  ],
+  "probability": 0.51,
+  "criterion": null
+ }
+}

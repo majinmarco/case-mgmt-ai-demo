@@ -17,6 +17,7 @@ from case_mgmt_ai_demo.review import (
 
 if TYPE_CHECKING:  # imported when used: Chroma and pymupdf are slow to load
     from case_mgmt_ai_demo.config import Settings
+    from case_mgmt_ai_demo.demo_cases import DemoCases
     from case_mgmt_ai_demo.extraction import OcrEngine
     from case_mgmt_ai_demo.index import Embedder
     from case_mgmt_ai_demo.ingest import Ingestion
@@ -26,6 +27,9 @@ COMMANDS = {
     "review": "Produce a Recommendation for a Permit Request.",
     "ingest": "Chunk the Reglamento and load it into the index.",
     "serve": "Run the Reviewer web UI.",
+    "seed": "Store the demo cases in the queue with their cached Recommendations (no network).",
+    "refresh": "Review the demo cases with the real models and cache their Recommendations.",
+    "regress": "Review the demo cases with the real models and report what changed.",
 }
 
 VERDICTS_ES = {
@@ -120,6 +124,20 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "serve":
             subparser.add_argument("--host", default="127.0.0.1", help="Address to listen on.")
             subparser.add_argument("--port", type=int, default=8000, help="Port to listen on.")
+        if name == "seed":
+            subparser.add_argument(
+                "--reset",
+                action="store_true",
+                help="Empty the queue first: every stored Permit Request, Recommendation and "
+                "Determination is removed.",
+            )
+        if name == "refresh":
+            subparser.add_argument(
+                "--case",
+                action="append",
+                metavar="SLUG",
+                help="Refresh only this demo case, named as its file without .json (repeatable).",
+            )
     return parser
 
 
@@ -143,7 +161,128 @@ def main(
             ocr=None if args.no_ocr else args.ocr or "",
             clear_clauses=args.clear_clauses,
         )
+    if args.command == "seed":
+        return _seed(reset=args.reset)
+    if args.command == "refresh":
+        return _refresh(args.case, pipeline)
+    if args.command == "regress":
+        return _regress(pipeline)
     return _serve(args.host, args.port, pipeline)
+
+
+def _demo_cases(settings: "Settings") -> "DemoCases | None":
+    """The demo cases of the configured directory; None, having said why, when it holds none
+    or a file in it is not one."""
+    from case_mgmt_ai_demo.demo_cases import DemoCases, InvalidDemoCases
+
+    try:
+        return DemoCases(settings.demo_cases_dir)
+    except InvalidDemoCases as error:
+        print(error, file=sys.stderr)
+        return None
+
+
+def _seed(reset: bool) -> int:
+    """Store the demo cases with their cached Recommendations; reads only local files."""
+    from case_mgmt_ai_demo.config import load_settings
+    from case_mgmt_ai_demo.store import PermitRequestStore
+
+    settings = load_settings()
+    demo_cases = _demo_cases(settings)
+    if demo_cases is None:
+        return 1
+    store = PermitRequestStore(settings.db_path)
+    if reset:
+        store.clear()
+    uncached = 0
+    for seeded in demo_cases.seed(store):
+        status = "" if seeded.added else " (ya estaba en la cola)"
+        print(f"  N.º {seeded.request_id}  {seeded.case.slug}: {_outcome(seeded.recommendation)}{status}")
+        if seeded.recommendation is None:
+            uncached += 1
+            print(
+                f"Sin Recomendación en caché para {seeded.case.slug}: ejecute "
+                "`case-mgmt-ai-demo refresh`.",
+                file=sys.stderr,
+            )
+    return 1 if uncached else 0
+
+
+def _refresh(slugs: list[str] | None, pipeline: RecommendationSource | None) -> int:
+    """Review the demo cases and cache each Recommendation that is the expected one."""
+    from case_mgmt_ai_demo.config import load_settings
+
+    settings = load_settings()
+    demo_cases = _demo_cases(settings)
+    if demo_cases is None:
+        return 1
+    known = [case.slug for case in demo_cases.cases]
+    if unknown := [slug for slug in slugs or [] if slug not in known]:
+        print(
+            f"Caso de demostración desconocido: {', '.join(unknown)}. Los casos son: "
+            f"{', '.join(known)}.",
+            file=sys.stderr,
+        )
+        return 1
+    # Built here, once: the cases are reviewed concurrently.
+    pipeline = pipeline or _real_pipeline_or_none()
+    if pipeline is None:
+        return 1
+    refreshed = demo_cases.refresh(pipeline, slugs)
+    for case in refreshed:
+        kept = "" if case.cached else " — NO se guardó en la caché"
+        print(f"  {case.case.slug}: {_outcome(case.recommendation)}{kept}")
+        for problem in case.problems:
+            print(f"⚠ {case.case.slug}: {problem}", file=sys.stderr)
+    return 0 if all(case.cached for case in refreshed) else 1
+
+
+def _regress(pipeline: RecommendationSource | None) -> int:
+    """The regression suite: review every demo case and report each that is not the expected
+    Recommendation (the suite then fails) and what moved since its baseline, the cached one."""
+    from case_mgmt_ai_demo.config import load_settings
+
+    settings = load_settings()
+    demo_cases = _demo_cases(settings)
+    if demo_cases is None:
+        return 1
+    threshold = settings.regression_drift_threshold
+    # Built here, once: the cases are reviewed concurrently.
+    pipeline = pipeline or _real_pipeline_or_none()
+    if pipeline is None:
+        return 1
+    regressed = demo_cases.regress(pipeline, threshold)
+    for result in regressed:
+        print(f"  {result.case.slug}: {_outcome(result.recommendation)}")
+        for problem in result.problems:
+            print(f"      ⚠ {problem}")
+        if not result.has_baseline:
+            print("      sin línea base: ejecute `case-mgmt-ai-demo refresh`")
+        if result.moved:
+            print(f"      Se movió más de {threshold:.2f} desde la línea base:")
+            for moved in result.moved:
+                print(f"        ⚠ {moved}")
+        if result.reclassified:
+            print("      Se clasificó de otro modo que en la línea base:")
+            for reclassified in result.reclassified:
+                print(f"        ⚠ {reclassified}")
+    failed = sum(1 for result in regressed if result.problems)
+    drifted = sum(1 for result in regressed if result.moved or result.reclassified)
+    print(
+        f"{len(regressed)} casos: {failed} con una Recomendación distinta de la esperada, "
+        f"{drifted} con cambios desde la línea base."
+    )
+    return 1 if failed else 0
+
+
+def _outcome(recommendation: Recommendation | None) -> str:
+    """A Recommendation in a few words: its verdict, score and Borderline flag."""
+    if recommendation is None:
+        return "sin revisar"
+    score = recommendation.approval_score
+    shown = "sin puntuación" if score is None else f"{score:.2f}"
+    borderline = ", caso límite" if recommendation.borderline else ""
+    return f"{VERDICTS_ES[recommendation.verdict]} ({shown}{borderline})"
 
 
 def _review(
@@ -157,18 +296,9 @@ def _review(
     except json.JSONDecodeError as error:
         print(f"{path} no es JSON válido: {error}", file=sys.stderr)
         return 1
+    pipeline = pipeline or _real_pipeline_or_none()
     if pipeline is None:
-        from case_mgmt_ai_demo.adapters import IndexNotBuilt
-
-        try:
-            pipeline = _real_pipeline()
-        except IndexNotBuilt as error:
-            print(
-                f"El índice del Reglamento ({error}) no contiene RC-2023-E: ejecute "
-                "`case-mgmt-ai-demo ingest`, o use PRA_RETRIEVER=fixture.",
-                file=sys.stderr,
-            )
-            return 1
+        return 1
     try:
         recommendation = pipeline.review(raw)
     except InvalidPermitRequest as error:
@@ -185,6 +315,21 @@ def _review(
         return 1
     print(format_recommendation(recommendation, show_selection, show_trace))
     return 0
+
+
+def _real_pipeline_or_none() -> RecommendationSource | None:
+    """The real pipeline; None, having said why, when the Reglamento index is not built."""
+    from case_mgmt_ai_demo.adapters import IndexNotBuilt
+
+    try:
+        return _real_pipeline()
+    except IndexNotBuilt as error:
+        print(
+            f"El índice del Reglamento ({error}) no contiene RC-2023-E: ejecute "
+            "`case-mgmt-ai-demo ingest`, o use PRA_RETRIEVER=fixture.",
+            file=sys.stderr,
+        )
+        return None
 
 
 def _real_pipeline() -> RecommendationSource:

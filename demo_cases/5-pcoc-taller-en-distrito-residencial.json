@@ -1,0 +1,65 @@
+{
+  "expected": {
+    "verdict": "not_approve",
+    "borderline": false,
+    "fee_matches": true
+  },
+  "rationale": "The paperwork is complete, but the work is a three-storey automotive workshop in an R-I district that allows single-family residential use and at most two storeys. The use is not allowed in the district and the height exceeds its limit (2.2.1.3(c)-(d)), which no document cures.",
+  "request": {
+    "request_type": "PCOC",
+    "applicant_name": "Autocentro Hermanos Vázquez, Inc.",
+    "applicant_type": "privado",
+    "applicant_role": "dueno",
+    "standing_document": "escritura_publica",
+    "municipio": "Bayamón",
+    "catastro": "098-011-456-07",
+    "catastro_matches_ogpe": true,
+    "calificacion": "R-I (Residencial Intermedio); solo se permite el uso residencial unifamiliar; usos comerciales e industriales no permitidos; altura máxima 2 plantas y 9 m; área bruta de piso máxima 300 m²",
+    "attached_documents": [
+      "planos_sellados",
+      "certificacion_valor_obra",
+      "determinacion_cumplimiento_ambiental",
+      "ubicacion_geografica",
+      "foto_aerea"
+    ],
+    "work_description": "Construcción de taller de mecánica automotriz y hojalatería de 3 plantas con área de exhibición y venta de piezas",
+    "estimated_work_value": 420000,
+    "work_value_method": "guias_ogpe",
+    "floors": 3,
+    "height_m": 12,
+    "gross_floor_area_m2": 640,
+    "declared_fee": 2667,
+    "district_parameters": {
+      "lot_area_m2": 520,
+      "min_lot_area_m2": 300,
+      "dwelling_units": 0,
+      "max_dwelling_units": 1,
+      "occupation_pct": 48,
+      "max_occupation_pct": 50,
+      "yards_m": {
+        "front": 5,
+        "side": 2,
+        "rear": 3
+      },
+      "min_yards_m": {
+        "front": 4,
+        "side": 1.5,
+        "rear": 3
+      },
+      "parking_spaces": 6,
+      "required_parking_spaces": 6,
+      "loading_spaces": 1,
+      "required_loading_spaces": 1
+    },
+    "plans_certification": {
+      "professional": "arquitecto",
+      "professional_name": "Arq. Lourdes Nieves Pagán",
+      "license_number": "20418",
+      "drafted_by": null,
+      "sheets_certified": true,
+      "compliance_certification": true,
+      "file_format": "DXF",
+      "north_oriented": true
+    }
+  }
+}

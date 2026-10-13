@@ -46,7 +46,7 @@ Permiso Único adds: proposed use / business type and whether it is ministerial 
 
 ### Synthetic dataset
 
-8 curated Permit Requests, each with an expected outcome and rationale: 3 clear approve, 2 clear not-approve (e.g. renewal > 2 years after expiry; use not allowed in the district), 2 borderline, 1 wrong fee. They double as the demo script and a regression suite.
+8 curated Permit Requests, each with an expected outcome and rationale: 3 clear approve, 2 clear not-approve (e.g. renewal > 2 years after expiry; use not allowed in the district), 2 borderline, 1 wrong fee. They double as the demo script and a regression suite. As built: *Demo cases and calibration* below.
 
 ## Pipeline (LangGraph)
 
@@ -95,6 +95,30 @@ With Criteria in place (CMAWD-5), the good Permiso Único example still scored 0
 - **A Section's opening paragraph is often left unclassified.** The text before a Section's first Clause is cited by the Section ID alone, and in the good PCOC run the selector left it out in 9.5.2.2, 9.2.3.2 and 10.2.11.7, so it was kept for `decide` and reported.
 - **Requirements the form cannot evidence are not scored.** Those Sections ask for things no field of the Permit Request can carry, so no Applicant could meet them through the form, and with the minimum as the score one such Clause sinks any request. The selector now classifies them `no_verificable`: they are set aside from `decide`, and `review` counts them above the Requirements and lists each with its reason after the Notes, since they remain requirements the Reviewer must check. `review` also names, under every Requirement, the Clauses it was assessed on; for a Requirement the Decisions API refused, which comes with no reason, it lists each of those Clauses with the selector's reason for keeping it. One run each (2026-10-13, real index): the good PCOC went from 0.01 to **0.56** (16 Clauses `no_verificable`, among them the flood certification, soil study, recycling plan and georeferenced polygon; weakest Requirements 9.5.2.2 and 10.2.11.7 at 0.56); the good Permiso Único's Sección 10.2.11.7 went from 0.06 to 0.81, though the run still had no score because the Decisions API refused Sección 3.1.3; both bad examples stayed at **0.00** (9 and 1 Clauses `no_verificable`). Clauses a Criterion pins are never asked, so they cannot be set aside this way.
 - The opt-in real-model tests that check the good and bad examples' scores run on the fixture retriever, where those scores were established; one more reviews the good PCOC against the real index and checks the trace.
+
+### Demo cases and calibration (CMAWD-16)
+
+The eight cases are in `demo_cases/`, one JSON file each: the Permit Request, the expected outcome (`verdict`, `borderline`, `fee_matches`; a Borderline case names no verdict, since its score may fall either side of the cutoff) and the rationale. Drafted by Claude; pending developer review. Scores are from the real index (2026-10-13), the same in the run that was cached and in one run of the regression suite after it:
+
+| Case | Request Type | Expected | Approval Score | Weakest Requirement |
+|---|---|---|---|---|
+| 1 Single-family house | PCOC | Approve | 0.72 | Sección 3.2.1.2 |
+| 2 Cafeteria, new | Permiso Único | Approve | 0.83 | Sección 3.7.1.2 |
+| 3 Pharmacy, renewal filed 45 days before expiry | Permiso Único | Approve | 0.84 | Sección 3.7.1.2 |
+| 4 Restaurant, renewal filed 2.6 years after expiry | Permiso Único | Not approve | 0.00 | `pu_renovacion_plazo` |
+| 5 Automotive workshop in a residential district | PCOC | Not approve | 0.00 | `pcoc_parametros` |
+| 6 Lessee who does not declare the owner's authorisation | PCOC | Borderline | 0.51 | `pcoc_legitimacion` |
+| 7 Cafetín with 3 of the 4 parking spaces required | Permiso Único | Borderline | 0.51 | Sección 3.7.1.2 |
+| 8 Medical offices declaring $1,524 where $1,540 is owed | PCOC | Approve, Fee Check Note | 0.72 | Sección 3.2.1.2 |
+
+- **Cache and baseline are one thing.** `demo_cases/cache/<case>.json` is the whole Recommendation the real models last gave the case. `seed` stores it with the request (no network); `regress` compares a new review with it. A cached Recommendation made for other fields than the case now has is ignored. `refresh` replaces it only with a Recommendation that is the expected one and has no failed model call, so the cache always holds a demo that works.
+- **Calibration: the cutoff stays at 0.5 and the Borderline band at 0.4–0.6.** The clear approvals score 0.72–0.84, at least 0.12 above the band; the clear denials 0.00; both Borderline cases 0.51, inside it. The gap between band and clear approvals (0.12) is under the drift threshold (0.15), so a clear approval can turn Borderline before `regress` reports its score as moved; it does fail on the Borderline flag.
+- **Scores were steady, classifications were not.** With the configuration below, each case scored the same to two decimals in every run (two to four each). The run of `regress` still reported 21 Clauses under another category than in the baseline, and Sección 9.12.4.3 judged to apply in two cases where it had not; nearly all the Clauses moved between the three set-aside categories (`no_aplica`, `no_verificable`, `tramite_del_sistema`), which does not change what `decide` sees. `regress` marks the changes that do ("cambia lo que se puntúa": into or out of `aplica`).
+- **What had to change for the clear approvals to score clearly.** Before, on the real index, case 1 scored 0.05–0.25 and case 2 had no score (two runs each):
+  - *Sections for another kind of request.* Retrieval brought Secciones 9.2.3.2 and 9.5.2.2 (construction permits for energy generation systems) and 10.2.11.7 (documents for recommendations on historic property) for nearly every request, and `validate_sections` kept them: each opens "Toda solicitud de permiso de construcción deberá incluir…", and the validator sees a Section without the Regla and Capítulo it sits under. On compliant requests their Requirements scored 0.03–0.61, mostly under 0.5. Every Clause of the three is now fixed `no_aplica` in `fixed_clause_categories.json`. This is a patch on three Sections, not a fix: the Sections still count as applying, so a Note may cite them, and another request may retrieve another such Section (case 5 retrieves 3.6.4.1, earth movement). Showing the validator the headings of a Section's Regla and Capítulo, or tagging Tomos IX and X with no Request Type, would address the cause.
+  - *General Clauses of Sección 3.1.3.* (c) (meet the general and particular requirements), (d) (no incomplete request is accepted) and (e) (payment) are fixed `tramite_del_sistema`, as 2.1.9.2(m) and (n) are: the Decisions API refused the question on (c) alone, and scored (c) and (d) together 0.25. Sección 2.1.9.3(c) (pay the difference if the final cost is higher) is fixed `no_aplica`; kept, it scored 0.10–0.46.
+  - *District limits the form has no number for.* `pcoc_parametros` scored 0.23–0.71 on compliant requests whose `calificacion` gave no height limit in metres and no gross floor area limit, two of the parameters of 2.2.1.3(d). With both written into the free text of `calificacion` it scores 0.73–1.00. The evidence rule again; fields for those two limits would make it structural.
+- **Known limits.** Case 6 scores 0.51 on standing, and `write_notes` writes a Note only for a Requirement below 0.5, so its Notes do not mention the missing authorisation: the Reviewer sees it as the weakest Requirement. In case 4 the models also score the other renewal Requirements near 0 once the deadline is missed. Cases 1 and 8 rest on Sección 3.2.1.2(a)–(b) at 0.72, a Section no Criterion curates.
 
 ## Models
 
@@ -194,7 +218,7 @@ Ingestion is not complete until retrieval has been evaluated; this validates bot
 - Chroma (embedded) vector store, built by a one-off `ingest` command; index cached so the demo starts instantly. OCR of text the PDF draws as outlines needs Tesseract's Spanish model (optional), or the Unlimited-OCR model on a GPU (optional extra `unlimited-ocr`).
 - FastAPI + Jinja + HTMX UI.
 - SQLite for Permit Requests, Recommendations, and Determinations.
-- Recommendations for curated cases cached so the live demo cannot fail.
+- Recommendations for curated cases cached so the live demo cannot fail (`seed`; CMAWD-16).
 - LangSmith tracing enabled only when `LANGSMITH_API_KEY` is set (loading the settings switches it off otherwise, whatever `LANGSMITH_TRACING` says); each review is one `permit_review` run. The in-app trace panel is primary.
 
 ## UI

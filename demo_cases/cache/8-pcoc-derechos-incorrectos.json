@@ -1,0 +1,2273 @@
+{
+ "request": {
+  "applicant_name": "Dr. Héctor Manuel Rosario Delgado",
+  "applicant_type": "privado",
+  "applicant_role": "dueno",
+  "standing_document": "escritura_publica",
+  "owner_authorization": null,
+  "municipio": "Carolina",
+  "catastro": "087-052-611-24",
+  "catastro_matches_ogpe": true,
+  "calificacion": "C-L (Comercial Liviano); oficinas profesionales y consultorios médicos permitidos ministerialmente; altura máxima 2 plantas y 9 m; área bruta de piso máxima 700 m²",
+  "request_type": "PCOC",
+  "attached_documents": [
+   "planos_sellados",
+   "certificacion_valor_obra",
+   "determinacion_cumplimiento_ambiental",
+   "ubicacion_geografica",
+   "foto_aerea"
+  ],
+  "work_description": "Construcción de edificio de 2 plantas para consultorios médicos y oficinas profesionales",
+  "estimated_work_value": "240000",
+  "work_value_method": "guias_ogpe",
+  "floors": 2,
+  "height_m": "8",
+  "gross_floor_area_m2": "320",
+  "declared_fee": "1524",
+  "works_by_government": false,
+  "district_parameters": {
+   "lot_area_m2": "700",
+   "min_lot_area_m2": "400",
+   "dwelling_units": 0,
+   "max_dwelling_units": 0,
+   "occupation_pct": "40",
+   "max_occupation_pct": "75",
+   "yards_m": {
+    "front": "5",
+    "side": "2",
+    "rear": "3"
+   },
+   "min_yards_m": {
+    "front": "4",
+    "side": "1.5",
+    "rear": "3"
+   },
+   "parking_spaces": 10,
+   "required_parking_spaces": 9,
+   "loading_spaces": 1,
+   "required_loading_spaces": 1
+  },
+  "plans_certification": {
+   "professional": "arquitecto",
+   "professional_name": "Arq. Marisol Figueroa Lugo",
+   "license_number": "15932",
+   "drafted_by": null,
+   "sheets_certified": true,
+   "compliance_certification": true,
+   "file_format": "DXF",
+   "north_oriented": true
+  }
+ },
+ "approval_score": 0.72,
+ "verdict": "approve",
+ "borderline": false,
+ "requirements": [
+  {
+   "id": "pcoc_legitimacion",
+   "text_es": "El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado) con alguno de los documentos de la Sección 2.1.9.5(b).",
+   "clause_refs": [
+    "RC-2023-E:2.1.9.5(a)",
+    "RC-2023-E:2.1.9.5(b)"
+   ],
+   "probability": 0.99,
+   "criterion": {
+    "id": "pcoc_legitimacion",
+    "request_type": "PCOC",
+    "text_es": "El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado) con alguno de los documentos de la Sección 2.1.9.5(b).",
+    "text_en": "The Applicant shows standing (owner, option-holder or authorised lessee) with one of the documents listed in Sección 2.1.9.5(b).",
+    "pinned": [
+     "RC-2023-E:2.1.9.5(a)",
+     "RC-2023-E:2.1.9.5(b)"
+    ],
+    "instructions": "¿Acredita la solicitud que el proponente es dueño, optante o arrendatario autorizado de la propiedad, con al menos uno de los documentos que enumera la Sección 2.1.9.5(b)?",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "pcoc_ambiental",
+   "text_es": "La solicitud incluye la determinación de cumplimiento ambiental.",
+   "clause_refs": [
+    "RC-2023-E:2.1.9.2(g)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pcoc_ambiental",
+    "request_type": "PCOC",
+    "text_es": "La solicitud incluye la determinación de cumplimiento ambiental.",
+    "text_en": "The request includes the environmental compliance determination.",
+    "pinned": [
+     "RC-2023-E:2.1.9.2(g)"
+    ],
+    "instructions": "¿Incluye la solicitud la determinación de cumplimiento ambiental correspondiente, como exige la Sección 2.1.9.2(g)?",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "pcoc_predio",
+   "text_es": "El predio está identificado: foto aérea, ubicación geográfica y número de catastro, con mapa catastral si la información catastral no concuerda con la de la OGPe.",
+   "clause_refs": [
+    "RC-2023-E:2.1.9.2(h)",
+    "RC-2023-E:2.1.9.2(i)",
+    "RC-2023-E:2.1.9.2(j)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pcoc_predio",
+    "request_type": "PCOC",
+    "text_es": "El predio está identificado: foto aérea, ubicación geográfica y número de catastro, con mapa catastral si la información catastral no concuerda con la de la OGPe.",
+    "text_en": "The site is identified: aerial photo, geographic location and cadastral number, with a cadastral map when the cadastral records do not match OGPe's.",
+    "pinned": [
+     "RC-2023-E:2.1.9.2(h)",
+     "RC-2023-E:2.1.9.2(i)",
+     "RC-2023-E:2.1.9.2(j)"
+    ],
+    "instructions": "¿Identifica la solicitud el predio como exigen los incisos (h), (i) y (j) de la Sección 2.1.9.2: foto aérea, ubicación geográfica y número de catastro, con mapa catastral si la información catastral no concuerda con la del sistema de la OGPe?",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "pcoc_planos",
+   "text_es": "Los planos están sellados y firmados por un profesional licenciado, con las certificaciones requeridas, en archivo digital orientado al norte.",
+   "clause_refs": [
+    "RC-2023-E:2.1.9.2(k)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pcoc_planos",
+    "request_type": "PCOC",
+    "text_es": "Los planos están sellados y firmados por un profesional licenciado, con las certificaciones requeridas, en archivo digital orientado al norte.",
+    "text_en": "The plans are sealed and signed by a licensed professional, carry the required certifications, and are filed digitally, oriented north.",
+    "pinned": [
+     "RC-2023-E:2.1.9.2(k)"
+    ],
+    "instructions": "¿Cumplen los planos con la Sección 2.1.9.2(k): sello y firma del profesional licenciado que los certifica, certificaciones en cada hoja, archivo digital orientado al norte y el documento de certificación de cumplimiento del proyectista?",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "pcoc_valor_obra",
+   "text_es": "Se certifica el valor estimado de la obra, calculado con las guías de la OGPe o con otro método que no dé un valor menor.",
+   "clause_refs": [
+    "RC-2023-E:2.1.9.3(a)",
+    "RC-2023-E:2.1.9.3(b)"
+   ],
+   "probability": 1.0,
+   "criterion": {
+    "id": "pcoc_valor_obra",
+    "request_type": "PCOC",
+    "text_es": "Se certifica el valor estimado de la obra, calculado con las guías de la OGPe o con otro método que no dé un valor menor.",
+    "text_en": "The estimated work value is certified, calculated with OGPe's guides or another method that gives no lower value.",
+    "pinned": [
+     "RC-2023-E:2.1.9.3(a)",
+     "RC-2023-E:2.1.9.3(b)"
+    ],
+    "instructions": "¿Incluye la solicitud la certificación del valor estimado de la obra, calculado según las guías de la OGPe o por otro mecanismo que no resulte en un valor menor, como exige la Sección 2.1.9.3?",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "pcoc_parametros",
+   "text_es": "El uso está permitido en el distrito y la obra cumple cada parámetro de la Sección 2.2.1.3(d) dentro de los límites del distrito.",
+   "clause_refs": [
+    "RC-2023-E:2.2.1.3(c)",
+    "RC-2023-E:2.2.1.3(d)"
+   ],
+   "probability": 0.76,
+   "criterion": {
+    "id": "pcoc_parametros",
+    "request_type": "PCOC",
+    "text_es": "El uso está permitido en el distrito y la obra cumple cada parámetro de la Sección 2.2.1.3(d) dentro de los límites del distrito.",
+    "text_en": "The use is allowed in the district and the work meets every parameter of Sección 2.2.1.3(d) within the district's limits.",
+    "pinned": [
+     "RC-2023-E:2.2.1.3(c)",
+     "RC-2023-E:2.2.1.3(d)"
+    ],
+    "instructions": "¿Está el uso propuesto permitido en el distrito y cumple la obra, dentro de los límites del distrito, cada parámetro de la Sección 2.2.1.3(d): calificación, usos, altura, tamaño del solar, densidad, área de ocupación, área bruta de piso, patios, estacionamiento y área de carga y descarga?",
+    "application_kinds": [
+     "nueva",
+     "renovacion"
+    ]
+   }
+  },
+  {
+   "id": "seccion_3_2_1_1",
+   "text_es": "Requisitos aplicables de la Sección 3.2.1.1 (DISPOSICIONES GENERALES)",
+   "clause_refs": [
+    "RC-2023-E:3.2.1.1(a)",
+    "RC-2023-E:3.2.1.1(b)"
+   ],
+   "probability": 0.98,
+   "criterion": null
+  },
+  {
+   "id": "seccion_3_2_1_2",
+   "text_es": "Requisitos aplicables de la Sección 3.2.1.2 (REQUISITOS DE PRESENTACIÓN)",
+   "clause_refs": [
+    "RC-2023-E:3.2.1.2(a)",
+    "RC-2023-E:3.2.1.2(b)"
+   ],
+   "probability": 0.72,
+   "criterion": null
+  }
+ ],
+ "notes": [
+  {
+   "text": "El solicitante figura como dueño y presentó una escritura pública como evidencia de legitimación activa, conforme a los documentos aceptables para acreditar ese requisito.",
+   "section_ids": [
+    "RC-2023-E:2.1.9.5(a)",
+    "RC-2023-E:2.1.9.5(b)"
+   ],
+   "curable": false
+  },
+  {
+   "text": "El uso propuesto —consultorios médicos y oficinas profesionales— está permitido ministerialmente en el distrito C-L; además, los datos declarados cumplen los límites indicados de altura, área bruta de piso, tamaño del solar, ocupación, patios y estacionamiento, y satisfacen el requisito de carga y descarga.",
+   "section_ids": [
+    "RC-2023-E:2.2.1.3(c)",
+    "RC-2023-E:2.2.1.3(d)"
+   ],
+   "curable": false
+  },
+  {
+   "text": "La solicitud incluye planos sellados y firmados por una arquitecta licenciada, certificaciones en cada hoja, certificación del proyectista y archivo DXF orientado al norte; también incluye la certificación del valor estimado de la obra calculado según las guías de la OGPe.",
+   "section_ids": [
+    "RC-2023-E:2.1.9.2(k)",
+    "RC-2023-E:2.1.9.3(a)",
+    "RC-2023-E:2.1.9.3(b)"
+   ],
+   "curable": false
+  },
+  {
+   "text": "Los derechos declarados ($1,524.00) no coinciden con los que corresponden según la Orden Administrativa OGPe 2022-07: $1,540.00.",
+   "section_ids": [
+    "COBROS:AnejoA:6"
+   ],
+   "curable": true
+  }
+ ],
+ "notes_retried": false,
+ "dropped_notes": [],
+ "retrieved_section_ids": [
+  "RC-2023-E:10.2.11.7",
+  "RC-2023-E:3.2.1.1",
+  "RC-2023-E:3.2.1.2",
+  "RC-2023-E:9.5.2.2",
+  "RC-2023-E:9.2.3.2",
+  "RC-2023-E:6.1.11.4",
+  "RC-2023-E:3.4.1.3",
+  "RC-2023-E:9.12.1.4",
+  "RC-2023-E:2.1.9.2",
+  "RC-2023-E:2.1.9.3",
+  "RC-2023-E:2.1.9.5",
+  "RC-2023-E:2.2.1.3"
+ ],
+ "section_relevance": [
+  {
+   "section_id": "RC-2023-E:10.2.11.7",
+   "applies": true,
+   "reason": "Aplica al Permiso de Construcción: exige, entre otros documentos, un juego completo de planos, especificaciones técnicas y estimado de costo. Aunque se adjuntan planos y estimado, no se menciona que se hayan presentado las especificaciones técnicas."
+  },
+  {
+   "section_id": "RC-2023-E:3.2.1.1",
+   "applies": true,
+   "reason": "Aplica porque es una solicitud de Permiso de Construcción para una obra nueva, actividad que requiere dicho permiso. La sección también establece que la solicitud debe cumplir los requisitos específicos de la Regla y que la construcción de más de un edificio por solar debe satisfacer los parámetros del distrito y el estacionamiento requerido."
+  },
+  {
+   "section_id": "RC-2023-E:3.2.1.2",
+   "applies": true,
+   "reason": "Aplica porque es una solicitud nueva de Permiso de Construcción para un edificio. La sección establece requisitos de presentación para obras de construcción, como planos certificados aplicables y, según corresponda, certificaciones e informes adicionales."
+  },
+  {
+   "section_id": "RC-2023-E:9.5.2.2",
+   "applies": true,
+   "reason": "La solicitud es para un Permiso de Construcción, trámite regulado por esta sección. Esta exige, entre otros requisitos, planos y documentos con las especificaciones indicadas y un archivo DXF con polígono georreferenciado al sistema NAD 83, unidades y revisión utilizada."
+  },
+  {
+   "section_id": "RC-2023-E:9.2.3.2",
+   "applies": true,
+   "reason": "La solicitud es para un Permiso de Construcción de un edificio, por lo que la sección establece requisitos para este tipo de solicitud, incluidos los planos y documentos que debe presentar."
+  },
+  {
+   "section_id": "RC-2023-E:6.1.11.4",
+   "applies": false,
+   "reason": "La solicitud es para una construcción nueva, pero el predio está calificado C-L; esta sección establece parámetros específicos del distrito RT-A, no del distrito C-L."
+  },
+  {
+   "section_id": "RC-2023-E:3.4.1.3",
+   "applies": false,
+   "reason": "La sección establece requisitos para un Permiso Único Incidental Operacional, mientras que la solicitud es de un Permiso de Construcción; por tanto, regula otro tipo de trámite."
+  },
+  {
+   "section_id": "RC-2023-E:9.12.1.4",
+   "applies": true,
+   "reason": "Aplica a esta solicitud de permiso de construcción, pues es para un edificio de consultorios y oficinas, no una vivienda unifamiliar o bifamiliar. Requiere presentar la Determinación Final de la Recomendación de Salud y del NCBPR; además, toda solicitud de recomendación debe incluir la certificación de cumplimiento del proyectista o especialista."
+  },
+  {
+   "section_id": "RC-2023-E:2.1.9.2",
+   "applies": true,
+   "reason": "Fijada por el Criterio pcoc_ambiental, pcoc_predio, pcoc_planos: siempre aplica."
+  },
+  {
+   "section_id": "RC-2023-E:2.1.9.3",
+   "applies": true,
+   "reason": "Fijada por el Criterio pcoc_valor_obra: siempre aplica."
+  },
+  {
+   "section_id": "RC-2023-E:2.1.9.5",
+   "applies": true,
+   "reason": "Fijada por el Criterio pcoc_legitimacion: siempre aplica."
+  },
+  {
+   "section_id": "RC-2023-E:2.2.1.3",
+   "applies": true,
+   "reason": "Fijada por el Criterio pcoc_parametros: siempre aplica."
+  }
+ ],
+ "selection": [
+  {
+   "ref": "RC-2023-E:10.2.11.7",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(a)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(b)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(c)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(d)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(e)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(f)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(g)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(h)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:10.2.11.7(i)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.1(a)",
+   "category": "aplica",
+   "reason": "La solicitud describe la construcción de un edificio, actividad que requiere Permiso de Construcción."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.1(b)",
+   "category": "aplica",
+   "reason": "Toda solicitud de Permiso de Construcción debe cumplir los requisitos generales y específicos aplicables."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.1(c)",
+   "category": "no_aplica",
+   "reason": "La solicitud describe un edificio, no la construcción de más de uno por solar."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.1(d)",
+   "category": "no_aplica",
+   "reason": "La obra descrita no incluye construcción o intervención de ascensores ni equipos relacionados."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.1(e)",
+   "category": "no_aplica",
+   "reason": "La solicitud es para construcción nueva, no para reconstrucción o remodelación."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.1(f)",
+   "category": "no_aplica",
+   "reason": "La culminación mediante Informe Final de Obras y la presentación de Permiso Único corresponden a etapas posteriores o a cambios de uso/licencia no descritos."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(a)",
+   "category": "aplica",
+   "reason": "La obra requiere planos certificados y la solicitud adjunta planos sellados y firmados por profesional licenciado."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(b)",
+   "category": "aplica",
+   "reason": "Los planos de construcción deben mostrar los detalles pertinentes a escala y especificar la escala; el formulario permite adjuntar los planos."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(c)",
+   "category": "no_verificable",
+   "reason": "La obra es de construcción, pero el formulario no admite la certificación de inundabilidad emitida por la JP."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(d)",
+   "category": "no_verificable",
+   "reason": "Si el predio está en zona susceptible a inundaciones, debe cumplir el Reglamento Núm. 13; el formulario no permite declarar esa condición ni acreditar ese cumplimiento."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(e)",
+   "category": "tramite_del_sistema",
+   "reason": "La recomendación de las Entidades Gubernamentales Concernidas y su término corresponden a la evaluación y coordinación gubernamental cuando se active esta condición."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(f)",
+   "category": "no_verificable",
+   "reason": "El formulario no admite certificación de condiciones del suelo, informe de subsuelo ni estudio de suelo."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(g)",
+   "category": "no_verificable",
+   "reason": "Si se aprueba inicialmente la solicitud, se requiere evidencia de póliza del Fondo del Seguro del Estado, pero el formulario no admite ese documento."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(h)",
+   "category": "tramite_del_sistema",
+   "reason": "El cumplimiento de arbitrios municipales es un pago que se verifica como trámite aparte tras la aprobación inicial."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(i)",
+   "category": "no_verificable",
+   "reason": "El formulario no permite declarar fecha de inicio, duración de la obra ni empleos directos a crear."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(j)",
+   "category": "no_verificable",
+   "reason": "El formulario no admite el Plan de Reciclaje ni evidencia de su presentación ante el DRNA."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(k)",
+   "category": "no_verificable",
+   "reason": "El formulario no permite declarar cuántas personas trabajarán en el proyecto ni admite la solicitud o evidencia de exención del Plan de Reciclaje."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(l)",
+   "category": "no_verificable",
+   "reason": "Si el proyecto está en una zona protegida indicada, requiere recomendación escrita del ICP; el formulario no permite declarar esa condición ni admite dicha recomendación."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(m)",
+   "category": "no_verificable",
+   "reason": "Si el proyecto está en una zona de interés turístico, requiere recomendación escrita de la Compañía de Turismo; el formulario no permite declarar esa condición ni admite dicha recomendación."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(n)",
+   "category": "no_verificable",
+   "reason": "La obra comercial no es una vivienda unifamiliar o bifamiliar, pero el formulario no admite las Determinaciones Finales de Salud y del Cuerpo de Bomberos."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(o)",
+   "category": "no_aplica",
+   "reason": "La descripción no relaciona la obra con comercio o almacenaje de explosivos, armas o municiones."
+  },
+  {
+   "ref": "RC-2023-E:3.2.1.2(p)",
+   "category": "no_verificable",
+   "reason": "El formulario no admite ni permite declarar la recomendación del Municipio."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(a)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(b)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(c)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(d)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(e)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(f)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(g)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.5.2.2(h)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(a)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(b)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(c)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(d)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(e)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(f)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(g)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(h)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.2.3.2(i)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar."
+  },
+  {
+   "ref": "RC-2023-E:9.12.1.4",
+   "category": "no_verificable",
+   "reason": "La obra no es vivienda unifamiliar o bifamiliar, pero el formulario no admite la Determinación Final de Salud y del NCBPR; sí incluye la certificación de cumplimiento del proyectista."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(a)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: la presentación electrónica en el SUI es parte de la radicación y no se acredita con los datos de la solicitud."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(b)",
+   "category": "no_aplica",
+   "reason": "Es una disposición sobre acceso público a información no confidencial del SUI, no un requisito de esta solicitud."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(c)",
+   "category": "no_aplica",
+   "reason": "Establece obligaciones del SUI sobre documentos públicos y firmas electrónicas, no un requisito que deba acreditar el solicitante."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(d)",
+   "category": "tramite_del_sistema",
+   "reason": "Dispone sobre la capacidad del SUI para cobrar derechos y otros cargos; los pagos se verifican aparte de los datos de la solicitud."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(e)",
+   "category": "tramite_del_sistema",
+   "reason": "Regula la gestión de transacciones y el trámite de pagos a través del SUI."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(f)",
+   "category": "no_aplica",
+   "reason": "Los acuerdos de uso regulan la relación entre el SUI y las agencias, instrumentalidades o municipios."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(g)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_ambiental: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(h)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_predio: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(i)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_predio: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(j)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_predio: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(k)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_planos: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(l)",
+   "category": "no_aplica",
+   "reason": "La solicitud se describe como ministerial según el uso permitido y los parámetros del distrito; no es un asunto discrecional, adjudicativo o cuasi legislativo."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(m)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: inciso general de completitud; la completitud se juzga por los requisitos específicos que aplican."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(n)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: pago de derechos de radicación; se verifica aparte."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(o)",
+   "category": "tramite_del_sistema",
+   "reason": "El término para subsanar es un plazo procesal de la solicitud en el sistema."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(p)",
+   "category": "tramite_del_sistema",
+   "reason": "El archivo por falta de subsanación es una actuación del sistema de radicación."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(q)",
+   "category": "tramite_del_sistema",
+   "reason": "El término para validar una solicitud completa corresponde a la agencia o al sistema."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(r)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: pago del 90% restante tras la validación; se verifica aparte."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(s)",
+   "category": "tramite_del_sistema",
+   "reason": "La asignación del número único de proyecto corresponde a la OGPe."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(t)",
+   "category": "tramite_del_sistema",
+   "reason": "La validación y la determinación de cuándo se considera radicada la solicitud son pasos procesales del sistema."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(u)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: pago del derecho de la Orden Administrativa de Cobro; se verifica aparte."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(v)",
+   "category": "tramite_del_sistema",
+   "reason": "La remisión del pago por el Profesional Autorizado es una gestión procesal y de pago."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.2(w)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: la carga al SUI y su notificación de recibo son parte de la radicación."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.3(a)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_valor_obra: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.3(b)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_valor_obra: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.3(c)",
+   "category": "no_aplica",
+   "reason": "Fijado por configuración: el pago de la diferencia surge si el costo final de la obra supera el estimado, después de expedido el permiso."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(a)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_legitimacion: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(b)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_legitimacion: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(c)",
+   "category": "no_verificable",
+   "reason": "El formulario no permite declarar si hay otros propietarios ni admite evidencia de autorización de todos o de delegación de ese derecho."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(d)",
+   "category": "no_aplica",
+   "reason": "El solicitante es una persona privada y la solicitud no se describe como relativa a propiedad o terreno público."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(e)",
+   "category": "no_aplica",
+   "reason": "La obra descrita es un edificio comercial privado, no una mejora pública en terreno privado."
+  },
+  {
+   "ref": "RC-2023-E:2.1.9.5(f)",
+   "category": "no_aplica",
+   "reason": "La solicitud la presenta el dueño, no un profesional licenciado en esa calidad."
+  },
+  {
+   "ref": "RC-2023-E:2.2.1.3(a)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: describe cómo evalúa la agencia las solicitudes ministeriales, no un requisito del Solicitante."
+  },
+  {
+   "ref": "RC-2023-E:2.2.1.3(b)",
+   "category": "tramite_del_sistema",
+   "reason": "Fijado por configuración: limita el juicio de los funcionarios al evaluar, no es un requisito del Solicitante."
+  },
+  {
+   "ref": "RC-2023-E:2.2.1.3(c)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_parametros: siempre se evalúa."
+  },
+  {
+   "ref": "RC-2023-E:2.2.1.3(d)",
+   "category": "aplica",
+   "reason": "Fijado por el Criterio pcoc_parametros: siempre se evalúa."
+  }
+ ],
+ "unclassified_clause_refs": [],
+ "unknown_clause_refs": [],
+ "errors": [],
+ "fee_check": {
+  "declared_fee": "1524",
+  "expected_fee": "1540.00",
+  "charges": [
+   {
+    "ref": "6(a)",
+    "section_id": "COBROS:AnejoA:6",
+    "concept_es": "Radicación (cargo por servicio)",
+    "base": "100.00",
+    "percent": 100,
+    "amount": "100.00"
+   },
+   {
+    "ref": "6(b)",
+    "section_id": "COBROS:AnejoA:6",
+    "concept_es": "Aranceles",
+    "base": "1200.00",
+    "percent": 100,
+    "amount": "1200.00"
+   },
+   {
+    "ref": "6(c)",
+    "section_id": "COBROS:AnejoA:6",
+    "concept_es": "Sellos del CIAPR y CAAPPR",
+    "base": "240.00",
+    "percent": 100,
+    "amount": "240.00"
+   }
+  ],
+  "exemption_es": null,
+  "section_ids": [
+   "COBROS:AnejoA:6"
+  ],
+  "unverifiable_es": null,
+  "matches": false
+ },
+ "trace": {
+  "retrieved": [
+   {
+    "section_id": "RC-2023-E:10.2.11.7",
+    "heading": "REQUISITOS ADICIONALES APLICABLES A CIERTAS RECOMENDACIONES O CERTIFICACIONES",
+    "similarity": 0.6095364093780518,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:10.2.11.7",
+     "RC-2023-E:10.2.11.7(a)",
+     "RC-2023-E:10.2.11.7(b)",
+     "RC-2023-E:10.2.11.7(c)",
+     "RC-2023-E:10.2.11.7(d)",
+     "RC-2023-E:10.2.11.7(e)",
+     "RC-2023-E:10.2.11.7(f)",
+     "RC-2023-E:10.2.11.7(g)",
+     "RC-2023-E:10.2.11.7(h)",
+     "RC-2023-E:10.2.11.7(i)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.2.1.1",
+    "heading": "DISPOSICIONES GENERALES",
+    "similarity": 0.5813792943954468,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.2.1.1(a)",
+     "RC-2023-E:3.2.1.1(b)",
+     "RC-2023-E:3.2.1.1(c)",
+     "RC-2023-E:3.2.1.1(d)",
+     "RC-2023-E:3.2.1.1(e)",
+     "RC-2023-E:3.2.1.1(f)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.2.1.2",
+    "heading": "REQUISITOS DE PRESENTACIÓN",
+    "similarity": 0.5750774145126343,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.2.1.2(a)",
+     "RC-2023-E:3.2.1.2(b)",
+     "RC-2023-E:3.2.1.2(c)",
+     "RC-2023-E:3.2.1.2(d)",
+     "RC-2023-E:3.2.1.2(e)",
+     "RC-2023-E:3.2.1.2(f)",
+     "RC-2023-E:3.2.1.2(g)",
+     "RC-2023-E:3.2.1.2(h)",
+     "RC-2023-E:3.2.1.2(i)",
+     "RC-2023-E:3.2.1.2(j)",
+     "RC-2023-E:3.2.1.2(k)",
+     "RC-2023-E:3.2.1.2(l)",
+     "RC-2023-E:3.2.1.2(m)",
+     "RC-2023-E:3.2.1.2(n)",
+     "RC-2023-E:3.2.1.2(o)",
+     "RC-2023-E:3.2.1.2(p)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:9.5.2.2",
+    "heading": "SOLICITUD DE PERMISO DE CONSTRUCCIÓN",
+    "similarity": 0.5744497776031494,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:9.5.2.2",
+     "RC-2023-E:9.5.2.2(a)",
+     "RC-2023-E:9.5.2.2(b)",
+     "RC-2023-E:9.5.2.2(c)",
+     "RC-2023-E:9.5.2.2(d)",
+     "RC-2023-E:9.5.2.2(e)",
+     "RC-2023-E:9.5.2.2(f)",
+     "RC-2023-E:9.5.2.2(g)",
+     "RC-2023-E:9.5.2.2(h)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:9.2.3.2",
+    "heading": "REQUISITOS PARA LA SOLICITUD DE PERMISO DE CONSTRUCCIÓN",
+    "similarity": 0.5735628604888916,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:9.2.3.2",
+     "RC-2023-E:9.2.3.2(a)",
+     "RC-2023-E:9.2.3.2(b)",
+     "RC-2023-E:9.2.3.2(c)",
+     "RC-2023-E:9.2.3.2(d)",
+     "RC-2023-E:9.2.3.2(e)",
+     "RC-2023-E:9.2.3.2(f)",
+     "RC-2023-E:9.2.3.2(g)",
+     "RC-2023-E:9.2.3.2(h)",
+     "RC-2023-E:9.2.3.2(i)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:6.1.11.4",
+    "heading": "PARÁMETROS DE DISEÑO",
+    "similarity": 0.5655739903450012,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:6.1.11.4"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:3.4.1.3",
+    "heading": "REQUISITOS PARA EL PERMISO ÚNICO INCIDENTAL OPERACIONAL",
+    "similarity": 0.554161787033081,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:3.4.1.3",
+     "RC-2023-E:3.4.1.3(a)",
+     "RC-2023-E:3.4.1.3(b)",
+     "RC-2023-E:3.4.1.3(c)",
+     "RC-2023-E:3.4.1.3(d)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:9.12.1.4",
+    "heading": "EVALUACIONES Y RECOMENDACIONES",
+    "similarity": 0.5538491606712341,
+    "pinned_by": [],
+    "clause_refs": [
+     "RC-2023-E:9.12.1.4"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:2.1.9.2",
+    "heading": "REQUISITOS DE PRESENTACIÓN",
+    "similarity": null,
+    "pinned_by": [
+     "pcoc_ambiental",
+     "pcoc_predio",
+     "pcoc_planos"
+    ],
+    "clause_refs": [
+     "RC-2023-E:2.1.9.2(a)",
+     "RC-2023-E:2.1.9.2(b)",
+     "RC-2023-E:2.1.9.2(c)",
+     "RC-2023-E:2.1.9.2(d)",
+     "RC-2023-E:2.1.9.2(e)",
+     "RC-2023-E:2.1.9.2(f)",
+     "RC-2023-E:2.1.9.2(g)",
+     "RC-2023-E:2.1.9.2(h)",
+     "RC-2023-E:2.1.9.2(i)",
+     "RC-2023-E:2.1.9.2(j)",
+     "RC-2023-E:2.1.9.2(k)",
+     "RC-2023-E:2.1.9.2(l)",
+     "RC-2023-E:2.1.9.2(m)",
+     "RC-2023-E:2.1.9.2(n)",
+     "RC-2023-E:2.1.9.2(o)",
+     "RC-2023-E:2.1.9.2(p)",
+     "RC-2023-E:2.1.9.2(q)",
+     "RC-2023-E:2.1.9.2(r)",
+     "RC-2023-E:2.1.9.2(s)",
+     "RC-2023-E:2.1.9.2(t)",
+     "RC-2023-E:2.1.9.2(u)",
+     "RC-2023-E:2.1.9.2(v)",
+     "RC-2023-E:2.1.9.2(w)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:2.1.9.3",
+    "heading": "VALOR ESTIMADO DE LA OBRA",
+    "similarity": null,
+    "pinned_by": [
+     "pcoc_valor_obra"
+    ],
+    "clause_refs": [
+     "RC-2023-E:2.1.9.3(a)",
+     "RC-2023-E:2.1.9.3(b)",
+     "RC-2023-E:2.1.9.3(c)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:2.1.9.5",
+    "heading": "LEGITIMACIÓN ACTIVA (STANDING)",
+    "similarity": null,
+    "pinned_by": [
+     "pcoc_legitimacion"
+    ],
+    "clause_refs": [
+     "RC-2023-E:2.1.9.5(a)",
+     "RC-2023-E:2.1.9.5(b)",
+     "RC-2023-E:2.1.9.5(c)",
+     "RC-2023-E:2.1.9.5(d)",
+     "RC-2023-E:2.1.9.5(e)",
+     "RC-2023-E:2.1.9.5(f)"
+    ]
+   },
+   {
+    "section_id": "RC-2023-E:2.2.1.3",
+    "heading": "CRITERIOS DE EVALUACIÓN DE SOLICITUDES DE CARÁCTER MINISTERIAL",
+    "similarity": null,
+    "pinned_by": [
+     "pcoc_parametros"
+    ],
+    "clause_refs": [
+     "RC-2023-E:2.2.1.3(a)",
+     "RC-2023-E:2.2.1.3(b)",
+     "RC-2023-E:2.2.1.3(c)",
+     "RC-2023-E:2.2.1.3(d)"
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "node": "intake",
+    "output": {
+     "request": {
+      "applicant_name": "Dr. Héctor Manuel Rosario Delgado",
+      "applicant_type": "privado",
+      "applicant_role": "dueno",
+      "standing_document": "escritura_publica",
+      "owner_authorization": null,
+      "municipio": "Carolina",
+      "catastro": "087-052-611-24",
+      "catastro_matches_ogpe": true,
+      "calificacion": "C-L (Comercial Liviano); oficinas profesionales y consultorios médicos permitidos ministerialmente; altura máxima 2 plantas y 9 m; área bruta de piso máxima 700 m²",
+      "request_type": "PCOC",
+      "attached_documents": [
+       "planos_sellados",
+       "certificacion_valor_obra",
+       "determinacion_cumplimiento_ambiental",
+       "ubicacion_geografica",
+       "foto_aerea"
+      ],
+      "work_description": "Construcción de edificio de 2 plantas para consultorios médicos y oficinas profesionales",
+      "estimated_work_value": "240000",
+      "work_value_method": "guias_ogpe",
+      "floors": 2,
+      "height_m": "8",
+      "gross_floor_area_m2": "320",
+      "declared_fee": "1524",
+      "works_by_government": false,
+      "district_parameters": {
+       "lot_area_m2": "700",
+       "min_lot_area_m2": "400",
+       "dwelling_units": 0,
+       "max_dwelling_units": 0,
+       "occupation_pct": "40",
+       "max_occupation_pct": "75",
+       "yards_m": {
+        "front": "5",
+        "side": "2",
+        "rear": "3"
+       },
+       "min_yards_m": {
+        "front": "4",
+        "side": "1.5",
+        "rear": "3"
+       },
+       "parking_spaces": 10,
+       "required_parking_spaces": 9,
+       "loading_spaces": 1,
+       "required_loading_spaces": 1
+      },
+      "plans_certification": {
+       "professional": "arquitecto",
+       "professional_name": "Arq. Marisol Figueroa Lugo",
+       "license_number": "15932",
+       "drafted_by": null,
+       "sheets_certified": true,
+       "compliance_certification": true,
+       "file_format": "DXF",
+       "north_oriented": true
+      }
+     },
+     "criteria": [
+      "pcoc_legitimacion",
+      "pcoc_ambiental",
+      "pcoc_predio",
+      "pcoc_planos",
+      "pcoc_valor_obra",
+      "pcoc_parametros"
+     ]
+    }
+   },
+   {
+    "node": "fee_check",
+    "output": {
+     "fee_check": {
+      "declared_fee": "1524",
+      "expected_fee": "1540.00",
+      "charges": [
+       {
+        "ref": "6(a)",
+        "section_id": "COBROS:AnejoA:6",
+        "concept_es": "Radicación (cargo por servicio)",
+        "base": "100.00",
+        "percent": 100,
+        "amount": "100.00"
+       },
+       {
+        "ref": "6(b)",
+        "section_id": "COBROS:AnejoA:6",
+        "concept_es": "Aranceles",
+        "base": "1200.00",
+        "percent": 100,
+        "amount": "1200.00"
+       },
+       {
+        "ref": "6(c)",
+        "section_id": "COBROS:AnejoA:6",
+        "concept_es": "Sellos del CIAPR y CAAPPR",
+        "base": "240.00",
+        "percent": 100,
+        "amount": "240.00"
+       }
+      ],
+      "exemption_es": null,
+      "section_ids": [
+       "COBROS:AnejoA:6"
+      ],
+      "unverifiable_es": null,
+      "matches": false
+     }
+    }
+   },
+   {
+    "node": "retrieve",
+    "output": {
+     "sections": [
+      "RC-2023-E:10.2.11.7",
+      "RC-2023-E:3.2.1.1",
+      "RC-2023-E:3.2.1.2",
+      "RC-2023-E:9.5.2.2",
+      "RC-2023-E:9.2.3.2",
+      "RC-2023-E:6.1.11.4",
+      "RC-2023-E:3.4.1.3",
+      "RC-2023-E:9.12.1.4",
+      "RC-2023-E:2.1.9.2",
+      "RC-2023-E:2.1.9.3",
+      "RC-2023-E:2.1.9.5",
+      "RC-2023-E:2.2.1.3"
+     ],
+     "section_clauses": [
+      "RC-2023-E:10.2.11.7",
+      "RC-2023-E:10.2.11.7(a)",
+      "RC-2023-E:10.2.11.7(b)",
+      "RC-2023-E:10.2.11.7(c)",
+      "RC-2023-E:10.2.11.7(d)",
+      "RC-2023-E:10.2.11.7(e)",
+      "RC-2023-E:10.2.11.7(f)",
+      "RC-2023-E:10.2.11.7(g)",
+      "RC-2023-E:10.2.11.7(h)",
+      "RC-2023-E:10.2.11.7(i)",
+      "RC-2023-E:3.2.1.1(a)",
+      "RC-2023-E:3.2.1.1(b)",
+      "RC-2023-E:3.2.1.1(c)",
+      "RC-2023-E:3.2.1.1(d)",
+      "RC-2023-E:3.2.1.1(e)",
+      "RC-2023-E:3.2.1.1(f)",
+      "RC-2023-E:3.2.1.2(a)",
+      "RC-2023-E:3.2.1.2(b)",
+      "RC-2023-E:3.2.1.2(c)",
+      "RC-2023-E:3.2.1.2(d)",
+      "RC-2023-E:3.2.1.2(e)",
+      "RC-2023-E:3.2.1.2(f)",
+      "RC-2023-E:3.2.1.2(g)",
+      "RC-2023-E:3.2.1.2(h)",
+      "RC-2023-E:3.2.1.2(i)",
+      "RC-2023-E:3.2.1.2(j)",
+      "RC-2023-E:3.2.1.2(k)",
+      "RC-2023-E:3.2.1.2(l)",
+      "RC-2023-E:3.2.1.2(m)",
+      "RC-2023-E:3.2.1.2(n)",
+      "RC-2023-E:3.2.1.2(o)",
+      "RC-2023-E:3.2.1.2(p)",
+      "RC-2023-E:9.5.2.2",
+      "RC-2023-E:9.5.2.2(a)",
+      "RC-2023-E:9.5.2.2(b)",
+      "RC-2023-E:9.5.2.2(c)",
+      "RC-2023-E:9.5.2.2(d)",
+      "RC-2023-E:9.5.2.2(e)",
+      "RC-2023-E:9.5.2.2(f)",
+      "RC-2023-E:9.5.2.2(g)",
+      "RC-2023-E:9.5.2.2(h)",
+      "RC-2023-E:9.2.3.2",
+      "RC-2023-E:9.2.3.2(a)",
+      "RC-2023-E:9.2.3.2(b)",
+      "RC-2023-E:9.2.3.2(c)",
+      "RC-2023-E:9.2.3.2(d)",
+      "RC-2023-E:9.2.3.2(e)",
+      "RC-2023-E:9.2.3.2(f)",
+      "RC-2023-E:9.2.3.2(g)",
+      "RC-2023-E:9.2.3.2(h)",
+      "RC-2023-E:9.2.3.2(i)",
+      "RC-2023-E:6.1.11.4",
+      "RC-2023-E:3.4.1.3",
+      "RC-2023-E:3.4.1.3(a)",
+      "RC-2023-E:3.4.1.3(b)",
+      "RC-2023-E:3.4.1.3(c)",
+      "RC-2023-E:3.4.1.3(d)",
+      "RC-2023-E:9.12.1.4",
+      "RC-2023-E:2.1.9.2(a)",
+      "RC-2023-E:2.1.9.2(b)",
+      "RC-2023-E:2.1.9.2(c)",
+      "RC-2023-E:2.1.9.2(d)",
+      "RC-2023-E:2.1.9.2(e)",
+      "RC-2023-E:2.1.9.2(f)",
+      "RC-2023-E:2.1.9.2(g)",
+      "RC-2023-E:2.1.9.2(h)",
+      "RC-2023-E:2.1.9.2(i)",
+      "RC-2023-E:2.1.9.2(j)",
+      "RC-2023-E:2.1.9.2(k)",
+      "RC-2023-E:2.1.9.2(l)",
+      "RC-2023-E:2.1.9.2(m)",
+      "RC-2023-E:2.1.9.2(n)",
+      "RC-2023-E:2.1.9.2(o)",
+      "RC-2023-E:2.1.9.2(p)",
+      "RC-2023-E:2.1.9.2(q)",
+      "RC-2023-E:2.1.9.2(r)",
+      "RC-2023-E:2.1.9.2(s)",
+      "RC-2023-E:2.1.9.2(t)",
+      "RC-2023-E:2.1.9.2(u)",
+      "RC-2023-E:2.1.9.2(v)",
+      "RC-2023-E:2.1.9.2(w)",
+      "RC-2023-E:2.1.9.3(a)",
+      "RC-2023-E:2.1.9.3(b)",
+      "RC-2023-E:2.1.9.3(c)",
+      "RC-2023-E:2.1.9.5(a)",
+      "RC-2023-E:2.1.9.5(b)",
+      "RC-2023-E:2.1.9.5(c)",
+      "RC-2023-E:2.1.9.5(d)",
+      "RC-2023-E:2.1.9.5(e)",
+      "RC-2023-E:2.1.9.5(f)",
+      "RC-2023-E:2.2.1.3(a)",
+      "RC-2023-E:2.2.1.3(b)",
+      "RC-2023-E:2.2.1.3(c)",
+      "RC-2023-E:2.2.1.3(d)"
+     ],
+     "retrieved": [
+      {
+       "section_id": "RC-2023-E:10.2.11.7",
+       "heading": "REQUISITOS ADICIONALES APLICABLES A CIERTAS RECOMENDACIONES O CERTIFICACIONES",
+       "similarity": 0.6095364093780518,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:10.2.11.7",
+        "RC-2023-E:10.2.11.7(a)",
+        "RC-2023-E:10.2.11.7(b)",
+        "RC-2023-E:10.2.11.7(c)",
+        "RC-2023-E:10.2.11.7(d)",
+        "RC-2023-E:10.2.11.7(e)",
+        "RC-2023-E:10.2.11.7(f)",
+        "RC-2023-E:10.2.11.7(g)",
+        "RC-2023-E:10.2.11.7(h)",
+        "RC-2023-E:10.2.11.7(i)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.2.1.1",
+       "heading": "DISPOSICIONES GENERALES",
+       "similarity": 0.5813792943954468,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.2.1.1(a)",
+        "RC-2023-E:3.2.1.1(b)",
+        "RC-2023-E:3.2.1.1(c)",
+        "RC-2023-E:3.2.1.1(d)",
+        "RC-2023-E:3.2.1.1(e)",
+        "RC-2023-E:3.2.1.1(f)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.2.1.2",
+       "heading": "REQUISITOS DE PRESENTACIÓN",
+       "similarity": 0.5750774145126343,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.2.1.2(a)",
+        "RC-2023-E:3.2.1.2(b)",
+        "RC-2023-E:3.2.1.2(c)",
+        "RC-2023-E:3.2.1.2(d)",
+        "RC-2023-E:3.2.1.2(e)",
+        "RC-2023-E:3.2.1.2(f)",
+        "RC-2023-E:3.2.1.2(g)",
+        "RC-2023-E:3.2.1.2(h)",
+        "RC-2023-E:3.2.1.2(i)",
+        "RC-2023-E:3.2.1.2(j)",
+        "RC-2023-E:3.2.1.2(k)",
+        "RC-2023-E:3.2.1.2(l)",
+        "RC-2023-E:3.2.1.2(m)",
+        "RC-2023-E:3.2.1.2(n)",
+        "RC-2023-E:3.2.1.2(o)",
+        "RC-2023-E:3.2.1.2(p)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:9.5.2.2",
+       "heading": "SOLICITUD DE PERMISO DE CONSTRUCCIÓN",
+       "similarity": 0.5744497776031494,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:9.5.2.2",
+        "RC-2023-E:9.5.2.2(a)",
+        "RC-2023-E:9.5.2.2(b)",
+        "RC-2023-E:9.5.2.2(c)",
+        "RC-2023-E:9.5.2.2(d)",
+        "RC-2023-E:9.5.2.2(e)",
+        "RC-2023-E:9.5.2.2(f)",
+        "RC-2023-E:9.5.2.2(g)",
+        "RC-2023-E:9.5.2.2(h)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:9.2.3.2",
+       "heading": "REQUISITOS PARA LA SOLICITUD DE PERMISO DE CONSTRUCCIÓN",
+       "similarity": 0.5735628604888916,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:9.2.3.2",
+        "RC-2023-E:9.2.3.2(a)",
+        "RC-2023-E:9.2.3.2(b)",
+        "RC-2023-E:9.2.3.2(c)",
+        "RC-2023-E:9.2.3.2(d)",
+        "RC-2023-E:9.2.3.2(e)",
+        "RC-2023-E:9.2.3.2(f)",
+        "RC-2023-E:9.2.3.2(g)",
+        "RC-2023-E:9.2.3.2(h)",
+        "RC-2023-E:9.2.3.2(i)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:6.1.11.4",
+       "heading": "PARÁMETROS DE DISEÑO",
+       "similarity": 0.5655739903450012,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:6.1.11.4"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:3.4.1.3",
+       "heading": "REQUISITOS PARA EL PERMISO ÚNICO INCIDENTAL OPERACIONAL",
+       "similarity": 0.554161787033081,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:3.4.1.3",
+        "RC-2023-E:3.4.1.3(a)",
+        "RC-2023-E:3.4.1.3(b)",
+        "RC-2023-E:3.4.1.3(c)",
+        "RC-2023-E:3.4.1.3(d)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:9.12.1.4",
+       "heading": "EVALUACIONES Y RECOMENDACIONES",
+       "similarity": 0.5538491606712341,
+       "pinned_by": [],
+       "clause_refs": [
+        "RC-2023-E:9.12.1.4"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.2",
+       "heading": "REQUISITOS DE PRESENTACIÓN",
+       "similarity": null,
+       "pinned_by": [
+        "pcoc_ambiental",
+        "pcoc_predio",
+        "pcoc_planos"
+       ],
+       "clause_refs": [
+        "RC-2023-E:2.1.9.2(a)",
+        "RC-2023-E:2.1.9.2(b)",
+        "RC-2023-E:2.1.9.2(c)",
+        "RC-2023-E:2.1.9.2(d)",
+        "RC-2023-E:2.1.9.2(e)",
+        "RC-2023-E:2.1.9.2(f)",
+        "RC-2023-E:2.1.9.2(g)",
+        "RC-2023-E:2.1.9.2(h)",
+        "RC-2023-E:2.1.9.2(i)",
+        "RC-2023-E:2.1.9.2(j)",
+        "RC-2023-E:2.1.9.2(k)",
+        "RC-2023-E:2.1.9.2(l)",
+        "RC-2023-E:2.1.9.2(m)",
+        "RC-2023-E:2.1.9.2(n)",
+        "RC-2023-E:2.1.9.2(o)",
+        "RC-2023-E:2.1.9.2(p)",
+        "RC-2023-E:2.1.9.2(q)",
+        "RC-2023-E:2.1.9.2(r)",
+        "RC-2023-E:2.1.9.2(s)",
+        "RC-2023-E:2.1.9.2(t)",
+        "RC-2023-E:2.1.9.2(u)",
+        "RC-2023-E:2.1.9.2(v)",
+        "RC-2023-E:2.1.9.2(w)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.3",
+       "heading": "VALOR ESTIMADO DE LA OBRA",
+       "similarity": null,
+       "pinned_by": [
+        "pcoc_valor_obra"
+       ],
+       "clause_refs": [
+        "RC-2023-E:2.1.9.3(a)",
+        "RC-2023-E:2.1.9.3(b)",
+        "RC-2023-E:2.1.9.3(c)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.5",
+       "heading": "LEGITIMACIÓN ACTIVA (STANDING)",
+       "similarity": null,
+       "pinned_by": [
+        "pcoc_legitimacion"
+       ],
+       "clause_refs": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)",
+        "RC-2023-E:2.1.9.5(c)",
+        "RC-2023-E:2.1.9.5(d)",
+        "RC-2023-E:2.1.9.5(e)",
+        "RC-2023-E:2.1.9.5(f)"
+       ]
+      },
+      {
+       "section_id": "RC-2023-E:2.2.1.3",
+       "heading": "CRITERIOS DE EVALUACIÓN DE SOLICITUDES DE CARÁCTER MINISTERIAL",
+       "similarity": null,
+       "pinned_by": [
+        "pcoc_parametros"
+       ],
+       "clause_refs": [
+        "RC-2023-E:2.2.1.3(a)",
+        "RC-2023-E:2.2.1.3(b)",
+        "RC-2023-E:2.2.1.3(c)",
+        "RC-2023-E:2.2.1.3(d)"
+       ]
+      }
+     ],
+     "errors": []
+    }
+   },
+   {
+    "node": "validate_sections",
+    "output": {
+     "section_relevance": [
+      {
+       "section_id": "RC-2023-E:10.2.11.7",
+       "applies": true,
+       "reason": "Aplica al Permiso de Construcción: exige, entre otros documentos, un juego completo de planos, especificaciones técnicas y estimado de costo. Aunque se adjuntan planos y estimado, no se menciona que se hayan presentado las especificaciones técnicas."
+      },
+      {
+       "section_id": "RC-2023-E:3.2.1.1",
+       "applies": true,
+       "reason": "Aplica porque es una solicitud de Permiso de Construcción para una obra nueva, actividad que requiere dicho permiso. La sección también establece que la solicitud debe cumplir los requisitos específicos de la Regla y que la construcción de más de un edificio por solar debe satisfacer los parámetros del distrito y el estacionamiento requerido."
+      },
+      {
+       "section_id": "RC-2023-E:3.2.1.2",
+       "applies": true,
+       "reason": "Aplica porque es una solicitud nueva de Permiso de Construcción para un edificio. La sección establece requisitos de presentación para obras de construcción, como planos certificados aplicables y, según corresponda, certificaciones e informes adicionales."
+      },
+      {
+       "section_id": "RC-2023-E:9.5.2.2",
+       "applies": true,
+       "reason": "La solicitud es para un Permiso de Construcción, trámite regulado por esta sección. Esta exige, entre otros requisitos, planos y documentos con las especificaciones indicadas y un archivo DXF con polígono georreferenciado al sistema NAD 83, unidades y revisión utilizada."
+      },
+      {
+       "section_id": "RC-2023-E:9.2.3.2",
+       "applies": true,
+       "reason": "La solicitud es para un Permiso de Construcción de un edificio, por lo que la sección establece requisitos para este tipo de solicitud, incluidos los planos y documentos que debe presentar."
+      },
+      {
+       "section_id": "RC-2023-E:6.1.11.4",
+       "applies": false,
+       "reason": "La solicitud es para una construcción nueva, pero el predio está calificado C-L; esta sección establece parámetros específicos del distrito RT-A, no del distrito C-L."
+      },
+      {
+       "section_id": "RC-2023-E:3.4.1.3",
+       "applies": false,
+       "reason": "La sección establece requisitos para un Permiso Único Incidental Operacional, mientras que la solicitud es de un Permiso de Construcción; por tanto, regula otro tipo de trámite."
+      },
+      {
+       "section_id": "RC-2023-E:9.12.1.4",
+       "applies": true,
+       "reason": "Aplica a esta solicitud de permiso de construcción, pues es para un edificio de consultorios y oficinas, no una vivienda unifamiliar o bifamiliar. Requiere presentar la Determinación Final de la Recomendación de Salud y del NCBPR; además, toda solicitud de recomendación debe incluir la certificación de cumplimiento del proyectista o especialista."
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.2",
+       "applies": true,
+       "reason": "Fijada por el Criterio pcoc_ambiental, pcoc_predio, pcoc_planos: siempre aplica."
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.3",
+       "applies": true,
+       "reason": "Fijada por el Criterio pcoc_valor_obra: siempre aplica."
+      },
+      {
+       "section_id": "RC-2023-E:2.1.9.5",
+       "applies": true,
+       "reason": "Fijada por el Criterio pcoc_legitimacion: siempre aplica."
+      },
+      {
+       "section_id": "RC-2023-E:2.2.1.3",
+       "applies": true,
+       "reason": "Fijada por el Criterio pcoc_parametros: siempre aplica."
+      }
+     ],
+     "applicable_sections": [
+      "RC-2023-E:10.2.11.7",
+      "RC-2023-E:3.2.1.1",
+      "RC-2023-E:3.2.1.2",
+      "RC-2023-E:9.5.2.2",
+      "RC-2023-E:9.2.3.2",
+      "RC-2023-E:9.12.1.4",
+      "RC-2023-E:2.1.9.2",
+      "RC-2023-E:2.1.9.3",
+      "RC-2023-E:2.1.9.5",
+      "RC-2023-E:2.2.1.3"
+     ],
+     "clauses": [
+      "RC-2023-E:10.2.11.7",
+      "RC-2023-E:10.2.11.7(a)",
+      "RC-2023-E:10.2.11.7(b)",
+      "RC-2023-E:10.2.11.7(c)",
+      "RC-2023-E:10.2.11.7(d)",
+      "RC-2023-E:10.2.11.7(e)",
+      "RC-2023-E:10.2.11.7(f)",
+      "RC-2023-E:10.2.11.7(g)",
+      "RC-2023-E:10.2.11.7(h)",
+      "RC-2023-E:10.2.11.7(i)",
+      "RC-2023-E:3.2.1.1(a)",
+      "RC-2023-E:3.2.1.1(b)",
+      "RC-2023-E:3.2.1.1(c)",
+      "RC-2023-E:3.2.1.1(d)",
+      "RC-2023-E:3.2.1.1(e)",
+      "RC-2023-E:3.2.1.1(f)",
+      "RC-2023-E:3.2.1.2(a)",
+      "RC-2023-E:3.2.1.2(b)",
+      "RC-2023-E:3.2.1.2(c)",
+      "RC-2023-E:3.2.1.2(d)",
+      "RC-2023-E:3.2.1.2(e)",
+      "RC-2023-E:3.2.1.2(f)",
+      "RC-2023-E:3.2.1.2(g)",
+      "RC-2023-E:3.2.1.2(h)",
+      "RC-2023-E:3.2.1.2(i)",
+      "RC-2023-E:3.2.1.2(j)",
+      "RC-2023-E:3.2.1.2(k)",
+      "RC-2023-E:3.2.1.2(l)",
+      "RC-2023-E:3.2.1.2(m)",
+      "RC-2023-E:3.2.1.2(n)",
+      "RC-2023-E:3.2.1.2(o)",
+      "RC-2023-E:3.2.1.2(p)",
+      "RC-2023-E:9.5.2.2",
+      "RC-2023-E:9.5.2.2(a)",
+      "RC-2023-E:9.5.2.2(b)",
+      "RC-2023-E:9.5.2.2(c)",
+      "RC-2023-E:9.5.2.2(d)",
+      "RC-2023-E:9.5.2.2(e)",
+      "RC-2023-E:9.5.2.2(f)",
+      "RC-2023-E:9.5.2.2(g)",
+      "RC-2023-E:9.5.2.2(h)",
+      "RC-2023-E:9.2.3.2",
+      "RC-2023-E:9.2.3.2(a)",
+      "RC-2023-E:9.2.3.2(b)",
+      "RC-2023-E:9.2.3.2(c)",
+      "RC-2023-E:9.2.3.2(d)",
+      "RC-2023-E:9.2.3.2(e)",
+      "RC-2023-E:9.2.3.2(f)",
+      "RC-2023-E:9.2.3.2(g)",
+      "RC-2023-E:9.2.3.2(h)",
+      "RC-2023-E:9.2.3.2(i)",
+      "RC-2023-E:9.12.1.4",
+      "RC-2023-E:2.1.9.2(a)",
+      "RC-2023-E:2.1.9.2(b)",
+      "RC-2023-E:2.1.9.2(c)",
+      "RC-2023-E:2.1.9.2(d)",
+      "RC-2023-E:2.1.9.2(e)",
+      "RC-2023-E:2.1.9.2(f)",
+      "RC-2023-E:2.1.9.2(g)",
+      "RC-2023-E:2.1.9.2(h)",
+      "RC-2023-E:2.1.9.2(i)",
+      "RC-2023-E:2.1.9.2(j)",
+      "RC-2023-E:2.1.9.2(k)",
+      "RC-2023-E:2.1.9.2(l)",
+      "RC-2023-E:2.1.9.2(m)",
+      "RC-2023-E:2.1.9.2(n)",
+      "RC-2023-E:2.1.9.2(o)",
+      "RC-2023-E:2.1.9.2(p)",
+      "RC-2023-E:2.1.9.2(q)",
+      "RC-2023-E:2.1.9.2(r)",
+      "RC-2023-E:2.1.9.2(s)",
+      "RC-2023-E:2.1.9.2(t)",
+      "RC-2023-E:2.1.9.2(u)",
+      "RC-2023-E:2.1.9.2(v)",
+      "RC-2023-E:2.1.9.2(w)",
+      "RC-2023-E:2.1.9.3(a)",
+      "RC-2023-E:2.1.9.3(b)",
+      "RC-2023-E:2.1.9.3(c)",
+      "RC-2023-E:2.1.9.5(a)",
+      "RC-2023-E:2.1.9.5(b)",
+      "RC-2023-E:2.1.9.5(c)",
+      "RC-2023-E:2.1.9.5(d)",
+      "RC-2023-E:2.1.9.5(e)",
+      "RC-2023-E:2.1.9.5(f)",
+      "RC-2023-E:2.2.1.3(a)",
+      "RC-2023-E:2.2.1.3(b)",
+      "RC-2023-E:2.2.1.3(c)",
+      "RC-2023-E:2.2.1.3(d)"
+     ],
+     "errors": []
+    }
+   },
+   {
+    "node": "select_requirements",
+    "output": {
+     "selection": [
+      {
+       "ref": "RC-2023-E:10.2.11.7",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(a)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(b)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(c)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(d)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(e)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(f)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(g)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(h)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:10.2.11.7(i)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 10.2.11 enumera los documentos de las recomendaciones sobre propiedades de valor histórico, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.1(a)",
+       "category": "aplica",
+       "reason": "La solicitud describe la construcción de un edificio, actividad que requiere Permiso de Construcción."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.1(b)",
+       "category": "aplica",
+       "reason": "Toda solicitud de Permiso de Construcción debe cumplir los requisitos generales y específicos aplicables."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.1(c)",
+       "category": "no_aplica",
+       "reason": "La solicitud describe un edificio, no la construcción de más de uno por solar."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.1(d)",
+       "category": "no_aplica",
+       "reason": "La obra descrita no incluye construcción o intervención de ascensores ni equipos relacionados."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.1(e)",
+       "category": "no_aplica",
+       "reason": "La solicitud es para construcción nueva, no para reconstrucción o remodelación."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.1(f)",
+       "category": "no_aplica",
+       "reason": "La culminación mediante Informe Final de Obras y la presentación de Permiso Único corresponden a etapas posteriores o a cambios de uso/licencia no descritos."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(a)",
+       "category": "aplica",
+       "reason": "La obra requiere planos certificados y la solicitud adjunta planos sellados y firmados por profesional licenciado."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(b)",
+       "category": "aplica",
+       "reason": "Los planos de construcción deben mostrar los detalles pertinentes a escala y especificar la escala; el formulario permite adjuntar los planos."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(c)",
+       "category": "no_verificable",
+       "reason": "La obra es de construcción, pero el formulario no admite la certificación de inundabilidad emitida por la JP."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(d)",
+       "category": "no_verificable",
+       "reason": "Si el predio está en zona susceptible a inundaciones, debe cumplir el Reglamento Núm. 13; el formulario no permite declarar esa condición ni acreditar ese cumplimiento."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(e)",
+       "category": "tramite_del_sistema",
+       "reason": "La recomendación de las Entidades Gubernamentales Concernidas y su término corresponden a la evaluación y coordinación gubernamental cuando se active esta condición."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(f)",
+       "category": "no_verificable",
+       "reason": "El formulario no admite certificación de condiciones del suelo, informe de subsuelo ni estudio de suelo."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(g)",
+       "category": "no_verificable",
+       "reason": "Si se aprueba inicialmente la solicitud, se requiere evidencia de póliza del Fondo del Seguro del Estado, pero el formulario no admite ese documento."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(h)",
+       "category": "tramite_del_sistema",
+       "reason": "El cumplimiento de arbitrios municipales es un pago que se verifica como trámite aparte tras la aprobación inicial."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(i)",
+       "category": "no_verificable",
+       "reason": "El formulario no permite declarar fecha de inicio, duración de la obra ni empleos directos a crear."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(j)",
+       "category": "no_verificable",
+       "reason": "El formulario no admite el Plan de Reciclaje ni evidencia de su presentación ante el DRNA."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(k)",
+       "category": "no_verificable",
+       "reason": "El formulario no permite declarar cuántas personas trabajarán en el proyecto ni admite la solicitud o evidencia de exención del Plan de Reciclaje."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(l)",
+       "category": "no_verificable",
+       "reason": "Si el proyecto está en una zona protegida indicada, requiere recomendación escrita del ICP; el formulario no permite declarar esa condición ni admite dicha recomendación."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(m)",
+       "category": "no_verificable",
+       "reason": "Si el proyecto está en una zona de interés turístico, requiere recomendación escrita de la Compañía de Turismo; el formulario no permite declarar esa condición ni admite dicha recomendación."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(n)",
+       "category": "no_verificable",
+       "reason": "La obra comercial no es una vivienda unifamiliar o bifamiliar, pero el formulario no admite las Determinaciones Finales de Salud y del Cuerpo de Bomberos."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(o)",
+       "category": "no_aplica",
+       "reason": "La descripción no relaciona la obra con comercio o almacenaje de explosivos, armas o municiones."
+      },
+      {
+       "ref": "RC-2023-E:3.2.1.2(p)",
+       "category": "no_verificable",
+       "reason": "El formulario no admite ni permite declarar la recomendación del Municipio."
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(a)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(b)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(c)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(d)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(e)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(f)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(g)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.5.2.2(h)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.5.2 regula las obras de sistemas de generación de energía con fuentes no renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(a)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(b)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(c)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(d)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(e)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(f)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(g)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(h)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.2.3.2(i)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: la Regla 9.2.3 regula las obras de sistemas de generación de energía con fuentes renovables, que el formulario no permite solicitar.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:9.12.1.4",
+       "category": "no_verificable",
+       "reason": "La obra no es vivienda unifamiliar o bifamiliar, pero el formulario no admite la Determinación Final de Salud y del NCBPR; sí incluye la certificación de cumplimiento del proyectista."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(a)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: la presentación electrónica en el SUI es parte de la radicación y no se acredita con los datos de la solicitud.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(b)",
+       "category": "no_aplica",
+       "reason": "Es una disposición sobre acceso público a información no confidencial del SUI, no un requisito de esta solicitud."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(c)",
+       "category": "no_aplica",
+       "reason": "Establece obligaciones del SUI sobre documentos públicos y firmas electrónicas, no un requisito que deba acreditar el solicitante."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(d)",
+       "category": "tramite_del_sistema",
+       "reason": "Dispone sobre la capacidad del SUI para cobrar derechos y otros cargos; los pagos se verifican aparte de los datos de la solicitud."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(e)",
+       "category": "tramite_del_sistema",
+       "reason": "Regula la gestión de transacciones y el trámite de pagos a través del SUI."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(f)",
+       "category": "no_aplica",
+       "reason": "Los acuerdos de uso regulan la relación entre el SUI y las agencias, instrumentalidades o municipios."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(g)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_ambiental: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(h)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_predio: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(i)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_predio: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(j)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_predio: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(k)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_planos: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(l)",
+       "category": "no_aplica",
+       "reason": "La solicitud se describe como ministerial según el uso permitido y los parámetros del distrito; no es un asunto discrecional, adjudicativo o cuasi legislativo."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(m)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: inciso general de completitud; la completitud se juzga por los requisitos específicos que aplican.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(n)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: pago de derechos de radicación; se verifica aparte.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(o)",
+       "category": "tramite_del_sistema",
+       "reason": "El término para subsanar es un plazo procesal de la solicitud en el sistema."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(p)",
+       "category": "tramite_del_sistema",
+       "reason": "El archivo por falta de subsanación es una actuación del sistema de radicación."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(q)",
+       "category": "tramite_del_sistema",
+       "reason": "El término para validar una solicitud completa corresponde a la agencia o al sistema."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(r)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: pago del 90% restante tras la validación; se verifica aparte.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(s)",
+       "category": "tramite_del_sistema",
+       "reason": "La asignación del número único de proyecto corresponde a la OGPe."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(t)",
+       "category": "tramite_del_sistema",
+       "reason": "La validación y la determinación de cuándo se considera radicada la solicitud son pasos procesales del sistema."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(u)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: pago del derecho de la Orden Administrativa de Cobro; se verifica aparte.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(v)",
+       "category": "tramite_del_sistema",
+       "reason": "La remisión del pago por el Profesional Autorizado es una gestión procesal y de pago."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.2(w)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: la carga al SUI y su notificación de recibo son parte de la radicación.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.3(a)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_valor_obra: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.3(b)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_valor_obra: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.3(c)",
+       "category": "no_aplica",
+       "reason": "Fijado por configuración: el pago de la diferencia surge si el costo final de la obra supera el estimado, después de expedido el permiso.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(a)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_legitimacion: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(b)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_legitimacion: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(c)",
+       "category": "no_verificable",
+       "reason": "El formulario no permite declarar si hay otros propietarios ni admite evidencia de autorización de todos o de delegación de ese derecho."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(d)",
+       "category": "no_aplica",
+       "reason": "El solicitante es una persona privada y la solicitud no se describe como relativa a propiedad o terreno público."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(e)",
+       "category": "no_aplica",
+       "reason": "La obra descrita es un edificio comercial privado, no una mejora pública en terreno privado."
+      },
+      {
+       "ref": "RC-2023-E:2.1.9.5(f)",
+       "category": "no_aplica",
+       "reason": "La solicitud la presenta el dueño, no un profesional licenciado en esa calidad."
+      },
+      {
+       "ref": "RC-2023-E:2.2.1.3(a)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: describe cómo evalúa la agencia las solicitudes ministeriales, no un requisito del Solicitante.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.2.1.3(b)",
+       "category": "tramite_del_sistema",
+       "reason": "Fijado por configuración: limita el juicio de los funcionarios al evaluar, no es un requisito del Solicitante.",
+       "request_types": null
+      },
+      {
+       "ref": "RC-2023-E:2.2.1.3(c)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_parametros: siempre se evalúa."
+      },
+      {
+       "ref": "RC-2023-E:2.2.1.3(d)",
+       "category": "aplica",
+       "reason": "Fijado por el Criterio pcoc_parametros: siempre se evalúa."
+      }
+     ],
+     "unclassified_clause_refs": [],
+     "unknown_clause_refs": [],
+     "errors": []
+    }
+   },
+   {
+    "node": "decide",
+    "output": {
+     "requirements": [
+      {
+       "id": "pcoc_legitimacion",
+       "text_es": "El proponente acredita legitimación activa (dueño, optante o arrendatario autorizado) con alguno de los documentos de la Sección 2.1.9.5(b).",
+       "clause_refs": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)"
+       ],
+       "probability": 0.99
+      },
+      {
+       "id": "pcoc_ambiental",
+       "text_es": "La solicitud incluye la determinación de cumplimiento ambiental.",
+       "clause_refs": [
+        "RC-2023-E:2.1.9.2(g)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pcoc_predio",
+       "text_es": "El predio está identificado: foto aérea, ubicación geográfica y número de catastro, con mapa catastral si la información catastral no concuerda con la de la OGPe.",
+       "clause_refs": [
+        "RC-2023-E:2.1.9.2(h)",
+        "RC-2023-E:2.1.9.2(i)",
+        "RC-2023-E:2.1.9.2(j)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pcoc_planos",
+       "text_es": "Los planos están sellados y firmados por un profesional licenciado, con las certificaciones requeridas, en archivo digital orientado al norte.",
+       "clause_refs": [
+        "RC-2023-E:2.1.9.2(k)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pcoc_valor_obra",
+       "text_es": "Se certifica el valor estimado de la obra, calculado con las guías de la OGPe o con otro método que no dé un valor menor.",
+       "clause_refs": [
+        "RC-2023-E:2.1.9.3(a)",
+        "RC-2023-E:2.1.9.3(b)"
+       ],
+       "probability": 1.0
+      },
+      {
+       "id": "pcoc_parametros",
+       "text_es": "El uso está permitido en el distrito y la obra cumple cada parámetro de la Sección 2.2.1.3(d) dentro de los límites del distrito.",
+       "clause_refs": [
+        "RC-2023-E:2.2.1.3(c)",
+        "RC-2023-E:2.2.1.3(d)"
+       ],
+       "probability": 0.76
+      },
+      {
+       "id": "seccion_3_2_1_1",
+       "text_es": "Requisitos aplicables de la Sección 3.2.1.1 (DISPOSICIONES GENERALES)",
+       "clause_refs": [
+        "RC-2023-E:3.2.1.1(a)",
+        "RC-2023-E:3.2.1.1(b)"
+       ],
+       "probability": 0.98
+      },
+      {
+       "id": "seccion_3_2_1_2",
+       "text_es": "Requisitos aplicables de la Sección 3.2.1.2 (REQUISITOS DE PRESENTACIÓN)",
+       "clause_refs": [
+        "RC-2023-E:3.2.1.2(a)",
+        "RC-2023-E:3.2.1.2(b)"
+       ],
+       "probability": 0.72
+      }
+     ],
+     "approval_score": 0.72,
+     "errors": []
+    }
+   },
+   {
+    "node": "write_notes",
+    "output": {
+     "notes_attempts": 1,
+     "draft_notes": [
+      {
+       "text": "El solicitante figura como dueño y presentó una escritura pública como evidencia de legitimación activa, conforme a los documentos aceptables para acreditar ese requisito.",
+       "section_ids": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "El uso propuesto —consultorios médicos y oficinas profesionales— está permitido ministerialmente en el distrito C-L; además, los datos declarados cumplen los límites indicados de altura, área bruta de piso, tamaño del solar, ocupación, patios y estacionamiento, y satisfacen el requisito de carga y descarga.",
+       "section_ids": [
+        "RC-2023-E:2.2.1.3(c)",
+        "RC-2023-E:2.2.1.3(d)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La solicitud incluye planos sellados y firmados por una arquitecta licenciada, certificaciones en cada hoja, certificación del proyectista y archivo DXF orientado al norte; también incluye la certificación del valor estimado de la obra calculado según las guías de la OGPe.",
+       "section_ids": [
+        "RC-2023-E:2.1.9.2(k)",
+        "RC-2023-E:2.1.9.3(a)",
+        "RC-2023-E:2.1.9.3(b)"
+       ],
+       "curable": false
+      }
+     ]
+    }
+   },
+   {
+    "node": "validate_citations",
+    "output": {
+     "rejected_notes": [],
+     "notes": [
+      {
+       "text": "El solicitante figura como dueño y presentó una escritura pública como evidencia de legitimación activa, conforme a los documentos aceptables para acreditar ese requisito.",
+       "section_ids": [
+        "RC-2023-E:2.1.9.5(a)",
+        "RC-2023-E:2.1.9.5(b)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "El uso propuesto —consultorios médicos y oficinas profesionales— está permitido ministerialmente en el distrito C-L; además, los datos declarados cumplen los límites indicados de altura, área bruta de piso, tamaño del solar, ocupación, patios y estacionamiento, y satisfacen el requisito de carga y descarga.",
+       "section_ids": [
+        "RC-2023-E:2.2.1.3(c)",
+        "RC-2023-E:2.2.1.3(d)"
+       ],
+       "curable": false
+      },
+      {
+       "text": "La solicitud incluye planos sellados y firmados por una arquitecta licenciada, certificaciones en cada hoja, certificación del proyectista y archivo DXF orientado al norte; también incluye la certificación del valor estimado de la obra calculado según las guías de la OGPe.",
+       "section_ids": [
+        "RC-2023-E:2.1.9.2(k)",
+        "RC-2023-E:2.1.9.3(a)",
+        "RC-2023-E:2.1.9.3(b)"
+       ],
+       "curable": false
+      }
+     ],
+     "dropped_notes": []
+    }
+   }
+  ]
+ },
+ "weakest_requirement": {
+  "id": "seccion_3_2_1_2",
+  "text_es": "Requisitos aplicables de la Sección 3.2.1.2 (REQUISITOS DE PRESENTACIÓN)",
+  "clause_refs": [
+   "RC-2023-E:3.2.1.2(a)",
+   "RC-2023-E:3.2.1.2(b)"
+  ],
+  "probability": 0.72,
+  "criterion": null
+ }
+}

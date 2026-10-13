@@ -1,0 +1,65 @@
+{
+  "expected": {
+    "verdict": "approve",
+    "borderline": false,
+    "fee_matches": true
+  },
+  "rationale": "Owner with a public deed builds a two-storey single-family house in an R-I district that allows it. Every document of 2.1.9.2 is attached, the plans are certified by a licensed engineer, the work value follows the OGPe guides and every district parameter is within its limit. The declared fee is the fee owed.",
+  "request": {
+    "request_type": "PCOC",
+    "applicant_name": "María Isabel Rivera Ortiz",
+    "applicant_type": "privado",
+    "applicant_role": "dueno",
+    "standing_document": "escritura_publica",
+    "municipio": "Caguas",
+    "catastro": "254-087-123-45",
+    "catastro_matches_ogpe": true,
+    "calificacion": "R-I (Residencial Intermedio); uso residencial unifamiliar permitido ministerialmente; altura máxima 2 plantas y 9 m; área bruta de piso máxima 300 m²",
+    "attached_documents": [
+      "planos_sellados",
+      "certificacion_valor_obra",
+      "determinacion_cumplimiento_ambiental",
+      "ubicacion_geografica",
+      "foto_aerea"
+    ],
+    "work_description": "Construcción de vivienda unifamiliar de 2 plantas, uso residencial unifamiliar",
+    "estimated_work_value": 185000,
+    "work_value_method": "guias_ogpe",
+    "floors": 2,
+    "height_m": 7.5,
+    "gross_floor_area_m2": 210,
+    "declared_fee": 1210,
+    "district_parameters": {
+      "lot_area_m2": 450,
+      "min_lot_area_m2": 300,
+      "dwelling_units": 1,
+      "max_dwelling_units": 1,
+      "occupation_pct": 35,
+      "max_occupation_pct": 50,
+      "yards_m": {
+        "front": 5,
+        "side": 2,
+        "rear": 3
+      },
+      "min_yards_m": {
+        "front": 4,
+        "side": 1.5,
+        "rear": 3
+      },
+      "parking_spaces": 2,
+      "required_parking_spaces": 2,
+      "loading_spaces": 0,
+      "required_loading_spaces": 0
+    },
+    "plans_certification": {
+      "professional": "ingeniero",
+      "professional_name": "Ing. Carlos Torres Vega",
+      "license_number": "12345",
+      "drafted_by": null,
+      "sheets_certified": true,
+      "compliance_certification": true,
+      "file_format": "DXF",
+      "north_oriented": true
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "expected": {
+    "verdict": "approve",
+    "borderline": false,
+    "fee_matches": true
+  },
+  "rationale": "Renewal of a pharmacy's Permiso Único filed 45 days before expiry (3.7.1.4(f)), with the owner's certification that the use conforms (3.7.1.4(k)). A renewal does not re-evaluate the authorised use. The declared fee is the fee owed.",
+  "request": {
+    "request_type": "PERMISO_UNICO",
+    "applicant_name": "Farmacia del Pueblo, Inc.",
+    "applicant_type": "privado",
+    "applicant_role": "dueno",
+    "standing_document": "escritura_publica",
+    "municipio": "Arecibo",
+    "catastro": "054-061-302-18",
+    "catastro_matches_ogpe": true,
+    "calificacion": "C-L (Comercial Liviano); farmacia permitida ministerialmente",
+    "attached_documents": [
+      "foto_aerea",
+      "ubicacion_geografica",
+      "memorial_explicativo",
+      "croquis",
+      "fotos_instalacion",
+      "exclusion_categorica",
+      "antecedentes_penales",
+      "no_deuda_asume",
+      "no_deuda_crim",
+      "planillas_ingresos",
+      "planillas_ivu",
+      "certificacion_deuda_dh",
+      "numero_patronal",
+      "registro_comerciantes",
+      "proyeccion_ventas",
+      "certificado_incorporacion",
+      "patente_municipal"
+    ],
+    "proposed_use": "Farmacia de comunidad con venta de artículos de primera necesidad",
+    "use_authorization": "ministerial",
+    "employees": 5,
+    "parking_spaces": 6,
+    "required_parking_spaces": 5,
+    "operating_hours": "lunes a sábado, de 8:00 a. m. a 7:00 p. m.",
+    "licenses_requested": [
+      "sanitaria",
+      "prevencion_incendios"
+    ],
+    "validity_years": 3,
+    "declared_fee": 355,
+    "establishment_type": "no_alimentos",
+    "site_sketch": {
+      "floor_area_m2": 85,
+      "shows_internal_layout": true,
+      "shows_access_road": true,
+      "shows_parking": true,
+      "shows_dimensions": true
+    },
+    "in_flood_zone": false,
+    "renewal": {
+      "permit_number": "2023-512044-PU-001203",
+      "expiry_date": "2026-11-30",
+      "filing_date": "2026-10-16",
+      "use_conforms_certification": true
+    }
+  }
+}

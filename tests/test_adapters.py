@@ -27,14 +27,14 @@ from test_index import AxisEmbedder
 from test_review import GOOD_PCOC, GOOD_PERMISO_UNICO
 
 
-def test_every_fixed_clause_is_a_fixture_clause_fixed_once():
-    fixture_refs = {
-        clause.ref for chunk in load_fixture_chunks() for clause in split_clauses(chunk)
-    }
+def test_every_fixed_clause_is_a_clause_of_the_reglamento_fixed_once(rc_chunking):
+    """Of the fixture or, for Sections only retrieval from the index brings, of RC-2023-E."""
+    chunks = [*load_fixture_chunks(), *rc_chunking.chunks]
+    refs = {clause.ref for chunk in chunks for clause in split_clauses(chunk)}
 
     fixed = [selection.ref for selection in load_fixed_clause_categories()]
 
-    assert fixed and set(fixed) <= fixture_refs
+    assert fixed and set(fixed) <= refs, set(fixed) - refs
     assert len(fixed) == len(set(fixed))
 
 

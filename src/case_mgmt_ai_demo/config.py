@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     cobros_pdf: Path = Path("docs_to_use/COBROS OA-2022-07.pdf")
     # Permit Requests (JSON files) `serve` stores the first time it runs, when it has none.
     examples_dir: Path = Path("examples")
+    # The curated demo cases, each with its cached Recommendation (`seed`, `refresh`, `regress`).
+    demo_cases_dir: Path = Path("demo_cases")
+    # `regress` reports an Approval Score or Requirement probability that moved by more than this.
+    regression_drift_threshold: float = Field(default=0.15, gt=0, le=1)
     # What reads the text a PDF draws as outlines.
     ocr_engine: Literal["tesseract", "unlimited-ocr"] = "tesseract"
     # Where Tesseract's Spanish model (spa.traineddata) lives; unset, the system's is used.
